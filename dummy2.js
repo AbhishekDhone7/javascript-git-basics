@@ -8,3 +8,7 @@ let str = "welcome to javascript world";
   
 
   let newarr = arr.sort();
+
+
+  let name = "Abhsihek";
+  console.log(name);
