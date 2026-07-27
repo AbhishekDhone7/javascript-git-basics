@@ -1,1 +1,9 @@
-console.log("hey abhishek");
+let a ="hey abhishek";
+
+let str = "welcome to javascript world";
+
+  let revStr =  str.split(" ").reverse().join(" ");
+
+  console.log(revStr);
+
+  let arr = [1,2,3,4]; 
