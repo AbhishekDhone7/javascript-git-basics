@@ -7,4 +7,5 @@ let str = "welcome to javascript world";
   let arr = [1,2,3,4];
 
   console.log(arr);
+  // Changes made in dummy file.
   
