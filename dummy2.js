@@ -6,3 +6,4 @@ let str = "welcome to javascript world";
 
   let arr = [1,2,3,4];
   
+  let a = "hey abhishek";
