@@ -4,5 +4,7 @@ let str = "welcome to javascript world";
 
   console.log(revStr);
 
-  let arr = [1,2,3,4];
+  let arr = [1,5,6,8,4];
   
+
+  let newarr = arr.sort();
