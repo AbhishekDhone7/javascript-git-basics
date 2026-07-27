@@ -1,4 +1,4 @@
-# Git for Beginners: Professional Practical Guide
+﻿# Git for Beginners: Professional Practical Guide
 
 ## Who This Guide Is For
 This guide is written for beginners who want to learn Git in a practical, real-world way. It explains concepts, commands, workflows, common problems, and team scenarios using diagrams and examples.
@@ -57,9 +57,9 @@ flowchart TD
 ### Screenshot Placeholders (Introduction)
 Replace these with real PNG images:
 
-![Git Workflow in VS Code](./assets/screenshots/01-git-workflow-vscode.png)
-![GitHub Repository Home](./assets/screenshots/02-github-repo-home.png)
-![Terminal Git Status](./assets/screenshots/03-terminal-git-status.png)
+![Git Workflow in VS Code](./assets/screenshots/real-01-git-workflow-vscode.png)
+![GitHub Repository Home](./assets/screenshots/real-02-github-repo-home.png)
+![Terminal Git Status](./assets/screenshots/real-03-terminal-git-status.png)
 
 ---
 
@@ -218,9 +218,9 @@ stateDiagram-v2
 
 ### Screenshot Placeholders (Initialize Repository)
 
-![Terminal git init output](./assets/screenshots/04-git-init-output.png)
-![VS Code Source Control staged files](./assets/screenshots/05-vscode-staging.png)
-![GitHub first push result](./assets/screenshots/06-github-first-push.png)
+![Terminal git init output](./assets/screenshots/real-04-git-init-output.png)
+![VS Code Source Control staged files](./assets/screenshots/real-05-vscode-staging.png)
+![GitHub first push result](./assets/screenshots/real-06-github-first-push.png)
 
 ---
 
@@ -287,9 +287,9 @@ flowchart TD
 
 ### Screenshot Placeholders (Daily Workflow)
 
-![Terminal daily workflow](./assets/screenshots/07-daily-workflow-terminal.png)
-![VS Code commit message and commit button](./assets/screenshots/08-vscode-commit.png)
-![GitHub commit history](./assets/screenshots/09-github-commit-history.png)
+![Terminal daily workflow](./assets/screenshots/real-07-daily-workflow-terminal.png)
+![VS Code commit message and commit button](./assets/screenshots/real-08-vscode-commit.png)
+![GitHub commit history](./assets/screenshots/real-09-github-commit-history.png)
 
 ---
 
@@ -374,9 +374,9 @@ flowchart TD
 
 ### Screenshot Placeholders (Clone)
 
-![Terminal git clone output](./assets/screenshots/10-git-clone-output.png)
-![VS Code branch switch](./assets/screenshots/11-vscode-branch-switch.png)
-![Git graph after fetch](./assets/screenshots/12-git-graph-fetch.png)
+![Terminal git clone output](./assets/screenshots/real-10-git-clone-output.png)
+![VS Code branch switch](./assets/screenshots/real-11-vscode-branch-switch.png)
+![Git graph after fetch](./assets/screenshots/real-12-git-graph-fetch.png)
 
 ---
 
@@ -508,10 +508,10 @@ flowchart LR
 
 ### Screenshot Placeholders (Merge Conflicts)
 
-![Terminal push rejected non-fast-forward](./assets/screenshots/13-push-rejected.png)
-![VS Code merge conflict markers](./assets/screenshots/14-vscode-conflict-markers.png)
-![VS Code conflict resolution actions](./assets/screenshots/15-vscode-conflict-actions.png)
-![GitHub pull request conflict warning](./assets/screenshots/16-github-pr-conflict.png)
+![Terminal push rejected non-fast-forward](./assets/screenshots/real-13-push-rejected.png)
+![VS Code merge conflict markers](./assets/screenshots/real-14-vscode-conflict-markers.png)
+![VS Code conflict resolution actions](./assets/screenshots/real-15-vscode-conflict-actions.png)
+![GitHub pull request conflict warning](./assets/screenshots/real-16-github-pr-conflict.png)
 
 ---
 
@@ -558,10 +558,10 @@ flowchart TD
 
 ### Screenshot Placeholders (Visual Pack)
 
-![VS Code Source Control panel](./assets/screenshots/17-vscode-source-control.png)
-![GitHub branches page](./assets/screenshots/18-github-branches.png)
-![GitHub pull request page](./assets/screenshots/19-github-pull-request.png)
-![Git graph in terminal or extension](./assets/screenshots/20-git-graph.png)
+![VS Code Source Control panel](./assets/screenshots/real-17-vscode-source-control.png)
+![GitHub branches page](./assets/screenshots/real-18-github-branches.png)
+![GitHub pull request page](./assets/screenshots/real-19-github-pull-request.png)
+![Git graph in terminal or extension](./assets/screenshots/real-20-git-graph.png)
 
 ---
 
@@ -794,3 +794,5 @@ git push
 ```
 
 You now have a complete beginner-to-intermediate Git foundation with practical conflict handling and collaboration workflows.
+
+
