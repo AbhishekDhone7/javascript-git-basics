@@ -54,8 +54,7 @@ flowchart TD
     G --> H[HEAD Current Branch Pointer]
 ```
 
-### Screenshot Placeholders (Introduction)
-Replace these with real PNG images:
+### Screenshots (Introduction)
 
 ![Git Workflow in VS Code](./assets/screenshots/real-01-git-workflow-vscode.png)
 ![GitHub Repository Home](./assets/screenshots/real-02-github-repo-home.png)
@@ -216,7 +215,7 @@ stateDiagram-v2
     Committed --> Staged: edit + git add
 ```
 
-### Screenshot Placeholders (Initialize Repository)
+### Screenshots (Initialize Repository)
 
 ![Terminal git init output](./assets/screenshots/real-04-git-init-output.png)
 ![VS Code Source Control staged files](./assets/screenshots/real-05-vscode-staging.png)
@@ -285,7 +284,7 @@ flowchart TD
     F --> G[Open PR or Continue Work]
 ```
 
-### Screenshot Placeholders (Daily Workflow)
+### Screenshots (Daily Workflow)
 
 ![Terminal daily workflow](./assets/screenshots/real-07-daily-workflow-terminal.png)
 ![VS Code commit message and commit button](./assets/screenshots/real-08-vscode-commit.png)
@@ -372,7 +371,7 @@ flowchart TD
     R2[origin/abhishek_dhone] --> L2[local abhishek_dhone]
 ```
 
-### Screenshot Placeholders (Clone)
+### Screenshots (Clone)
 
 ![Terminal git clone output](./assets/screenshots/real-10-git-clone-output.png)
 ![VS Code branch switch](./assets/screenshots/real-11-vscode-branch-switch.png)
@@ -506,7 +505,7 @@ flowchart LR
 - Conflict appears in the same function.
 - You pull latest `main`, re-merge, resolve file conflict, and push.
 
-### Screenshot Placeholders (Merge Conflicts)
+### Screenshots (Merge Conflicts)
 
 ![Terminal push rejected non-fast-forward](./assets/screenshots/real-13-push-rejected.png)
 ![VS Code merge conflict markers](./assets/screenshots/real-14-vscode-conflict-markers.png)
@@ -556,7 +555,7 @@ flowchart TD
     F --> G[Merge to main]
 ```
 
-### Screenshot Placeholders (Visual Pack)
+### Screenshots (Visual Pack)
 
 ![VS Code Source Control panel](./assets/screenshots/real-17-vscode-source-control.png)
 ![GitHub branches page](./assets/screenshots/real-18-github-branches.png)
@@ -751,24 +750,6 @@ Suggested commit style examples:
 
 20. What are best practices for commit messages?
 - Keep them concise, clear, and action-oriented; describe what and why.
-
----
-
-## Suggested Folder for Screenshot Assets
-
-Create this structure for your real screenshots:
-
-```text
-assets/
-  screenshots/
-    01-git-workflow-vscode.png
-    02-github-repo-home.png
-    03-terminal-git-status.png
-    ...
-    20-git-graph.png
-```
-
-This keeps your documentation professional and easy to maintain.
 
 ---
 
