@@ -1,5 +1,6 @@
 ﻿# Git for Beginners: Professional Practical Guide
 
+
 ## Who This Guide Is For
 This guide is written for beginners who want to learn Git in a practical, real-world way. It explains concepts, commands, workflows, common problems, and team scenarios using diagrams and examples.
 
