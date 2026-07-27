@@ -8,3 +8,4 @@ let str = "welcome to javascript world";
   
 
   let newarr = arr.sort();
+  console.log(newArr);
