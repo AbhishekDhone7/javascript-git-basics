@@ -12,6 +12,7 @@ let str = "welcome to javascript world";
 
 
   let name = "Kundan";
+  // Learning Git Branches, Conflicts
   console.log(name);
 
   
