@@ -28,79 +28,34 @@
 ---
 
 ## 1. JavaScript at a Glance
-## 15. Useful Built-ins: Date, Math, Map, Set
+
 ### What is it?
 
 JavaScript is a programming language that tells your app what to do at runtime.
 
 Runtime means "when code is actually running".
 
-- High-level: you write human-friendly code, not machine-level instructions
-- Dynamic: data type can be decided while the program runs
-- Interpreted/JIT-compiled by engine: browser engine reads and optimizes code at runtime
-- Event-driven: code can run when events happen (click, submit, timer, response)
-String methods are already deeply covered in Section 6A.
-Number methods are already deeply covered in Section 6B.
+JavaScript is also:
 
-This section is now focused on Date, Math, Map, and Set in depth.
-- Validate data before using it
-- Show clear success or error messages
-- Keep logic in small reusable functions
+- High-level: human-friendly syntax
+- Dynamic: type checks happen at runtime
+- JIT optimized: modern engines optimize code while running
+- Event-driven: responds to user actions, timers, and API results
 
-### Common mistakes
+### Where JavaScript runs
 
-- Use Math for pricing, random IDs, and numeric utilities
-- Thinking JavaScript and Java are same language
-- Thinking JavaScript runs only in browser
-- Writing long code without functions
-- Not handling invalid user input
+- Browser (frontend)
+- Node.js (backend)
 
-A[Data or operation need] --> B{Need time/date logic?}
-B -- Yes --> C[Use Date]
-B -- No --> D{Need math utilities?}
-D -- Yes --> E[Use Math]
-D -- No --> F{Need unique values?}
-F -- Yes --> G[Use Set]
-F -- No --> H{Need key-value with non-string keys?}
-H -- Yes --> I[Use Map]
-H -- No --> J[Use Object/Array]
-- Start with `const`, then use `let` if value must change
-- Name variables by purpose, not by short unclear names
-### Date deep dive
+### Why JavaScript matters
 
-Date is used for timestamps, scheduling, expiry logic, and reporting periods.
+- It powers interactive web apps
+- It is used end-to-end in many modern stacks
+- It has a huge ecosystem and tooling support
 
-Common Date operations:
-
-- current time (`new Date()`)
-- parse ISO date (`new Date("2026-07-28T10:00:00Z")`)
-- extract parts (`getFullYear`, `getMonth`, `getDate`)
-- arithmetic using milliseconds
-- formatting for display
-
-#### Date methods quick table
-
-| Method | Use |
-|---|---|
-| `Date.now()` | current epoch milliseconds |
-| `new Date()` | current date-time object |
-| `getFullYear()` | year number |
-| `getMonth()` | month index (0-11) |
-| `getDate()` | day of month |
-| `getTime()` | epoch milliseconds from Date object |
-| `toISOString()` | standard UTC string |
-
-#### Date example: order age calculation
 ### Summary
 
-const createdAt = new Date("2026-07-20T10:00:00Z");
-const now = new Date("2026-07-28T10:00:00Z");
-
-const diffMs = now.getTime() - createdAt.getTime();
-const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-console.log(diffDays);
-console.log(createdAt.toISOString());
+JavaScript is the core language for dynamic web behavior and modern full-stack development.
 
 ## 2. Runtime Model: Execution Context and Call Stack
 
@@ -5096,21 +5051,25 @@ async function loadWithTimeout(url, timeoutMs = 5000) {
 ### Example 5: Axios-style client pattern (interceptor concept)
 
 ```js
-// Pseudocode style if axios is used
-// const api = axios.create({ baseURL: "https://api.example.com", timeout: 10000 });
-// api.interceptors.request.use((config) => {
-//   config.headers.Authorization = `Bearer ${token}`;
-//   return config;
-// });
-// api.interceptors.response.use(
-//   (res) => res,
-//   (err) => {
-//     if (err.response?.status === 401) {
-//       // refresh token or redirect login
-//     }
-//     return Promise.reject(err);
-//   }
-// );
+const api = axios.create({
+  baseURL: "https://api.example.com",
+  timeout: 10000
+});
+
+api.interceptors.request.use((config) => {
+  config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      redirectToLogin();
+    }
+    return Promise.reject(err);
+  }
+);
 ```
 
 Why this pattern matters:
@@ -5458,147 +5417,21 @@ Strong error handling and debugging turn fragile apps into reliable systems. If 
 
 ---
 
-## 15. Useful Built-ins: String, Number, Date, Math, Map, Set
+## 15. Useful Built-ins: Date, Math, Map, Set
 
 ### What is it?
 
 JavaScript provides built-in objects for common tasks.
 
-- `String`: text formatting, search, slicing
-- `Number`: numeric parsing, precision handling
 - `Math`: calculations
 - `Date`: time handling
 - `Map`: key-value with any key type
 - `Set`: unique values collection
 
-### Coverage note (from your notes set)
+String methods are already deeply covered in Section 6A.
+Number methods are already deeply covered in Section 6B.
 
-This section now includes practical String and Number methods aligned with your practice files around:
-
-- `strings.js`
-- `numbers.js`
-- `numbers2.js`
-
-### A) String methods
-
-Strings are used in names, search boxes, emails, order ids, and API messages.
-
-#### Common String methods table
-
-| Method | What it does | Return type | Real-world use |
-|---|---|---|---|
-| `length` | counts characters | `number` | password length check |
-| `toUpperCase()` | uppercase text | `string` | normalize search/filter |
-| `toLowerCase()` | lowercase text | `string` | case-insensitive comparison |
-| `trim()` | remove outer spaces | `string` | clean form input |
-| `includes()` | substring exists? | `boolean` | keyword search |
-| `startsWith()` | prefix check | `boolean` | validate code format |
-| `endsWith()` | suffix check | `boolean` | file extension/email domain |
-| `slice(start,end)` | extract part | `string` | mask IDs |
-| `substring(start,end)` | extract part | `string` | preview text |
-| `replace(a,b)` | replace first match | `string` | message cleanup |
-| `replaceAll(a,b)` | replace all matches | `string` | global formatting |
-| `split(sep)` | convert to array | `array` | CSV/tag parsing |
-| `concat()` | join strings | `string` | build output messages |
-| `repeat(n)` | repeat text n times | `string` | UI separators |
-| `charAt(i)` | character at index | `string` | initial extraction |
-| `indexOf()` | first index or -1 | `number` | keyword position |
-
-#### String method examples
-
-```js
-const rawName = "  nisha dhone  ";
-const cleaned = rawName.trim();
-
-console.log(cleaned);
-console.log(cleaned.toUpperCase());
-console.log(cleaned.includes("dhone"));
-console.log(cleaned.startsWith("nisha"));
-console.log(cleaned.slice(0, 5));
-console.log("a,b,c".split(","));
-console.log("order-id".replace("-", "_"));
-console.log("ha".repeat(3));
-```
-
-#### Output
-
-```txt
-nisha dhone
-NISHA DHONE
-true
-true
-nisha
-[ 'a', 'b', 'c' ]
-order_id
-hahaha
-```
-
-#### String scenarios to consider
-
-- User enters extra spaces in login/email field
-- Search should work even with uppercase/lowercase differences
-- Message templates need dynamic string formatting
-
-### B) Number methods
-
-Numbers are used in price calculations, quantity updates, tax, discounts, and analytics.
-
-#### Common Number methods and helpers table
-
-| Method/helper | What it does | Return type | Real-world use |
-|---|---|---|---|
-| `Number(value)` | convert to number | `number` | form input conversion |
-| `Number.isNaN(v)` | strict NaN check | `boolean` | validation before math |
-| `Number.isInteger(v)` | integer check | `boolean` | quantity validation |
-| `toFixed(n)` | fixed decimal string | `string` | currency display |
-| `toPrecision(n)` | fixed significant digits | `string` | reports/charts |
-| `parseInt(str,10)` | parse integer | `number` | extract numeric ID part |
-| `parseFloat(str)` | parse decimal | `number` | decimal input parsing |
-| `Math.round(n)` | nearest integer | `number` | rounded price |
-| `Math.floor(n)` | round down | `number` | page count/indexing |
-| `Math.ceil(n)` | round up | `number` | package/unit planning |
-| `Math.max(...)` | maximum value | `number` | highest score/sale |
-| `Math.min(...)` | minimum value | `number` | lowest price |
-| `Math.random()` | random 0 to 1 | `number` | OTP/test data |
-
-#### Number method examples
-
-```js
-const qty = Number("3");
-const price = 199.456;
-
-console.log(qty);
-console.log(Number.isInteger(qty));
-console.log((price * qty).toFixed(2));
-console.log(parseInt("42px", 10));
-console.log(parseFloat("10.75kg"));
-console.log(Math.round(4.6));
-console.log(Math.floor(4.9));
-console.log(Math.ceil(4.1));
-console.log(Math.max(10, 20, 5));
-console.log(Number.isNaN(Number("abc")));
-```
-
-#### Output
-
-```txt
-3
-true
-598.37
-42
-10.75
-5
-4
-5
-20
-true
-```
-
-#### Number scenarios to consider
-
-- Input comes as string from form/API and must be converted
-- Floating point precision issues (example: `0.1 + 0.2`)
-- Display formatting differs from internal calculation value
+This section focuses only on Date, Math, Map, and Set.
 
 ### Real-world scenario
 
@@ -5610,81 +5443,210 @@ true
 
 ```mermaid
 flowchart LR
-A[Input Data] --> B{Need uniqueness?}
-B -- Yes --> C[Use Set]
-B -- No --> D{Need key-value with custom keys?}
-D -- Yes --> E[Use Map]
-D -- No --> F[Use Object/Array]
+A[Need built-in utility] --> B{Time/date logic?}
+B -- Yes --> C[Date]
+B -- No --> D{Numeric helper?}
+D -- Yes --> E[Math]
+D -- No --> F{Unique collection?}
+F -- Yes --> G[Set]
+F -- No --> H{Dynamic key-value map?}
+H -- Yes --> I[Map]
+H -- No --> J[Object or Array]
 ```
 
-### Code example
+### A) Date deep dive
+
+Date is used for timestamps, expiry checks, durations, scheduling, and reports.
+
+#### Date methods table
+
+| Method | Meaning | Typical use |
+|---|---|---|
+| `Date.now()` | current epoch milliseconds | timer math, latency calc |
+| `new Date()` | current date-time object | current stamp |
+| `new Date(iso)` | parse ISO date-time | server timestamp parse |
+| `getTime()` | epoch from Date object | duration diff |
+| `toISOString()` | UTC standard format | API transport |
+| `getFullYear()` | year number | yearly grouping |
+| `getMonth()` | month index 0-11 | monthly grouping |
+| `getDate()` | day of month | calendar render |
+
+#### Date example: order age in days
 
 ```js
-const tags = ["js", "api", "js"];
-const uniqueTags = [...new Set(tags)];
-console.log(uniqueTags);
+const createdAt = new Date("2026-07-20T10:00:00Z");
+const now = new Date("2026-07-28T10:00:00Z");
+
+const diffMs = now.getTime() - createdAt.getTime();
+const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+console.log(diffDays);
+console.log(createdAt.toISOString());
 ```
 
 ### Output
 
 ```txt
-[ 'js', 'api' ]
+8
+2026-07-20T10:00:00.000Z
 ```
 
-### C) Date/Math/Map/Set quick practical examples
+#### Date timeline diagram
+
+```mermaid
+flowchart LR
+A[Start timestamp] --> B[Convert to ms]
+B --> C[End timestamp to ms]
+C --> D[Subtract]
+D --> E[Convert to days/hours]
+```
+
+### B) Math deep dive
+
+Math provides numeric utility functions for rounding, ranges, random values, and calculations.
+
+#### Math methods table
+
+| Method | Typical use |
+|---|---|
+| `Math.round` | nearest integer |
+| `Math.floor` | round down |
+| `Math.ceil` | round up |
+| `Math.max` | largest value |
+| `Math.min` | smallest value |
+| `Math.random` | pseudo-random number |
+| `Math.abs` | absolute distance |
+| `Math.pow` | exponent |
+
+#### Math example: billing and random coupon
 
 ```js
-// Date
-const now = new Date();
-console.log(now.getFullYear() > 2000);
+const subtotal = 999.49;
+const taxRate = 0.18;
+const total = subtotal + subtotal * taxRate;
 
-// Math
-console.log(Math.round(12.49));
+const roundedTotal = Math.round(total);
+const absDelta = Math.abs(120 - 165);
+const couponNumber = Math.floor(1000 + Math.random() * 9000);
 
-// Map
-const stockMap = new Map([
-  ["pen", 10],
-  ["book", 5]
-]);
-console.log(stockMap.get("book"));
-
-// Set
-const tags = new Set(["js", "api", "js"]);
-console.log(tags.size);
+console.log(roundedTotal);
+console.log(absDelta);
+console.log(couponNumber >= 1000 && couponNumber <= 9999);
 ```
 
 ### Output
 
 ```txt
+1179
+45
 true
-12
-5
+```
+
+### C) Map deep dive
+
+Map stores key-value pairs where keys can be any type, including objects.
+
+#### Map operations table
+
+| Operation | Method |
+|---|---|
+| Insert/update | `map.set(key, value)` |
+| Read | `map.get(key)` |
+| Exists | `map.has(key)` |
+| Delete | `map.delete(key)` |
+| Size | `map.size` |
+| Iterate | `map.entries()` |
+
+#### Map example: object keys for inventory
+
+```js
+const p1 = { sku: "PEN-1" };
+const p2 = { sku: "BOOK-1" };
+
+const inventory = new Map();
+inventory.set(p1, { qty: 10, price: 12 });
+inventory.set(p2, { qty: 5, price: 120 });
+
+console.log(inventory.get(p1).qty);
+console.log(inventory.has(p2));
+console.log(inventory.size);
+```
+
+### Output
+
+```txt
+10
+true
 2
 ```
 
+### D) Set deep dive
+
+Set stores unique values only.
+
+#### Set operations table
+
+| Operation | Method |
+|---|---|
+| Add | `set.add(value)` |
+| Exists | `set.has(value)` |
+| Delete | `set.delete(value)` |
+| Size | `set.size` |
+| Iterate | `set.values()` |
+
+#### Set example: dedupe and membership
+
+```js
+const rawTags = ["js", "api", "js", "frontend", "api"];
+const uniqueTags = new Set(rawTags);
+
+console.log([...uniqueTags]);
+console.log(uniqueTags.has("api"));
+
+uniqueTags.delete("api");
+console.log(uniqueTags.has("api"));
+console.log(uniqueTags.size);
+```
+
+### Output
+
+```txt
+[ 'js', 'api', 'frontend' ]
+true
+false
+2
+```
+
+### Map vs Object and Set vs Array
+
+| Comparison | Better option | Reason |
+|---|---|---|
+| Map vs Object | Map for dynamic key/value data | supports non-string keys and clearer APIs |
+| Set vs Array | Set for uniqueness checks | intent is clearer and membership is efficient |
+
 ### Edge cases
 
-- Date parsing varies by input format
-- Floating point math precision issues
-- `toFixed()` returns string, not number
-- `parseInt("08")` should include radix like `parseInt("08", 10)`
+- `getMonth()` is zero-based
+- non-ISO Date parsing may vary by environment
+- `Math.random()` is not secure for cryptography
+- Set checks object uniqueness by reference, not deep value
 
 ### Common mistakes
 
-- Using object where Map is better for frequent dynamic keys
-- Comparing numeric strings without conversion
 - Using localized date strings directly in logic
+- Repeated membership checks in arrays where Set is better
+- Using Object where Map is required for object keys
 
 ### Best practices
 
-- Use ISO date formats
-- Use Set for uniqueness and Map for lookup-heavy logic
-- Convert number inputs explicitly before calculations
-- Keep display formatting (`toFixed`) separate from raw numeric value
+- Use ISO timestamps for API data
+- Normalize timezone before date comparisons
+- Use Set for uniqueness and Map for dynamic dictionaries
+- Keep helper utilities for date/math operations reusable
 
 ### Summary
 
-String and Number methods, along with Date/Math/Map/Set, reduce code and improve clarity for real-world JavaScript development.
+Date, Math, Map, and Set are core built-ins for reliable production JavaScript logic.
 
 ---
 
@@ -5692,63 +5654,296 @@ String and Number methods, along with Date/Math/Map/Set, reduce code and improve
 
 ### What is it?
 
-Modern JavaScript adds cleaner syntax and safer patterns.
+Modern JavaScript (ES6+) introduces syntax and language features that make code more readable, safer, and easier to maintain.
 
-Key features:
+This section is a deep dive into the most important ES6+ concepts used in real projects and interviews.
 
-- Template literals
-- Destructuring
-- Rest parameter
-- Spread operator
-- Default parameters
-- Optional chaining
-- Nullish coalescing
+### ES6+ concept map
 
-### Real-world scenario
+| Group | Concepts |
+|---|---|
+| Variables and scope | `let`, `const`, block scope, TDZ |
+| Function syntax | arrow function, default params, rest params |
+| Data handling | destructuring, spread, template literals |
+| Safe access | optional chaining `?.`, nullish coalescing `??` |
+| Collections and iteration | `for...of`, `Map`, `Set` |
+| Async and modules | modules `import/export`, dynamic import |
+| Robust operators | `??=`, `||=`, `&&=` |
 
-API response object can be safely read with optional chaining and defaults to avoid runtime crashes.
-
-### Flow diagram
+### ES6+ processing flow
 
 ```mermaid
 flowchart TD
-A[Complex Object] --> B[Destructure needed fields]
-B --> C[Use defaults for missing values]
-C --> D[Render safe UI]
+A[Raw API/inputs] --> B[Destructure + defaults]
+B --> C[Validate with ?? and ?.]
+C --> D[Transform with spread/rest]
+D --> E[Compose output string/template]
+E --> F[Export reusable module function]
 ```
 
-### Code example
+### 1) `let` and `const` (block scope)
 
 ```js
-const user = { name: "Aman", address: { city: "Delhi" } };
-const city = user.address?.city ?? "Unknown";
-const { name } = user;
-console.log(`${name} - ${city}`);
+const appName = "ShopEasy";
+let page = 1;
+
+if (true) {
+  const inside = "block-only";
+  page += 1;
+}
+
+console.log(appName, page);
 ```
 
-### Output
+Why important:
 
-```txt
-Aman - Delhi
+- prevents accidental global leaks
+- safer than `var` due to block scope and TDZ behavior
+
+### 2) Arrow functions
+
+```js
+const prices = [10, 20, 30];
+const withTax = prices.map((p) => p * 1.18);
+console.log(withTax);
 ```
 
-### Edge cases
+Use when:
 
-- Spread is shallow copy, not deep copy
-- Destructuring undefined object throws error
+- short callbacks
+- lexical `this` is desired
+
+Avoid for:
+
+- object methods requiring dynamic `this`
+
+### 3) Template literals
+
+```js
+const user = "Nisha";
+const city = "Pune";
+console.log(`User ${user} from ${city}`);
+```
+
+Benefits:
+
+- interpolation without string concatenation noise
+- multiline string support
+
+### 4) Destructuring (object and array)
+
+```js
+const profile = { name: "Nisha", role: "admin", stats: { posts: 12 } };
+const { name, role, stats: { posts } } = profile;
+
+const colors = ["red", "green", "blue"];
+const [first, , third] = colors;
+
+console.log(name, role, posts, first, third);
+```
+
+### 5) Default parameters
+
+```js
+function createLabel(name = "Guest", city = "Unknown") {
+  return `${name} - ${city}`;
+}
+
+console.log(createLabel());
+console.log(createLabel("Nisha", "Pune"));
+```
+
+### 6) Rest parameter and Spread operator
+
+```js
+function total(...nums) {
+  return nums.reduce((sum, n) => sum + n, 0);
+}
+
+const base = { id: 1, name: "Pen" };
+const updated = { ...base, price: 10, inStock: true };
+
+console.log(total(10, 20, 30));
+console.log(updated);
+```
+
+Rest vs spread:
+
+- rest collects many values into one array
+- spread expands array/object into individual values/properties
+
+### 7) Optional chaining and nullish coalescing
+
+```js
+const response = { user: { profile: { city: "Pune" } } };
+
+const city = response.user?.profile?.city ?? "Unknown";
+const pin = response.user?.profile?.pin ?? "N/A";
+
+console.log(city);
+console.log(pin);
+```
+
+Why `??` instead of `||` sometimes:
+
+- `||` treats `0`, `""`, `false` as fallback triggers
+- `??` only falls back for `null` or `undefined`
+
+### 8) Logical assignment operators
+
+```js
+let a = null;
+a ??= "default";
+
+let b = "";
+b ||= "fallback";
+
+let c = true;
+c &&= false;
+
+console.log(a, b, c);
+```
+
+### 9) `for...of` iteration
+
+```js
+const items = ["pen", "book", "bag"];
+for (const item of items) {
+  console.log(item);
+}
+```
+
+Prefer `for...of` when:
+
+- you need values directly
+- cleaner iteration than index-based loops
+
+### 10) Modules (`export` / `import`)
+
+`math.js`
+
+```js
+export function add(a, b) {
+  return a + b;
+}
+
+export const TAX = 0.18;
+```
+
+`app.js`
+
+```js
+import { add, TAX } from "./math.js";
+console.log(add(10, 20), TAX);
+```
+
+Dynamic import example:
+
+```js
+async function loadChart() {
+  const mod = await import("./chart.js");
+  mod.renderChart();
+}
+```
+
+### Module loading diagram
+
+```mermaid
+sequenceDiagram
+participant App as app.js
+participant Loader as Module Loader
+participant M as math.js
+
+App->>Loader: import { add, TAX }
+Loader->>M: resolve and load module
+M-->>Loader: exports
+Loader-->>App: bound imports
+```
+
+### 11) Object literal enhancements
+
+```js
+const name = "Nisha";
+const city = "Pune";
+const field = "role";
+
+const user = {
+  name,
+  city,
+  [field]: "admin",
+  greet() {
+    return `Hello ${this.name}`;
+  }
+};
+
+console.log(user.greet());
+```
+
+### 12) Symbol and BigInt (often missed)
+
+```js
+const id = Symbol("id");
+const obj = { [id]: 101, name: "Pen" };
+
+const big = 9007199254740993n;
+console.log(typeof id, typeof big, obj[id]);
+```
+
+Use cases:
+
+- Symbol: unique non-colliding keys
+- BigInt: integers larger than Number safe limit
+
+### ES6+ feature selection guide
+
+```mermaid
+flowchart TD
+A[Need cleaner modern code] --> B{Safe nested access needed?}
+B -- Yes --> C[Use optional chaining + nullish]
+B -- No --> D{Need immutable update?}
+D -- Yes --> E[Use spread]
+D -- No --> F{Need flexible params?}
+F -- Yes --> G[Use default + rest]
+F -- No --> H{Need code split/lazy load?}
+H -- Yes --> I[Use dynamic import]
+H -- No --> J[Use simplest readable syntax]
+```
+
+### Common edge cases
+
+- Spread is shallow copy, not deep clone
+- Destructuring undefined object throws unless fallback is provided
+- Arrow function does not have its own `this`
+- `??` and `||` are not interchangeable
+- BigInt cannot be mixed directly with Number in arithmetic
 
 ### Common mistakes
 
-- Overusing nested destructuring reducing readability
+- Overusing one-liner patterns that reduce readability
+- Using nested destructuring without defaults
+- Forgetting file extension/path correctness in browser ES modules
+- Using `var` in new code causing scope confusion
 
 ### Best practices
 
-- Use features where they improve clarity
-- Prefer readable over clever one-liners
+- Prefer `const` by default
+- Keep modern syntax readable, not clever
+- Use optional chaining for uncertain API fields
+- Use modules to separate business logic cleanly
+- Adopt immutable update patterns with spread for predictable state
+
+### Interview quick table
+
+| Question | Strong short answer |
+|---|---|
+| `let` vs `const`? | Both are block scoped; `const` forbids reassignment and is default choice. |
+| Rest vs spread? | Rest collects values; spread expands values. |
+| `??` vs `||`? | `??` only falls back on null/undefined, `||` falls back on any falsy value. |
+| Why modules? | Encapsulation, reuse, dependency clarity, and maintainability. |
 
 ### Summary
 
-ES6+ features make code shorter, safer, and easier to maintain.
+ES6+ is not just shorter syntax; it is a set of patterns for safer, clearer, and scalable JavaScript. Mastering these concepts improves interview performance and real-world code quality.
 
 ---
 
