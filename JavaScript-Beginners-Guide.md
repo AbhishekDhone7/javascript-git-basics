@@ -3811,6 +3811,79 @@ Simple meaning:
 | Static members | Belong to class, not instances | Utilities/factories |
 | Getter/Setter | Controlled read/write | Validation and safety |
 
+### OOP relationship diagram
+
+```mermaid
+classDiagram
+class Person {
+  +name
+  +getRole()
+}
+
+class Customer {
+  +loyaltyPoints
+  +getRole()
+}
+
+class PaymentMethod {
+  +pay(amount)
+}
+
+class CardPayment {
+  +pay(amount)
+}
+
+class UpiPayment {
+  +pay(amount)
+}
+
+class Order {
+  +confirm(orderId)
+}
+
+class EmailNotifier {
+  +send(message)
+}
+
+class SmsNotifier {
+  +send(message)
+}
+
+Person <|-- Customer
+PaymentMethod <|-- CardPayment
+PaymentMethod <|-- UpiPayment
+Order --> EmailNotifier : uses
+Order --> SmsNotifier : uses
+```
+
+This diagram shows both inheritance (is-a) and composition (has-a) in one view.
+
+### OOP interview table (concept ID + answer)
+
+| ID | Concept | Common interview question | Interview-ready answer |
+|---|---|---|---|
+| OOP-01 | Class and Object | What is class vs object in JavaScript? | A class is a blueprint that defines structure and behavior, while an object is a runtime instance created from that blueprint. |
+| OOP-02 | Encapsulation | What is encapsulation and why use it? | Encapsulation bundles data with methods and restricts direct access to internals, so state changes happen through controlled APIs. |
+| OOP-03 | Abstraction | Explain abstraction with an example. | Abstraction exposes only required operations and hides implementation details; for example, a `pay()` method hides gateway retries and validation logic. |
+| OOP-04 | Inheritance | What is inheritance in JavaScript? | Inheritance allows a child class to reuse parent behavior using `extends`, reducing duplication and enabling specialization via overridden methods. |
+| OOP-05 | Polymorphism | What is polymorphism? | Polymorphism means the same method name can produce different behavior based on object type, such as `pay()` in `CardPayment` and `UpiPayment`. |
+| OOP-06 | Composition | Composition vs inheritance: which is better? | Prefer composition when behavior must change independently; it is more flexible and testable, while inheritance is best for clear is-a relationships. |
+| OOP-07 | Static members | When should we use static methods? | Use static methods for utilities or factory behavior that belongs to the class itself and does not depend on instance state. |
+| OOP-08 | Getter/Setter | Why use getters and setters? | Getters and setters provide controlled property access, allowing validation, transformation, or side-effects while keeping a clean object API. |
+
+### Rapid interview one-liners
+
+| ID | One-liner answer |
+|---|---|
+| OOP-01 | Class defines; object uses. |
+| OOP-02 | Hide data, expose safe methods. |
+| OOP-03 | Show interface, hide complexity. |
+| OOP-04 | Reuse parent behavior in child. |
+| OOP-05 | Same method, different runtime behavior. |
+| OOP-06 | Build objects from smaller reusable parts. |
+| OOP-07 | Class-level behavior without object creation. |
+| OOP-08 | Controlled read/write with validation. |
+
 ### Real-world domain example: E-commerce Order System
 
 We model a shopping system with:
@@ -4185,72 +4258,261 @@ Prototype and class understanding gives you production-level OOP design in JavaS
 
 ### What is it?
 
-DOM (Document Object Model) is browser representation of HTML as a tree of nodes.
+DOM (Document Object Model) is the in-memory tree representation of your HTML page.
 
-You can:
+Every HTML tag becomes a node, and JavaScript can:
 
-- Select elements
-- Modify content/styles/attributes
-- Handle events like click, input, submit
+- Find nodes (query/select)
+- Read or change content and attributes
+- Change styles and classes
+- Listen to user actions (events)
 
-Event propagation phases:
+### Why DOM matters in real projects
 
-- Capturing
-- Target
-- Bubbling
+Without DOM APIs, your UI cannot react to user input.
 
-Event delegation handles many child events using one parent listener.
+Typical product features using DOM/events:
 
-### Real-world scenario
+- Login form validation
+- Search filtering while typing
+- Cart add/remove buttons
+- Modal open/close
+- Table sorting and pagination
 
-In a todo list:
-
-- One click handler on list parent manages all delete buttons
-- New items added later still work without new listeners
-
-### Flow diagram
+### DOM node model at a glance
 
 ```mermaid
 flowchart TD
-A[User Click] --> B[Capture Phase]
-B --> C[Target Element]
-C --> D[Bubble Phase]
-D --> E[Parent Handler Runs]
+A[document] --> B[html]
+B --> C[head]
+B --> D[body]
+D --> E[div app]
+E --> F[input]
+E --> G[button]
+E --> H[ul list]
 ```
 
-### Code example
+### DOM operations quick table
+
+| Operation | Common API | Example use |
+|---|---|---|
+| Select one element | `querySelector` | get save button |
+| Select many elements | `querySelectorAll` | get all todo rows |
+| Read/write text | `textContent` | show status message |
+| Read/write HTML | `innerHTML` | render list markup |
+| Attribute update | `getAttribute`, `setAttribute` | update image src, ARIA attrs |
+| CSS class toggle | `classList.add/remove/toggle` | active/inactive state |
+| Create nodes | `createElement`, `append` | add new todo item |
+| Remove nodes | `remove`, `removeChild` | delete row/card |
+
+### Events fundamentals
+
+An event is a signal that something happened.
+
+Common events:
+
+- Mouse: `click`, `dblclick`, `mouseenter`
+- Keyboard: `keydown`, `keyup`
+- Form: `submit`, `input`, `change`, `focus`, `blur`
+- Page: `DOMContentLoaded`, `load`
+
+### Event propagation (capture -> target -> bubble)
+
+```mermaid
+flowchart LR
+A[Window/Document] --> B[Capture phase]
+B --> C[Target element]
+C --> D[Bubble phase]
+D --> E[Parent handlers]
+```
+
+### Event delegation runtime diagram
+
+```mermaid
+sequenceDiagram
+participant U as User
+participant B as Child Button
+participant L as Parent List Listener
+
+U->>B: Click delete
+B-->>L: Bubble event
+L->>L: Check event.target.closest("[data-action='delete']")
+L->>L: Remove matched row
+```
+
+This explains why one parent listener can manage many child buttons, including dynamically added items.
+
+### Event APIs quick table
+
+| API / property | Purpose | Notes |
+|---|---|---|
+| `addEventListener(type, handler)` | attach listener | preferred over inline handlers |
+| `event.target` | exact clicked/input element | useful in delegation |
+| `event.currentTarget` | element where listener is attached | may differ from target |
+| `event.preventDefault()` | stop default browser action | form submit/navigation |
+| `event.stopPropagation()` | stop bubbling to parent | use carefully |
+| `removeEventListener()` | cleanup listener | important in large apps |
+
+### Real-world scenario: Todo app with dynamic items
+
+Requirements:
+
+- Add todo using form
+- Delete any todo
+- Works for future items too
+
+Best pattern: one delegated listener on list container.
+
+### Example 1: Safe element selection + click handler
 
 ```js
-const btn = document.querySelector("#saveBtn");
-btn.addEventListener("click", () => {
-  console.log("Saved");
+document.addEventListener("DOMContentLoaded", () => {
+  const saveBtn = document.querySelector("#saveBtn");
+  const status = document.querySelector("#status");
+
+  if (!saveBtn || !status) return;
+
+  saveBtn.addEventListener("click", () => {
+    status.textContent = "Saved successfully";
+  });
 });
 ```
 
-### Output
+Output (UI text):
 
 ```txt
-Saved
+Saved successfully
 ```
+
+### Example 2: Event delegation for dynamic delete buttons
+
+```js
+const list = document.querySelector("#todoList");
+
+list.addEventListener("click", (event) => {
+  const deleteBtn = event.target.closest("[data-action='delete']");
+  if (!deleteBtn) return;
+
+  const row = deleteBtn.closest("li");
+  row?.remove();
+});
+```
+
+Why this is powerful:
+
+- One listener handles all existing and future delete buttons
+- Better performance than adding listener to each row
+
+### Example 3: Form submit + prevent default + validation
+
+```js
+const form = document.querySelector("#todoForm");
+const input = document.querySelector("#todoInput");
+const errorText = document.querySelector("#errorText");
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const value = input.value.trim();
+  if (!value) {
+    errorText.textContent = "Todo cannot be empty";
+    return;
+  }
+
+  errorText.textContent = "";
+  console.log("Todo added:", value);
+  form.reset();
+});
+```
+
+Console output example:
+
+```txt
+Todo added: Buy milk
+```
+
+### Example 4: target vs currentTarget difference
+
+```js
+const card = document.querySelector("#card");
+
+card.addEventListener("click", (event) => {
+  console.log("target:", event.target.tagName);
+  console.log("currentTarget:", event.currentTarget.tagName);
+});
+```
+
+When clicking a child button inside card, target may be `BUTTON` and currentTarget is `DIV`.
+
+### Example 5: classList + attribute updates
+
+```js
+const themeBtn = document.querySelector("#themeBtn");
+const box = document.querySelector("#box");
+
+themeBtn.addEventListener("click", () => {
+  box.classList.toggle("dark");
+  const isDark = box.classList.contains("dark");
+  box.setAttribute("aria-pressed", String(isDark));
+});
+```
+
+### event bubbling vs delegation (diff table)
+
+| Topic | Bubbling behavior | Delegation usage |
+|---|---|---|
+| What it is | Event moves child to parent | Parent uses bubbling to manage child actions |
+| Listener count | Often many (if attached per child) | Usually one on container |
+| Dynamic elements | Need extra listeners | Works automatically |
+| Performance | Can be heavy for big lists | More efficient |
+
+### Mini workflow for DOM-driven features
+
+```mermaid
+flowchart TD
+A[Select DOM nodes] --> B[Attach listeners]
+B --> C[User action]
+C --> D[Validate input/event target]
+D --> E[Update DOM state]
+E --> F[Persist if needed localStorage/API]
+```
+
+### Scenario checklist
+
+- Are elements selected after DOM is ready?
+- Are null checks present before using nodes?
+- Do you need `preventDefault` for form/links?
+- Would delegation reduce listener count?
+- Are you updating text safely (`textContent`) where possible?
 
 ### Edge cases
 
-- Event bubbling triggers parent unexpectedly
-- Query selector returns null if element not loaded yet
+- `querySelector` returns null when selector is wrong or element not loaded
+- `innerHTML` can replace nodes and remove old event listeners
+- Bubbling may trigger parent handler unexpectedly
+- `stopPropagation` can break analytics/global listeners if overused
+- Events on disabled form elements may not fire as expected
 
 ### Common mistakes
 
-- Adding too many individual listeners for list items
-- Forgetting `event.preventDefault()` on form submit when needed
+- Attaching listeners inside loops without cleanup
+- Using `innerHTML` with unsanitized user content (XSS risk)
+- Assuming `event.target` is always the container
+- Forgetting trim/validation for form input
+- Registering listeners before DOM is ready
 
 ### Best practices
 
-- Prefer event delegation in dynamic lists
-- Register handlers after DOM is ready
+- Prefer `addEventListener` over inline HTML handlers
+- Prefer `textContent` for plain text updates
+- Use event delegation for dynamic collections
+- Keep handlers small and call dedicated functions
+- Add ARIA and semantic attributes when UI state changes
+- Cleanup listeners in SPA components when unmounting
 
 ### Summary
 
-DOM and events connect user actions to JavaScript behavior.
+DOM and events are the bridge between UI and JavaScript logic. Mastering selection, event propagation, delegation, and safe updates is essential for real-world frontend development.
 
 ---
 
