@@ -1091,6 +1091,7 @@ Main categories:
 - Assignment: `= += -=`
 - Comparison: `> < >= <= ===`
 - Logical: `&& || !`
+- Ternary: `condition ? valueA : valueB`
 
 Operator priorities matter. For example:
 
@@ -1102,6 +1103,28 @@ Statements control flow:
 - `if...else`
 - `switch`
 - loops: `for`, `while`, `do...while`, `for...of`, `for...in`
+
+In real projects, these are used together:
+
+- Operator calculates result
+- Condition checks rule
+- Statement decides branch
+- Loop repeats process for all items
+
+### End-to-end logic flow
+
+```mermaid
+flowchart TD
+A[Receive input data] --> B[Apply operators]
+B --> C{Condition true?}
+C -- Yes --> D[Run success branch]
+C -- No --> E[Run fallback branch]
+D --> F{More items left?}
+E --> F
+F -- Yes --> G[Next loop iteration]
+G --> B
+F -- No --> H[Return final output]
+```
 
 ### Quick decision table
 
@@ -1115,6 +1138,16 @@ Statements control flow:
 | Iterate array values | `for...of` |
 | Iterate object keys | `for...in` |
 
+### Operator behavior quick table
+
+| Operator type | Example | Result idea |
+|---|---|---|
+| Arithmetic | `20 / 4` | numeric calculation |
+| Comparison | `age >= 18` | returns boolean |
+| Logical | `isLoggedIn && isVerified` | combines conditions |
+| Assignment | `total += 50` | updates variable |
+| Ternary | `stock > 0 ? "In" : "Out"` | short if/else |
+
 ### Real-world scenario
 
 Order discount flow:
@@ -1122,6 +1155,12 @@ Order discount flow:
 - if amount > 5000, apply 10% discount
 - else if amount > 2000, apply 5%
 - else no discount
+
+Scenario to consider:
+
+- Amount can be invalid (negative, null, string)
+- Business rules can overlap, so condition order matters
+- Final amount should never become negative
 
 ### Flow diagram
 
@@ -1136,6 +1175,18 @@ E -- No --> G[No Discount]
 D --> H[Show Final Price]
 F --> H
 G --> H
+```
+
+### Scenario 2: Login attempt lock system
+
+```mermaid
+flowchart TD
+A[User enters password] --> B{Password correct?}
+B -- Yes --> C[Login success and reset attempts]
+B -- No --> D[attempts = attempts + 1]
+D --> E{attempts >= 3 ?}
+E -- Yes --> F[Lock account temporarily]
+E -- No --> G[Show retry message]
 ```
 
 ### Code example
@@ -1159,6 +1210,32 @@ console.log(`Discount: ${discount}%`);
 Discount: 5%
 ```
 
+### Code example 1.1: Safe discount with validation
+
+```js
+const amountInput = "3200";
+const amount = Number(amountInput);
+
+if (Number.isNaN(amount) || amount < 0) {
+  console.log("Invalid amount");
+} else {
+  let discount = 0;
+  if (amount > 5000) discount = 10;
+  else if (amount > 2000) discount = 5;
+
+  const finalAmount = amount - (amount * discount) / 100;
+  console.log(`Discount: ${discount}%`);
+  console.log(`Final amount: ${finalAmount}`);
+}
+```
+
+### Output
+
+```txt
+Discount: 5%
+Final amount: 3040
+```
+
 ### Code example 2: Operator precedence
 
 ```js
@@ -1174,6 +1251,27 @@ console.log(result2);
 ```txt
 20
 60
+```
+
+### Code example 2.1: Logical operators in business rules
+
+```js
+const isLoggedIn = true;
+const isEmailVerified = false;
+const isAdmin = true;
+
+const canAccessAdminPanel = isAdmin && isLoggedIn;
+const canCheckout = isLoggedIn && isEmailVerified;
+
+console.log(canAccessAdminPanel);
+console.log(canCheckout);
+```
+
+### Output
+
+```txt
+true
+false
 ```
 
 ### Code example 3: `switch` for status mapping
@@ -1205,6 +1303,36 @@ console.log(message);
 Order is on the way
 ```
 
+### Code example 3.1: Missing break fall-through risk
+
+```js
+const level = "gold";
+let benefits = "";
+
+switch (level) {
+  case "gold":
+    benefits += "Priority Support ";
+  case "silver":
+    benefits += "Discount Vouchers";
+    break;
+  default:
+    benefits = "Basic Benefits";
+}
+
+console.log(benefits);
+```
+
+### Output
+
+```txt
+Priority Support Discount Vouchers
+```
+
+Why this matters:
+
+- Missing `break` after `gold` allowed code to continue into `silver`
+- Sometimes useful intentionally, but usually a bug
+
 ### Code example 4: `for...of` vs `for...in`
 
 ```js
@@ -1230,6 +1358,24 @@ index: 1
 index: 2
 ```
 
+### Code example 4.1: `for...in` for objects
+
+```js
+const user = { name: "Nisha", role: "admin", active: true };
+
+for (const key in user) {
+  console.log(`${key}: ${user[key]}`);
+}
+```
+
+### Output
+
+```txt
+name: Nisha
+role: admin
+active: true
+```
+
 ### Code example 5: While loop safety pattern
 
 ```js
@@ -1249,6 +1395,32 @@ Attempt 2
 Attempt 3
 ```
 
+### Code example 6: `do...while` runs at least once
+
+```js
+let count = 5;
+
+do {
+  console.log(`Executed once with count=${count}`);
+  count++;
+} while (count < 5);
+```
+
+### Output
+
+```txt
+Executed once with count=5
+```
+
+### Scenario checklist: What to consider before writing conditions/loops
+
+- Is input valid and type-safe?
+- Are condition branches mutually exclusive?
+- Can this loop become infinite?
+- Do we need `break` or `continue`?
+- Are we iterating array values or object keys?
+- Is there a safer built-in method like `map`, `filter`, `some`, `every`?
+
 ### Edge cases
 
 - Infinite loop if condition never changes
@@ -1256,6 +1428,8 @@ Attempt 3
 - Missing `break` in `switch` can cause fall-through bugs
 - `NaN` comparisons are tricky (`NaN === NaN` is false)
 - Wrong logical grouping (`&&` / `||`) can approve invalid business conditions
+- `for...in` can also iterate inherited keys in some object patterns
+- Mutating array while looping can skip or reprocess elements
 
 ### Common mistakes
 
@@ -1263,6 +1437,8 @@ Attempt 3
 - Missing `break` inside `switch`
 - Writing complex `if` blocks without intermediate variables
 - Updating wrong loop variable, causing endless loop
+- Comparing numbers received as strings without conversion
+- Using deeply nested conditions instead of early returns
 
 ### Best practices
 
@@ -1271,6 +1447,9 @@ Attempt 3
 - Use parentheses in complex conditions for clarity
 - Keep `switch` cases explicit and always handle `default`
 - Use guard clauses to reduce deep nested `if` blocks
+- Validate input at the boundary (form/API layer) before comparisons
+- Prefer intention-revealing variable names like `isEligible`, `hasStock`
+- Add tests for boundary values (`0`, `1`, min, max, empty)
 
 ### Summary
 
