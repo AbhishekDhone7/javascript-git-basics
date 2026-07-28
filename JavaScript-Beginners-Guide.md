@@ -3860,29 +3860,29 @@ This diagram shows both inheritance (is-a) and composition (has-a) in one view.
 
 ### OOP interview table (concept ID + answer)
 
-| ID | Concept | Common interview question | Interview-ready answer |
-|---|---|---|---|
-| OOP-01 | Class and Object | What is class vs object in JavaScript? | A class is a blueprint that defines structure and behavior, while an object is a runtime instance created from that blueprint. |
-| OOP-02 | Encapsulation | What is encapsulation and why use it? | Encapsulation bundles data with methods and restricts direct access to internals, so state changes happen through controlled APIs. |
-| OOP-03 | Abstraction | Explain abstraction with an example. | Abstraction exposes only required operations and hides implementation details; for example, a `pay()` method hides gateway retries and validation logic. |
-| OOP-04 | Inheritance | What is inheritance in JavaScript? | Inheritance allows a child class to reuse parent behavior using `extends`, reducing duplication and enabling specialization via overridden methods. |
-| OOP-05 | Polymorphism | What is polymorphism? | Polymorphism means the same method name can produce different behavior based on object type, such as `pay()` in `CardPayment` and `UpiPayment`. |
-| OOP-06 | Composition | Composition vs inheritance: which is better? | Prefer composition when behavior must change independently; it is more flexible and testable, while inheritance is best for clear is-a relationships. |
-| OOP-07 | Static members | When should we use static methods? | Use static methods for utilities or factory behavior that belongs to the class itself and does not depend on instance state. |
-| OOP-08 | Getter/Setter | Why use getters and setters? | Getters and setters provide controlled property access, allowing validation, transformation, or side-effects while keeping a clean object API. |
+| Concept | Common interview question | Interview-ready answer |
+|---|---|---|
+| Class and Object | What is class vs object in JavaScript? | A class is a blueprint that defines structure and behavior, while an object is a runtime instance created from that blueprint. |
+| Encapsulation | What is encapsulation and why use it? | Encapsulation bundles data with methods and restricts direct access to internals, so state changes happen through controlled APIs. |
+| Abstraction | Explain abstraction with an example. | Abstraction exposes only required operations and hides implementation details; for example, a `pay()` method hides gateway retries and validation logic. |
+| Inheritance | What is inheritance in JavaScript? | Inheritance allows a child class to reuse parent behavior using `extends`, reducing duplication and enabling specialization via overridden methods. |
+| Polymorphism | What is polymorphism? | Polymorphism means the same method name can produce different behavior based on object type, such as `pay()` in `CardPayment` and `UpiPayment`. |
+| Composition | Composition vs inheritance: which is better? | Prefer composition when behavior must change independently; it is more flexible and testable, while inheritance is best for clear is-a relationships. |
+| Static members | When should we use static methods? | Use static methods for utilities or factory behavior that belongs to the class itself and does not depend on instance state. |
+| Getter/Setter | Why use getters and setters? | Getters and setters provide controlled property access, allowing validation, transformation, or side-effects while keeping a clean object API. |
 
 ### Rapid interview one-liners
 
-| ID | One-liner answer |
+| Concept | One-liner answer |
 |---|---|
-| OOP-01 | Class defines; object uses. |
-| OOP-02 | Hide data, expose safe methods. |
-| OOP-03 | Show interface, hide complexity. |
-| OOP-04 | Reuse parent behavior in child. |
-| OOP-05 | Same method, different runtime behavior. |
-| OOP-06 | Build objects from smaller reusable parts. |
-| OOP-07 | Class-level behavior without object creation. |
-| OOP-08 | Controlled read/write with validation. |
+| Class and Object | Class defines; object uses. |
+| Encapsulation | Hide data, expose safe methods. |
+| Abstraction | Show interface, hide complexity. |
+| Inheritance | Reuse parent behavior in child. |
+| Polymorphism | Same method, different runtime behavior. |
+| Composition | Build objects from smaller reusable parts. |
+| Static members | Class-level behavior without object creation. |
+| Getter/Setter | Controlled read/write with validation. |
 
 ### Real-world domain example: E-commerce Order System
 
@@ -4520,52 +4520,157 @@ DOM and events are the bridge between UI and JavaScript logic. Mastering selecti
 
 ### What is it?
 
-Async JavaScript handles tasks that take time without freezing the UI.
+Async JavaScript lets your app continue running while slow work (network, timers, file I/O) completes in the background.
 
-Important parts:
+Without async behavior, the UI would freeze until each slow operation finishes.
 
-- Callbacks
-- `setTimeout` / `setInterval`
-- Promises
-- `async` / `await`
-- Event loop and task queues
+Core pieces:
+
+- Call stack
+- Web APIs (browser) or runtime APIs (Node.js)
+- Callback queue (macrotask queue)
+- Microtask queue (Promise jobs)
+- Event loop scheduler
+
+### Why event loop matters
+
+Most interview confusion happens because developers know Promise and setTimeout syntax but do not know task priority rules.
+
+Event loop understanding helps you:
+
+- Predict exact log order
+- Avoid race conditions
+- Prevent UI jank and long blocking tasks
+- Debug async bugs faster
+
+### Event loop architecture
+
+```mermaid
+flowchart LR
+A[Call Stack] -->|empty?| B{Event Loop}
+C[Web APIs: timer/fetch/DOM] --> D[Task Queues]
+D --> E[Microtask Queue\nPromise.then catch finally\nqueueMicrotask]
+D --> F[Macrotask Queue\nsetTimeout setInterval UI events]
+B -->|1st priority| E
+B -->|2nd priority| F
+B --> A
+```
+
+### Step-by-step execution model
+
+1. Run synchronous code on call stack.
+2. Async operations go to Web APIs/runtime.
+3. Completed callbacks are queued.
+4. When stack is empty, event loop runs:
+   - Drain all microtasks first.
+   - Then run one macrotask.
+   - Repeat.
+
+### Queue priority diff table
+
+| Queue type | Examples | Priority | Execution behavior |
+|---|---|---|---|
+| Microtask | `Promise.then`, `catch`, `finally`, `queueMicrotask` | Higher | Drained fully before next macrotask |
+| Macrotask | `setTimeout`, `setInterval`, DOM events | Lower | One task per loop turn |
 
 ### Real-world scenario
 
-When user opens dashboard:
+Dashboard loading flow:
 
-- UI appears quickly
-- API requests run in background
-- Data cards update when response arrives
-
-### Flow diagram
+- show skeleton immediately (sync)
+- fetch metrics (async API)
+- Promise handlers update cards (microtask)
+- delayed tooltip animation (macrotask timer)
 
 ```mermaid
-flowchart TD
-A[Call async task] --> B[Browser/Web API handles timer or network]
-B --> C[Task callback queued]
-C --> D[Call stack empty?]
-D -- Yes --> E[Event loop pushes callback]
-E --> F[Callback executes]
+sequenceDiagram
+participant UI as UI Thread
+participant API as Fetch API
+participant MT as Microtask Queue
+participant MA as Macrotask Queue
+
+UI->>UI: Render skeleton (sync)
+UI->>API: fetch /metrics
+API-->>MT: Promise resolve handler queued
+UI->>MA: setTimeout(animation, 0)
+UI->>MT: Run Promise handler first
+UI->>MA: Then run timer callback
 ```
 
-### Code example
+### Example 1: Basic async ordering
 
 ```js
 console.log("Start");
-setTimeout(() => console.log("Timer done"), 0);
+setTimeout(() => console.log("Timer"), 0);
 console.log("End");
 ```
 
-### Output
+Output:
 
 ```txt
 Start
 End
-Timer done
+Timer
 ```
 
-### Promise + async/await example
+Why:
+
+- timer callback is macrotask
+- sync logs finish first
+
+### Example 2: Promise microtask vs timer macrotask
+
+```js
+console.log("A");
+
+setTimeout(() => console.log("setTimeout"), 0);
+
+Promise.resolve()
+  .then(() => console.log("promise then 1"))
+  .then(() => console.log("promise then 2"));
+
+console.log("B");
+```
+
+Output:
+
+```txt
+A
+B
+promise then 1
+promise then 2
+setTimeout
+```
+
+Why:
+
+- microtasks run before macrotasks
+- Promise chain continues in microtask queue
+
+### Example 3: Nested queues
+
+```js
+setTimeout(() => {
+  console.log("T1");
+  Promise.resolve().then(() => console.log("micro in T1"));
+}, 0);
+
+setTimeout(() => console.log("T2"), 0);
+```
+
+Output:
+
+```txt
+T1
+micro in T1
+T2
+```
+
+Why:
+
+- after macrotask T1 finishes, event loop drains microtasks before next macrotask T2
+
+### Example 4: async/await under the hood
 
 ```js
 function wait(ms) {
@@ -4573,39 +4678,167 @@ function wait(ms) {
 }
 
 async function run() {
-  console.log("A");
-  await wait(100);
-  console.log("B");
+  console.log("run start");
+  await wait(10);
+  console.log("run resume");
 }
 
+console.log("script start");
 run();
+console.log("script end");
 ```
 
-### Output
+Output:
 
 ```txt
-A
-B
+script start
+run start
+script end
+run resume
 ```
+
+Why:
+
+- async function starts synchronously until first await
+- continuation after await runs later as microtask when promise resolves
+
+### async/await flow diagram
+
+```mermaid
+flowchart TD
+A[Call async function] --> B[Execute sync part]
+B --> C[Hit await]
+C --> D[Pause function and return Promise]
+D --> E[Awaited Promise settles]
+E --> F[Queue continuation as microtask]
+F --> G[Resume function]
+```
+
+### Callback, Promise, async/await diff table
+
+| Style | Strength | Weakness | Best use |
+|---|---|---|---|
+| Callback | Simple for one step | Nested callback hell | Very small async tasks |
+| Promise | Better chaining and error flow | Can still become complex | Medium async workflows |
+| async/await | Most readable sequential style | Must handle errors carefully | API/service business logic |
+
+### Parallel async with Promise.all
+
+```js
+function api(name, delay) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(`${name} done`), delay);
+  });
+}
+
+async function loadAll() {
+  const [users, orders] = await Promise.all([
+    api("users", 100),
+    api("orders", 120)
+  ]);
+
+  console.log(users);
+  console.log(orders);
+}
+
+loadAll();
+```
+
+Output:
+
+```txt
+users done
+orders done
+```
+
+Use case:
+
+- When tasks are independent, run in parallel to reduce total wait time.
+
+### Error handling in async code
+
+```js
+async function getData() {
+  try {
+    const res = await fetch("https://jsonplaceholder.typicode.com/users/99999");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const data = await res.json();
+    console.log(data);
+  } catch (error) {
+    console.log("Request failed:", error.message);
+  } finally {
+    console.log("Request finished");
+  }
+}
+```
+
+### Event loop interview order problem
+
+```js
+console.log(1);
+
+setTimeout(() => console.log(2), 0);
+
+Promise.resolve().then(() => {
+  console.log(3);
+  setTimeout(() => console.log(4), 0);
+});
+
+Promise.resolve().then(() => console.log(5));
+
+console.log(6);
+```
+
+Expected output:
+
+```txt
+1
+6
+3
+5
+2
+4
+```
+
+Reason:
+
+- sync first: 1, 6
+- microtasks: 3 then 5
+- macrotasks in queue order: 2 then 4
+
+### Common async patterns in production
+
+- Debounce search input to reduce API calls
+- Retry transient failures with backoff
+- Cancel old requests when user types new query
+- Show loading, empty, success, and error states
 
 ### Edge cases
 
-- Callback hell with deeply nested callbacks
-- Unhandled promise rejection crashes flow
+- Long synchronous loops block event loop and freeze UI
+- Unhandled promise rejection can crash flow/log noise
+- setTimeout delay is minimum time, not exact guaranteed runtime
+- Promise chains without return can break data flow silently
 
 ### Common mistakes
 
-- Forgetting `await` before promise result
-- Mixing callbacks and promises without clear pattern
+- Mixing callbacks, then, and await in one function without plan
+- Forgetting to return promise in chain
+- Using await sequentially for independent APIs (slow)
+- Not checking HTTP status before parsing JSON
 
 ### Best practices
 
 - Prefer async/await for readability
-- Use `try...catch` around awaited calls
+- Use Promise.all for independent tasks
+- Use try/catch around awaited risky code
+- Keep heavy CPU work off main thread (Web Worker if needed)
+- Measure performance before optimizing queue behavior
 
 ### Summary
 
-Async JavaScript keeps apps responsive and is mandatory for API-driven apps.
+Async JavaScript and the event loop are the backbone of modern frontend behavior. If you understand stack, queues, and microtask priority, you can predict execution order, write responsive apps, and debug async issues confidently.
 
 ---
 
