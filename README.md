@@ -15,6 +15,7 @@ The goal is to make difficult topics easier by explaining:
 
 ## Repository Contents
 
+- [JavaScript/](JavaScript/)
 - [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md)
 - [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md)
 - [assets/screenshots](assets/screenshots)
@@ -24,6 +25,14 @@ The goal is to make difficult topics easier by explaining:
 - [Hoisting-TDZ.js](Hoisting-TDZ.js)
 - [coding-exercises.js](coding-exercises.js)
 - [dummy2.js](dummy2.js)
+
+## Structured JavaScript Syllabus
+
+A complete beginner-to-advanced JavaScript learning platform structure is available in:
+
+- [JavaScript/README.md](JavaScript/README.md)
+
+It includes a modular numbered folder hierarchy from setup and fundamentals to advanced topics, projects, and interview preparation.
 
 ## Complete Documentation Index
 
