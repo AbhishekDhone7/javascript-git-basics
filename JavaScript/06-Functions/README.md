@@ -8,10 +8,12 @@ Functions are the core unit of reuse, testing, and maintainable architecture in 
 
 ## Concepts Covered
 - Declaration vs expression
+- Function declaration, invocation, and return values
 - Arrow functions
 - IIFE and callbacks
 - Closures, currying, recursion
 - Function scope and outer-variable access
+- Parameter copy behavior and accidental-global pitfalls
 - Returning multiple values via array/object
 - Returning values vs returning functions
 

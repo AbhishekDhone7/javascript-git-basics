@@ -19,6 +19,8 @@ Correct handling of variables and scope prevents hidden bugs and improves mainta
 - Basic arithmetic with variable values
 - Practical scope behavior with `var`, `let`, and `const`
 - Hoisting differences and TDZ error demonstrations
+- Function declaration vs function expression hoisting
+- Nested-scope hoisting behavior
 
 ## Learning Objectives
 By the end of this section, you should be able to:

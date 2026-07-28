@@ -19,6 +19,8 @@ Business logic is built from conditions and loops, so this section is foundation
 - `break` and `continue` in loops
 - switch fall-through behavior
 - for...of vs for...in
+- Iterating nested arrays and nested objects
+- Safe object iteration with own-property checks
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -34,9 +36,10 @@ By the end of this section, you should be able to:
 5. Continue with `for-loop-patterns-break-and-continue.js`.
 6. Continue with `while-and-do-while-loop-patterns.js`.
 7. Continue with `switch-statement-and-fallthrough.js`.
-8. Verify postfix and prefix outputs manually.
-9. Focus on precedence and associativity examples, then rewrite them with parentheses.
-10. Add your own notes for confusing edge cases.
+8. Continue with `for-in-vs-for-of-iteration-patterns.js`.
+9. Verify postfix and prefix outputs manually.
+10. Focus on precedence and associativity examples, then rewrite them with parentheses.
+11. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 04-Type-Coercion-and-Equality
@@ -50,6 +53,7 @@ By the end of this section, you should be able to:
 - `for-loop-patterns-break-and-continue.js` - for-loop patterns with nested loops, break, and continue
 - `while-and-do-while-loop-patterns.js` - while vs do-while examples and array iteration
 - `switch-statement-and-fallthrough.js` - switch syntax, grouped cases, and fall-through behavior
+- `for-in-vs-for-of-iteration-patterns.js` - Practical comparison of iteration styles across arrays, strings, and objects
 
 ## Real-World Applications
 Discount systems, inventory checks, and access control all rely on control flow.

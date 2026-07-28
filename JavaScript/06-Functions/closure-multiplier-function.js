@@ -17,5 +17,19 @@ const multiply = createMultiplier();
 console.log(multiply(4)); // 36
 console.log(multiply(2)); // 72
 
+// Same closure idea using a function expression.
+const createMultiplierExpression = function () {
+  let multiplierState = 9;
+
+  return function multiplyWithState(value) {
+    multiplierState = multiplierState * value;
+    return multiplierState;
+  };
+};
+
+const multiplyFromExpression = createMultiplierExpression();
+console.log(multiplyFromExpression(4)); // 36
+console.log(multiplyFromExpression(3)); // 108
+
 // Parent function variable is not directly accessible outside.
 // console.log(multiplierState); // ReferenceError

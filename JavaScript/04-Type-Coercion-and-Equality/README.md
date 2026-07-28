@@ -13,6 +13,8 @@ Type coercion mistakes are a common interview and production failure point.
 - Comparison edge cases
 - Unary plus, Number(), String(), and Boolean() conversions
 - NaN behavior and safe NaN checks
+- `null` and `undefined` comparison gotchas
+- Reference equality for arrays and objects
 
 ## Learning Objectives
 By the end of this section, you should be able to:
