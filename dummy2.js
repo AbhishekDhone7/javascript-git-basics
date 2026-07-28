@@ -19,6 +19,7 @@ let str = "welcome to javascript world";
   console.log("after unshift operation : ",arr);
 
 
+
   //============//
 
   let arr = [1,2,3,4,5];
@@ -58,9 +59,8 @@ console.log("reverse : ",str2);
 
 let input1 = "madam";
 let output1 = input1.split("").reverse().join("");
-let input2 = "hello";
-let output2 = input2.split("").reverse().join("");
-console.log("palindrome : ",output1 === output2);
+
+console.log("palindrome : ",input1 === output2);
 
 let input3 =[12, 45, 2, 89, 34];
  let sorted = input3.sort((a,b)=>a-b);
@@ -83,3 +83,24 @@ function vowels(input){
 }
 
 console.log(vowels(input4))
+
+//1. Find the Largest Number in an Array
+
+function findLargestNum(arr)
+{
+  let max = arr[0];
+  for(let i=1; i<arr.length; i++)
+  {
+    if(arr[i] > max)
+    {
+      max=arr[i];
+    }
+  }
+  return max;
+}
+console.log(findLargestNum([10,45,20,99,67]))
+
+//way-2
+const arr=[10,5,30,2,15];
+const max = Math.max(...arr);
+console.log(max);
