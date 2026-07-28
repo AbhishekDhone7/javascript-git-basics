@@ -1,16 +1,17 @@
-# Git Practice Workspace
+﻿# Git and JavaScript Practice Workspace
 
-This workspace contains beginner-friendly Git learning material, visual examples, and practice JavaScript files.
+This workspace contains beginner-friendly Git learning material, a JavaScript beginner guide, visual examples, and practice JavaScript files.
 
 ## What’s Inside
 
 - [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md) - a complete Git guide with workflows, commands, merge conflicts, diagrams, and interview questions.
-- [assets/screenshots](assets/screenshots) - realistic PNG mock screenshots used in the Git documentation.
-- [Array.js](Array.js), [dummy2.js](dummy2.js), and [Hoisting-TDZ.js](Hoisting-TDZ.js) - practice JavaScript files.
+- [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md) - a complete JavaScript fundamentals guide with execution context, hoisting, TDZ, functions, closures, currying, Mermaid diagrams, examples, and edge cases.
+- [assets/screenshots](assets/screenshots) - PNG resources used across documentation.
+- [Array.js](Array.js), [dummy2.js](dummy2.js), [Hoisting-TDZ.js](Hoisting-TDZ.js), [functions.js](functions.js), [String.js](String.js), and [coding-exercises.js](coding-exercises.js) - practice JavaScript files.
 
-## Git Guide Preview
+## Documentation Coverage
 
-The Git documentation covers:
+### Git Guide Highlights
 
 - Git basics and the difference between Git and GitHub
 - Repository initialization and daily workflow
@@ -18,13 +19,24 @@ The Git documentation covers:
 - Merge conflict scenarios and fixes
 - Command cheat sheet, common errors, best practices, and interview questions
 
+### JavaScript Guide Highlights
+
+- JavaScript basics from scratch
+- Global and Function Execution Context
+- Memory Creation Phase and Execution Phase
+- Hoisting, TDZ, and var/let/const differences
+- Function Declaration, Function Expression, and Arrow Functions
+- Closures and Currying with beginner examples
+- Real-world edge cases and interview question bank
+
 ## How to Use
 
-1. Open [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md) to read the full guide.
-2. Review the screenshots in [assets/screenshots](assets/screenshots).
-3. Use the practice JavaScript files to try Git commands locally.
+1. Start with [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md) if you are learning version control.
+2. Read [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md) for JavaScript fundamentals.
+3. Review images in [assets/screenshots](assets/screenshots) when referenced by the docs.
+4. Practice concepts in the JavaScript files at workspace root.
 
-## Recommended Next Steps
+## Recommended Command Practice
 
 If you are learning Git, start here:
 
@@ -37,11 +49,10 @@ git remote add origin <your-repo-url>
 git push -u origin main
 ```
 
-Then follow the daily workflow in the Git guide:
+Then follow your daily workflow:
 
 ```bash
 git add .
 git commit -m "Your message"
 git push
 ```
-
