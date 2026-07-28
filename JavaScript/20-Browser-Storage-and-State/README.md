@@ -1,43 +1,24 @@
-# 20-Browser-Storage-and-State
+﻿# 20-Browser-Storage-and-State
 
-## Introduction
-This section is part of the complete JavaScript syllabus and focuses on **Browser Storage and State**.
+## Focus
+This section covers **Browser Storage and State** as part of the complete JavaScript learning path.
 
-## Why This Topic Matters
-State and storage decisions directly affect UX, reliability, and data consistency.
+## Learning Goals
+By finishing this section, you should be able to explain and apply core concepts of **Browser Storage and State** with working code examples.
 
-## Concepts Covered
-- Storage APIs
-- State modeling basics
-- Persistence strategies
-- Data expiration and cleanup
+## Files In This Folder
+- `browser-storage-session-state-and-expiration.js`
 
-## Learning Objectives
-By the end of this section, you should be able to:
-- Use localStorage/sessionStorage safely
-- Model client state thoughtfully
-- Handle sync and persistence trade-offs
+## Practice Checklist
+1. Read each file from top to bottom and run it locally.
+2. Predict output before execution, then verify in terminal or browser console.
+3. Rewrite one example in your own style without changing behavior.
+4. Note one edge case and document it in your study notes.
 
-## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+## Sequence
+- Prerequisite: 19-Modules-and-Tooling
+- Next: 21-Patterns-and-Architecture
 
-## Prerequisites
-19-Modules-and-Tooling
-
-## Folder Contents
-- README.md (this guide)
-- `browser-storage-session-state-and-expiration.js` - State snapshots, storage behavior, and expiration patterns
-
-## Real-World Applications
-Shopping carts, preferences, and draft forms depend on robust client-side state handling.
-
-## Next Topic
-- [21-Patterns-and-Architecture](../21-Patterns-and-Architecture/README.md)
-
-## Related Topics
-- [13-DOM-and-Events](../13-DOM-and-Events/README.md)
-- [21-Patterns-and-Architecture](../21-Patterns-and-Architecture/README.md)
+## Quick Tip
+Keep commits small while practicing. Commit after each concept so your Git history doubles as your revision timeline.
 

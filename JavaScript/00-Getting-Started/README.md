@@ -1,48 +1,25 @@
-# 00-Getting-Started
+﻿# 00-Getting-Started
 
-## Introduction
-This section is part of the complete JavaScript syllabus and focuses on **Getting Started**.
+## Focus
+This section covers **Getting Started** as part of the complete JavaScript learning path.
 
-## Why This Topic Matters
-This section helps beginners set up their learning environment and understand how to study JavaScript effectively.
+## Learning Goals
+By finishing this section, you should be able to explain and apply core concepts of **Getting Started** with working code examples.
 
-## Concepts Covered
-- How to use this syllabus
-- Developer setup checklist
-- Running code in browser and Node.js
-- How to practice effectively
-- First JavaScript program using console output
-- Different ways to run JavaScript programs
+## Files In This Folder
+- `first-console-output.js`
+- `run-javascript-in-different-environments.js`
 
-## Learning Objectives
-By the end of this section, you should be able to:
-- Set up editor and runtime
-- Run first JavaScript programs
-- Follow a productive learning workflow
+## Practice Checklist
+1. Read each file from top to bottom and run it locally.
+2. Predict output before execution, then verify in terminal or browser console.
+3. Rewrite one example in your own style without changing behavior.
+4. Note one edge case and document it in your study notes.
 
-## Recommended Learning Order
-1. Start with `first-console-output.js`.
-2. Run it in Node.js and observe `log`, `warn`, and `error` output styles.
-3. Continue with `run-javascript-in-different-environments.js`.
-4. Try at least two run methods (browser console and Node.js script).
-5. Add your own notes for confusing edge cases.
+## Sequence
+- Prerequisite: None. This is the first section in the track.
+- Next: 01-Introduction
 
-## Prerequisites
-None. This is the starting point.
-
-## Folder Contents
-- README.md (this guide)
-- `first-console-output.js` - Beginner starter for running JavaScript and using console methods
-- `run-javascript-in-different-environments.js` - Practical overview of browser, REPL, Node.js, and online run options
-
-## Real-World Applications
-Teams onboard new developers faster when setup and workflow are standardized.
-
-## Next Topic
-- [01-Introduction](../01-Introduction/README.md)
-
-## Related Topics
-- [01-Introduction](../01-Introduction/README.md)
-- [28-Coding-Exercises](../28-Coding-Exercises/README.md)
-- [25-Nodejs-Fundamentals](../25-Nodejs-Fundamentals/README.md)
+## Quick Tip
+Keep commits small while practicing. Commit after each concept so your Git history doubles as your revision timeline.
 

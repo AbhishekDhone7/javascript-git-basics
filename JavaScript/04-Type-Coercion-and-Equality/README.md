@@ -1,50 +1,26 @@
-# 04-Type-Coercion-and-Equality
+﻿# 04-Type-Coercion-and-Equality
 
-## Introduction
-This section is part of the complete JavaScript syllabus and focuses on **Type Coercion and Equality**.
+## Focus
+This section covers **Type Coercion and Equality** as part of the complete JavaScript learning path.
 
-## Why This Topic Matters
-Type coercion mistakes are a common interview and production failure point.
+## Learning Goals
+By finishing this section, you should be able to explain and apply core concepts of **Type Coercion and Equality** with working code examples.
 
-## Concepts Covered
-- Implicit and explicit conversion
-- == vs ===
-- Truthy and falsy values
-- Comparison edge cases
-- Unary plus, Number(), String(), and Boolean() conversions
-- NaN behavior and safe NaN checks
-- `null` and `undefined` comparison gotchas
-- Reference equality for arrays and objects
+## Files In This Folder
+- `equality-and-comparison-coercion.js`
+- `implicit-and-explicit-type-coercion.js`
+- `truthy-falsy-and-nan-checks.js`
 
-## Learning Objectives
-By the end of this section, you should be able to:
-- Use strict equality safely
-- Convert values explicitly
-- Recognize truthy/falsy traps
+## Practice Checklist
+1. Read each file from top to bottom and run it locally.
+2. Predict output before execution, then verify in terminal or browser console.
+3. Rewrite one example in your own style without changing behavior.
+4. Note one edge case and document it in your study notes.
 
-## Recommended Learning Order
-1. Start with `implicit-and-explicit-type-coercion.js`.
-2. Continue with `equality-and-comparison-coercion.js`.
-3. Finish with `truthy-falsy-and-nan-checks.js`.
-4. Write one variation of each example.
-5. Add your own notes for confusing edge cases.
+## Sequence
+- Prerequisite: 03-Variables-Scope-and-Data-Types
+- Next: 05-Operators-Control-Flow-and-Loops
 
-## Prerequisites
-03-Variables-Scope-and-Data-Types
-
-## Folder Contents
-- README.md (this guide)
-- `implicit-and-explicit-type-coercion.js` - Core implicit and explicit conversion examples
-- `equality-and-comparison-coercion.js` - Loose/strict equality and comparison coercion
-- `truthy-falsy-and-nan-checks.js` - Truthy/falsy values and NaN validation patterns
-
-## Real-World Applications
-Validation and pricing logic fail silently when types are not controlled.
-
-## Next Topic
-- [05-Operators-Control-Flow-and-Loops](../05-Operators-Control-Flow-and-Loops/README.md)
-
-## Related Topics
-- [05-Operators-Control-Flow-and-Loops](../05-Operators-Control-Flow-and-Loops/README.md)
-- [16-Error-Handling-and-Debugging](../16-Error-Handling-and-Debugging/README.md)
+## Quick Tip
+Keep commits small while practicing. Commit after each concept so your Git history doubles as your revision timeline.
 

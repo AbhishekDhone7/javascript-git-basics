@@ -1,67 +1,31 @@
-# 05-Operators-Control-Flow-and-Loops
+﻿# 05-Operators-Control-Flow-and-Loops
 
-## Introduction
-This section is part of the complete JavaScript syllabus and focuses on **Operators Control Flow and Loops**.
+## Focus
+This section covers **Operators Control Flow and Loops** as part of the complete JavaScript learning path.
 
-## Why This Topic Matters
-Business logic is built from conditions and loops, so this section is foundational for problem solving.
+## Learning Goals
+By finishing this section, you should be able to explain and apply core concepts of **Operators Control Flow and Loops** with working code examples.
 
-## Concepts Covered
-- Operators
-- Arithmetic operators (`+`, `-`, `*`, `/`, `%`, `++`, `--`, `**`)
-- Prefix vs postfix unary behavior (`x++` vs `++x`)
-- Operator precedence and associativity
-- if-else and switch
-- else-if chains and nested if blocks
-- Ternary operator for concise branching
-- Logical operators (`&&`, `||`) in conditions
-- for/while/do-while
-- `break` and `continue` in loops
-- switch fall-through behavior
-- for...of vs for...in
-- Iterating nested arrays and nested objects
-- Safe object iteration with own-property checks
+## Files In This Folder
+- `arithmetic-operators-precedence-and-associativity.js`
+- `for-in-vs-for-of-iteration-patterns.js`
+- `for-loop-patterns-break-and-continue.js`
+- `if-else-else-if-and-nested-conditionals.js`
+- `switch-statement-and-fallthrough.js`
+- `ternary-and-logical-operators-in-conditions.js`
+- `unary-increment-decrement-prefix-postfix.js`
+- `while-and-do-while-loop-patterns.js`
 
-## Learning Objectives
-By the end of this section, you should be able to:
-- Build clear branching logic
-- Use loops safely
-- Prevent infinite loop and precedence bugs
+## Practice Checklist
+1. Read each file from top to bottom and run it locally.
+2. Predict output before execution, then verify in terminal or browser console.
+3. Rewrite one example in your own style without changing behavior.
+4. Note one edge case and document it in your study notes.
 
-## Recommended Learning Order
-1. Start with `arithmetic-operators-precedence-and-associativity.js`.
-2. Continue with `unary-increment-decrement-prefix-postfix.js`.
-3. Continue with `if-else-else-if-and-nested-conditionals.js`.
-4. Continue with `ternary-and-logical-operators-in-conditions.js`.
-5. Continue with `for-loop-patterns-break-and-continue.js`.
-6. Continue with `while-and-do-while-loop-patterns.js`.
-7. Continue with `switch-statement-and-fallthrough.js`.
-8. Continue with `for-in-vs-for-of-iteration-patterns.js`.
-9. Verify postfix and prefix outputs manually.
-10. Focus on precedence and associativity examples, then rewrite them with parentheses.
-11. Add your own notes for confusing edge cases.
+## Sequence
+- Prerequisite: 04-Type-Coercion-and-Equality
+- Next: 06-Functions
 
-## Prerequisites
-04-Type-Coercion-and-Equality
-
-## Folder Contents
-- README.md (this guide)
-- `arithmetic-operators-precedence-and-associativity.js` - Core arithmetic operators with precedence and associativity examples
-- `unary-increment-decrement-prefix-postfix.js` - Prefix vs postfix increment/decrement behavior and assignment effects
-- `if-else-else-if-and-nested-conditionals.js` - if/else patterns, else-if chains, and nested conditionals
-- `ternary-and-logical-operators-in-conditions.js` - Ternary usage and logical condition combinations
-- `for-loop-patterns-break-and-continue.js` - for-loop patterns with nested loops, break, and continue
-- `while-and-do-while-loop-patterns.js` - while vs do-while examples and array iteration
-- `switch-statement-and-fallthrough.js` - switch syntax, grouped cases, and fall-through behavior
-- `for-in-vs-for-of-iteration-patterns.js` - Practical comparison of iteration styles across arrays, strings, and objects
-
-## Real-World Applications
-Discount systems, inventory checks, and access control all rely on control flow.
-
-## Next Topic
-- [06-Functions](../06-Functions/README.md)
-
-## Related Topics
-- [06-Functions](../06-Functions/README.md)
-- [09-Arrays](../09-Arrays/README.md)
+## Quick Tip
+Keep commits small while practicing. Commit after each concept so your Git history doubles as your revision timeline.
 

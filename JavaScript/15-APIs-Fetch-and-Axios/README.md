@@ -1,48 +1,25 @@
-# 15-APIs-Fetch-and-Axios
+﻿# 15-APIs-Fetch-and-Axios
 
-## Introduction
-This section is part of the complete JavaScript syllabus and focuses on **APIs Fetch and Axios**.
+## Focus
+This section covers **APIs Fetch and Axios** as part of the complete JavaScript learning path.
 
-## Why This Topic Matters
-Most applications are data-driven and must communicate reliably with backend services.
+## Learning Goals
+By finishing this section, you should be able to explain and apply core concepts of **APIs Fetch and Axios** with working code examples.
 
-## Concepts Covered
-- HTTP methods and status codes
-- Fetch patterns
-- Axios patterns
-- Request cancellation and retries
-- RESTful APIs and CRUD mapping
-- Response handling, content types, and sequential requests
+## Files In This Folder
+- `axios-basics-and-http-methods.js`
+- `restful-apis-with-fetch-and-http-methods.js`
 
-## Learning Objectives
-By the end of this section, you should be able to:
-- Understand REST fundamentals
-- Build robust API clients
-- Handle loading and failure states
+## Practice Checklist
+1. Read each file from top to bottom and run it locally.
+2. Predict output before execution, then verify in terminal or browser console.
+3. Rewrite one example in your own style without changing behavior.
+4. Note one edge case and document it in your study notes.
 
-## Recommended Learning Order
-1. Start with `restful-apis-with-fetch-and-http-methods.js`.
-2. Continue with `axios-basics-and-http-methods.js`.
-3. Read the concepts in the listed topic order.
-4. Run every code sample manually.
-5. Write one variation of each example.
-6. Add your own notes for confusing edge cases.
+## Sequence
+- Prerequisite: 14-Async-JavaScript-and-Event-Loop
+- Next: 16-Error-Handling-and-Debugging
 
-## Prerequisites
-14-Async-JavaScript-and-Event-Loop
-
-## Folder Contents
-- README.md (this guide)
-- `restful-apis-with-fetch-and-http-methods.js` - REST basics, fetch requests, response handling, and async API patterns
-- `axios-basics-and-http-methods.js` - Axios request patterns, error handling, cancellation, and sequential requests
-
-## Real-World Applications
-Product lists, authentication, and checkout pipelines all depend on API integration.
-
-## Next Topic
-- [16-Error-Handling-and-Debugging](../16-Error-Handling-and-Debugging/README.md)
-
-## Related Topics
-- [16-Error-Handling-and-Debugging](../16-Error-Handling-and-Debugging/README.md)
-- [24-Security-and-Safe-Coding](../24-Security-and-Safe-Coding/README.md)
+## Quick Tip
+Keep commits small while practicing. Commit after each concept so your Git history doubles as your revision timeline.
 
