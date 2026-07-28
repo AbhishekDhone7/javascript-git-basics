@@ -2502,16 +2502,72 @@ Array methods are the backbone of JavaScript data processing. Choosing the right
 
 Object stores key-value pairs.
 
+Object is used to model real-world entities like:
+
+- user profile
+- product
+- order
+- invoice
+- app configuration
+
+In objects:
+
+- key is property name
+- value can be any type (string, number, array, object, function)
+
 Common operations:
 
 - Create and update properties
-- Optional chaining `?.`
+- Read values using dot and bracket notation
+- Optional chaining `?.` for safe nested reads
 - Destructuring for clean extraction
 - Object methods for behavior
+- Merge and copy objects using spread or `Object.assign`
+
+### Object structure diagram
+
+```mermaid
+flowchart TD
+A[Object] --> B[Primitive properties]
+A --> C[Nested object]
+A --> D[Array property]
+A --> E[Method function]
+```
+
+### Access and update flow
+
+```mermaid
+flowchart LR
+A[Need object value] --> B{Property exists?}
+B -- Yes --> C[Read/Update value]
+B -- No --> D{Use optional chaining?}
+D -- Yes --> E[Get undefined safely]
+D -- No --> F[Possible runtime error]
+```
+
+### Object method quick table
+
+| Pattern | What it does | Real-world use |
+|---|---|---|
+| Dot notation | Read fixed property name | `user.name` |
+| Bracket notation | Read dynamic property key | `user[fieldName]` |
+| Optional chaining | Safe nested access | `user.address?.city` |
+| Destructuring | Extract fields quickly | `const { name, role } = user` |
+| Spread copy | Shallow copy/merge | update profile settings |
+| `Object.keys` | Get property names | table headers/filter fields |
+| `Object.values` | Get property values | summary panels |
+| `Object.entries` | Key-value iteration | generic renderers |
+| `Object.freeze` | Prevent modifications | protect constants/config |
 
 ### Real-world scenario
 
 User profile object stores name, email, role, preferences, address, and methods like `getDisplayName()`.
+
+Additional production scenarios:
+
+- API response normalization before rendering UI
+- Role-based access checks from user object
+- Creating updated object state without mutating old state
 
 ### Flow diagram
 
@@ -2522,11 +2578,11 @@ B --> C[Validate Required Fields]
 C --> D[Render Profile]
 ```
 
-### Code example
+### Code example 1: Create and read object
 
 ```js
 const user = {
-  name: "Riya",
+  name: "Nisha",
   role: "admin",
   isActive: true
 };
@@ -2537,27 +2593,171 @@ console.log(user.name, user.role);
 ### Output
 
 ```txt
-Riya admin
+Nisha admin
 ```
+
+### Code example 2: Dot vs bracket notation
+
+```js
+const product = {
+  id: 101,
+  name: "Notebook",
+  price: 120
+};
+
+const dynamicKey = "price";
+
+console.log(product.name);       // dot notation
+console.log(product[dynamicKey]); // bracket notation
+```
+
+### Output
+
+```txt
+Notebook
+120
+```
+
+### Code example 3: Nested object + optional chaining
+
+```js
+const order = {
+  id: "ORD-1",
+  customer: {
+    name: "Nisha",
+    address: { city: "Pune" }
+  }
+};
+
+console.log(order.customer.address.city);
+console.log(order.customer.contact?.phone);
+```
+
+### Output
+
+```txt
+Pune
+undefined
+```
+
+### Code example 4: Destructuring
+
+```js
+const profile = {
+  name: "Nisha",
+  role: "editor",
+  stats: { posts: 14 }
+};
+
+const { name, role } = profile;
+const { posts } = profile.stats;
+console.log(name, role, posts);
+```
+
+### Output
+
+```txt
+Nisha editor 14
+```
+
+### Code example 5: Immutable-style update with spread
+
+```js
+const state = {
+  user: { name: "Nisha", city: "Pune" },
+  theme: "light"
+};
+
+const nextState = {
+  ...state,
+  user: { ...state.user, city: "Mumbai" }
+};
+
+console.log(state.user.city);
+console.log(nextState.user.city);
+```
+
+### Output
+
+```txt
+Pune
+Mumbai
+```
+
+### Code example 6: Object iteration helpers
+
+```js
+const metrics = { users: 12, orders: 7, revenue: 4200 };
+
+console.log(Object.keys(metrics));
+console.log(Object.values(metrics));
+
+for (const [key, value] of Object.entries(metrics)) {
+  console.log(`${key}: ${value}`);
+}
+```
+
+### Output
+
+```txt
+[ 'users', 'orders', 'revenue' ]
+[ 12, 7, 4200 ]
+users: 12
+orders: 7
+revenue: 4200
+```
+
+### Code example 7: `Object.freeze()` for protected configuration
+
+```js
+const config = Object.freeze({
+  appName: "ShopEasy",
+  version: "1.0.0"
+});
+
+config.version = "2.0.0"; // ignored in non-strict mode
+console.log(config.version);
+```
+
+### Output
+
+```txt
+1.0.0
+```
+
+### Scenario checklist for objects
+
+- Is object shape consistent across API responses?
+- Are you mutating shared object by mistake?
+- Do you need safe nested read (`?.`)?
+- Should this update be immutable (spread/assign)?
+- Are dynamic keys needed (bracket notation)?
 
 ### Edge cases
 
 - Accessing missing nested property throws error without optional chaining
 - Shallow copy can still share nested object references
+- `Object.freeze()` is shallow, nested objects can still change
+- Two objects with same content are not equal by reference (`{} === {}` is false)
 
 ### Common mistakes
 
 - Mutating shared objects directly
 - Assuming spread makes deep copy
+- Using dot notation for dynamic keys (fails in many cases)
+- Forgetting default value while destructuring optional fields
 
 ### Best practices
 
 - Use optional chaining for safe reads
 - Use object spread for safe shallow updates
+- Prefer clear object schema and predictable property names
+- Use `Object.entries` for generic key-value rendering
+- Keep methods small and avoid mixing too much business logic in one object
 
 ### Summary
 
-Objects represent real-world entities and structured application data.
+Objects represent real-world entities and structured application data. Mastering access, update, and safe-read patterns is essential for production JavaScript.
 
 ---
 
