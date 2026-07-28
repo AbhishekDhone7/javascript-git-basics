@@ -14,7 +14,7 @@ Understanding prototypal inheritance and class syntax enables scalable object-or
 - Getter/setter accessors on objects and classes
 - Class syntax
 - Inheritance and polymorphism
-- Getters, setters, static members
+- Getters, setters, static methods, and static properties
 
 ## Learning Objectives
 By the end of this section, you should be able to:

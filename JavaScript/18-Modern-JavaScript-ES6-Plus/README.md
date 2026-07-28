@@ -7,11 +7,14 @@ This section is part of the complete JavaScript syllabus and focuses on **Modern
 Modern syntax improves code clarity, maintainability, and collaboration across teams.
 
 ## Concepts Covered
+- let and const
 - Destructuring and spread
+- Rest parameters and spread syntax
 - Optional chaining and nullish coalescing
 - Template literals and defaults
 - Logical assignment operators
 - Arrow functions and lexical `this`
+- Classes, Map, Set, Symbol, generators, Proxy, Reflect, and Intl
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -21,9 +24,12 @@ By the end of this section, you should be able to:
 
 ## Recommended Learning Order
 1. Start with `arrow-functions-and-lexical-this.js`.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+2. Continue with `destructuring-assignment.js`.
+3. Continue with `rest-parameters-and-spread-syntax.js`.
+4. Continue with `es6-features-overview.js`.
+5. Run every code sample manually.
+6. Write one variation of each example.
+7. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 17-Built-in-Objects-Date-Map-Set
@@ -31,6 +37,9 @@ By the end of this section, you should be able to:
 ## Folder Contents
 - README.md (this guide)
 - `arrow-functions-and-lexical-this.js` - Arrow syntax, implicit returns, callbacks, and lexical `this` behavior
+- `destructuring-assignment.js` - Object and array destructuring, defaults, rest, and function parameter patterns
+- `rest-parameters-and-spread-syntax.js` - Rest parameters, spread syntax, arguments object comparisons, and array/object expansion
+- `es6-features-overview.js` - Overview of core ES6 language features and selected built-ins
 
 ## Real-World Applications
 Modern codebases expect ES6+ fluency in reviews and interviews.

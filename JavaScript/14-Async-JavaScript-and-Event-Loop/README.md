@@ -9,6 +9,8 @@ Async behavior controls responsiveness, data loading, and execution order in mod
 ## Concepts Covered
 - Call stack and queues
 - Microtasks vs macrotasks
+- Timers with `setTimeout` and `setInterval`
+- Event loop ordering and scheduling
 - Promises and combinators
 - async/await patterns
 
@@ -19,17 +21,22 @@ By the end of this section, you should be able to:
 - Prevent race and ordering issues
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with `timers-with-settimeout-and-setinterval.js`.
+2. Continue with `event-loop-call-stack-microtasks-and-macrotasks.js`.
+3. Continue with `promises-and-async-await-basics.js`.
+4. Read the concepts in the listed topic order.
+5. Run every code sample manually.
+6. Write one variation of each example.
+7. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 13-DOM-and-Events
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `timers-with-settimeout-and-setinterval.js` - Delayed callbacks, repeated timers, countdowns, and stopping intervals
+- `event-loop-call-stack-microtasks-and-macrotasks.js` - Execution order, microtasks, macrotasks, and async function scheduling
+- `promises-and-async-await-basics.js` - Promise states, handlers, chaining, combinators, and async/await basics
 
 ## Real-World Applications
 Search, live updates, and background loading rely on safe async orchestration.

@@ -79,3 +79,102 @@ in MP they call me ${lastNameB} and
 in GJ call me ${false ? "P" : lastNameC}`;
 
 console.log("Template literal output:\n" + profileText);
+
+// Basic template literal usage versus concatenation.
+const traditionalGreeting = "Hello, " + "World!";
+console.log(traditionalGreeting);
+
+const templateGreeting = `Hello, World!`;
+console.log(templateGreeting);
+
+// String interpolation and expressions.
+const name = "Alice";
+const age = 25;
+const traditionalIntroduction = "My name is " + name + " and I am " + age + " years old.";
+console.log(traditionalIntroduction);
+
+const templateIntroduction = `My name is ${name} and I am ${age} years old.`;
+console.log(templateIntroduction);
+
+const price = 10;
+const taxRate = 0.05;
+const total = `Total: $${price * (1 + taxRate)}`;
+console.log(total);
+
+// Multi-line template literals.
+const traditionalAddress =
+  "123 Main St.\n" +
+  "Anytown, USA\n" +
+  "12345";
+console.log(traditionalAddress);
+
+const templateAddress =
+  `123 Main St.
+Anytown, USA
+12345`;
+console.log(templateAddress);
+
+// Nested template literals.
+const orderUser = { id: 1, name: "John Doe" };
+const item = { id: 2, name: "Widget", price: 9.99 };
+const orderMessage = `Order Details:
+User: ${orderUser.name} (ID: ${orderUser.id})
+Item: ${item.name} (ID: ${item.id}, Price: $${item.price})`;
+console.log(orderMessage);
+
+// Tagged template literals.
+function highlight(strings, ...values) {
+  console.log("Strings:", strings);
+  console.log("Values:", values);
+  return "Processed String";
+}
+
+const quantity = 3;
+const pricePerUnit = 5;
+const taggedResult = highlight`You bought ${quantity} units at $${pricePerUnit} each.`;
+console.log(taggedResult);
+
+// Advanced expression interpolation.
+function double(x) {
+  return x * 2;
+}
+
+const number = 4;
+const resultExpression = `Double of ${number} is ${double(number)}.`;
+console.log(resultExpression);
+
+// Conditional expressions inside template literals.
+const isLoggedIn = true;
+const userName = "Jane Doe";
+const loginMessage = `User status: ${isLoggedIn ? `Logged in as ${userName}` : "Not logged in"}.`;
+console.log(loginMessage);
+
+// Template literals with array methods.
+const fruitListSource = ["Apple", "Banana", "Cherry"];
+const fruitList = `Fruits: ${fruitListSource.map((fruit) => fruit).join(", ")}.`;
+console.log(fruitList);
+
+// Escaping backticks inside template literals.
+const codeSnippet = `Here's some code: \`${double.toString()}\``;
+console.log(codeSnippet);
+
+// Nested template literal with conditional branch.
+const student = { name: "Emily", grade: 90 };
+const studentInfo = `Student Info:
+- Name: ${student.name}
+- Grade: ${student.grade >= 90 ? `A (Score: ${student.grade})` : "B or below"}`;
+console.log(studentInfo);
+
+// Tagged template for custom formatting.
+function style(strings, ...values) {
+  let output = "";
+  strings.forEach((string, index) => {
+    output += `${string}${values[index] ? `<span style="color: red;">${values[index]}</span>` : ""}`;
+  });
+  return output;
+}
+
+const errorMessage = "Unexpected token";
+const lineNumber = 10;
+const styledMessage = style`Error: ${errorMessage} at line ${lineNumber}.`;
+console.log(styledMessage);

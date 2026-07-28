@@ -266,3 +266,113 @@ console.log("CoffeeMachine waterAmount:", cm1.waterAmount);
 cm1.waterAmount = -10;
 console.log("CoffeeMachine waterAmount after negative:", cm1.waterAmount);
 console.log("CoffeeMachine power:", cm1.power);
+
+// ---------------- Static methods and static properties ----------------
+class User1 {
+  static userStaticMethod() {
+    console.log("Hi this is a static method of User1");
+  }
+}
+
+class User2 {
+  userStaticMethod = function () {
+    console.log("Hi this is an instance method of User2");
+  };
+}
+
+class User3 {
+  userStaticMethod() {
+    console.log("Hi this is a prototype method of User3");
+  }
+}
+
+User1.userStaticMethod();
+
+const obj2 = new User2();
+obj2.userStaticMethod();
+
+const obj3 = new User3();
+obj3.userStaticMethod();
+
+class ArticleStatic {
+  constructor(name, date) {
+    this.name = name;
+    this.date = date;
+  }
+
+  static compare(articleA, articleB) {
+    return articleA.date - articleB.date;
+  }
+
+  static printArticle(article) {
+    return `Article name: ${article.name}, Article date: ${article.date}`;
+  }
+}
+
+const articles = [
+  new ArticleStatic("ASUS", new Date("2021-01-01")),
+  new ArticleStatic("MacBook", new Date("2022-01-01")),
+  new ArticleStatic("Dell", new Date("2019-01-01")),
+  new ArticleStatic("Lenovo", new Date("2020-01-01")),
+];
+
+console.log(ArticleStatic.printArticle(articles[0]));
+console.log(ArticleStatic.printArticle(articles[1]));
+console.log(ArticleStatic.printArticle(articles[2]));
+console.log(ArticleStatic.printArticle(articles[3]));
+
+articles.sort(ArticleStatic.compare);
+console.log("Oldest article:", articles[0].name);
+
+class Newspaper {
+  constructor(name, date) {
+    this.name = name;
+    this.date = date;
+  }
+
+  get info() {
+    return `Name of Newspaper is ${this.name} and the Creation date is ${this.date.toISOString()}`;
+  }
+
+  static createNewspaper(name) {
+    return new this(name, new Date());
+  }
+}
+
+const lokmat = Newspaper.createNewspaper("Lokmat");
+console.log(lokmat.info);
+
+class AnimalStatic {
+  static planet = "Earth";
+
+  constructor(name, speed) {
+    this.speed = speed;
+    this.name = name;
+  }
+
+  run(speed = 0) {
+    this.speed += speed;
+    console.log(`${this.name} runs with speed ${this.speed}.`);
+  }
+
+  static compare(animalA, animalB) {
+    return animalA.speed - animalB.speed;
+  }
+}
+
+class RabbitStatic extends AnimalStatic {
+  hide() {
+    console.log(`${this.name} hides!`);
+  }
+}
+
+const rabbits = [
+  new RabbitStatic("White Rabbit", 10),
+  new RabbitStatic("Black Rabbit", 5),
+];
+
+rabbits.sort(RabbitStatic.compare);
+rabbits[0].run();
+console.log(RabbitStatic.planet);
+console.log(RabbitStatic.__proto__ === AnimalStatic);
+console.log(RabbitStatic.prototype.__proto__ === AnimalStatic.prototype);

@@ -11,7 +11,7 @@ Text processing is essential for user input, search, formatting, and APIs.
 - Search and extraction methods
 - Replace and split
 - Formatting patterns
-- Template literals and expression interpolation
+- Template literals, multiline strings, interpolation, and tagged templates
 - Character and Unicode methods (`charAt`, `charCodeAt`, `fromCharCode`)
 - Search APIs (`indexOf`, `lastIndexOf`, `search`, `match`)
 - Prefix/suffix and contains checks (`startsWith`, `endsWith`, `includes`)
