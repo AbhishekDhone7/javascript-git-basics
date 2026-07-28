@@ -1986,6 +1986,33 @@ Array methods help you:
 | Sort/order | `sort` | price/order/date sorting |
 | Flatten | `flat` | nested category/tag arrays |
 
+### Return type of each array method
+
+| Method | Returns | Return type | Mutates original array? |
+|---|---|---|---|
+| `push()` | New array length | `number` | Yes |
+| `pop()` | Removed last item | `any` or `undefined` | Yes |
+| `shift()` | Removed first item | `any` or `undefined` | Yes |
+| `unshift()` | New array length | `number` | Yes |
+| `splice()` | Removed items list | `array` | Yes |
+| `slice()` | Copied portion | `array` | No |
+| `includes()` | Found or not | `boolean` | No |
+| `indexOf()` | Item position or -1 | `number` | No |
+| `find()` | First matching item | `any` or `undefined` | No |
+| `findIndex()` | First matching index or -1 | `number` | No |
+| `map()` | Transformed items | `array` | No |
+| `filter()` | Matching items | `array` | No |
+| `reduce()` | Single accumulated value | `any` (based on accumulator) | No |
+| `forEach()` | No useful return value | `undefined` | No |
+| `some()` | At least one matched? | `boolean` | No |
+| `every()` | All matched? | `boolean` | No |
+| `sort()` | Sorted same array reference | `array` | Yes |
+| `flat()` | Flattened array | `array` | No |
+| `flatMap()` | Mapped + flattened array | `array` | No |
+
+> [!TIP]
+> If you need a new array and want to keep original data unchanged, prefer non-mutating methods like `map`, `filter`, `slice`, `flat`, and `flatMap`.
+
 ### Method selection flow
 
 ```mermaid
