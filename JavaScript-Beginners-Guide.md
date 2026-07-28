@@ -3320,6 +3320,211 @@ boundIntro("India");
 | Normal function | Dynamic (call-site based) | Yes | Object methods needing dynamic this |
 | Arrow function | Lexical (from outer scope) | No (ignored for this) | Short callbacks, closures |
 
+### this behavior inside object (all invocation combinations)
+
+| Case | Pattern | this points to | Output expectation |
+|---|---|---|---|
+| 1 | Object regular method | That object | Works as expected |
+| 2 | Object arrow method | Outer lexical scope (not object) | Usually undefined/window-based |
+| 3 | Nested regular inside regular | Inner regular call-site | Context often lost |
+| 4 | Nested arrow inside regular | Captures outer regular method this | Uses object context |
+| 5 | Nested regular inside arrow | Inner regular call-site | Context lost unless bound |
+| 6 | Nested arrow inside arrow | Lexical chain from outer scope | Not object (unless outer already has object this) |
+
+### Case 1: Invoked as regular function inside object method
+
+```js
+const user1 = {
+  name: "Nisha",
+  regularMethod: function () {
+    console.log(this.name);
+  }
+};
+
+user1.regularMethod();
+```
+
+Output:
+
+```txt
+Nisha
+```
+
+Why:
+
+- regularMethod is called with object-dot syntax
+- so this becomes user1
+
+### Case 2: Invoked as arrow function inside object
+
+```js
+const user2 = {
+  name: "Nisha",
+  arrowMethod: () => {
+    console.log(this?.name);
+  }
+};
+
+user2.arrowMethod();
+```
+
+Output:
+
+```txt
+undefined
+```
+
+Why:
+
+- arrow does not create its own this
+- it captures this from outer scope, not from user2
+
+### Case 3: Nested regular + regular
+
+```js
+const user3 = {
+  name: "Nisha",
+  outerRegular: function () {
+    console.log("outer:", this.name);
+
+    function innerRegular() {
+      console.log("inner:", this?.name);
+    }
+
+    innerRegular();
+  }
+};
+
+user3.outerRegular();
+```
+
+Output:
+
+```txt
+outer: Nisha
+inner: undefined
+```
+
+Why:
+
+- outerRegular gets object context
+- innerRegular is plain function invocation, so context is lost
+
+### Case 4: Nested regular + arrow
+
+```js
+const user4 = {
+  name: "Nisha",
+  outerRegular: function () {
+    console.log("outer:", this.name);
+
+    const innerArrow = () => {
+      console.log("inner:", this.name);
+    };
+
+    innerArrow();
+  }
+};
+
+user4.outerRegular();
+```
+
+Output:
+
+```txt
+outer: Nisha
+inner: Nisha
+```
+
+Why:
+
+- innerArrow captures this from outerRegular
+- outerRegular has this = user4
+
+### Case 5: Nested arrow + regular
+
+```js
+const user5 = {
+  name: "Nisha",
+  outerArrow: () => {
+    console.log("outer:", this?.name);
+
+    function innerRegular() {
+      console.log("inner:", this?.name);
+    }
+
+    innerRegular();
+  }
+};
+
+user5.outerArrow();
+```
+
+Output:
+
+```txt
+outer: undefined
+inner: undefined
+```
+
+Why:
+
+- outerArrow already does not get object this
+- innerRegular plain call also does not get object this
+
+### Case 6: Nested arrow + arrow
+
+```js
+const user6 = {
+  name: "Nisha",
+  outerArrow: () => {
+    console.log("outer:", this?.name);
+
+    const innerArrow = () => {
+      console.log("inner:", this?.name);
+    };
+
+    innerArrow();
+  }
+};
+
+user6.outerArrow();
+```
+
+Output:
+
+```txt
+outer: undefined
+inner: undefined
+```
+
+Why:
+
+- both arrows use lexical this from outer scope
+- object user6 is not the lexical this source here
+
+### Quick fix patterns for lost context
+
+```js
+const user7 = {
+  name: "Nisha",
+  outerRegular: function () {
+    function innerRegular() {
+      console.log(this.name);
+    }
+
+    // Fix 1: bind
+    const bound = innerRegular.bind(this);
+    bound();
+
+    // Fix 2: call
+    innerRegular.call(this);
+  }
+};
+
+user7.outerRegular();
+```
+
 ### Real-world scenario
 
 A billing utility method should work for multiple customer objects without duplicating function logic.
@@ -3585,72 +3790,394 @@ Understanding `this` and binding methods prevents many advanced bugs.
 
 ### What is it?
 
-JavaScript uses prototype-based inheritance.
+JavaScript is prototype-based, and class syntax is a cleaner way to model Object-Oriented Programming (OOP).
 
-A prototype is an object that other objects can inherit from.
+Simple meaning:
 
-Class syntax is cleaner wrapper over prototypes.
+- Prototype: shared parent object for methods/properties
+- Class: readable syntax over prototype system
+- Object: actual instance created from class/constructor
 
-Class features:
+### OOP concepts covered in this section
 
-- constructor
-- instance methods
-- static methods
-- inheritance using `extends`
+| Concept | Meaning | Why it matters |
+|---|---|---|
+| Class and Object | Blueprint and instance | Organizes real entities |
+| Encapsulation | Keep data + methods together, hide internals | Prevents misuse |
+| Abstraction | Show what to use, hide complex internal logic | Reduces mental load |
+| Inheritance | Child reuses parent behavior | Avoids duplicate code |
+| Polymorphism | Same method name, different behavior | Flexible design |
+| Composition | Build feature by combining small objects | Better maintainability |
+| Static members | Belong to class, not instances | Utilities/factories |
+| Getter/Setter | Controlled read/write | Validation and safety |
 
-### Real-world scenario
+### Real-world domain example: E-commerce Order System
 
-`Vehicle` base class defines common behavior; `Car` and `Bike` inherit and add specific behavior.
+We model a shopping system with:
 
-### Flow diagram
+- Base user behavior
+- Customer and admin specialization
+- Order calculation and discount rules
+- Payment abstraction
+- Notification composition
+
+### High-level architecture flow
 
 ```mermaid
 flowchart TD
-A[Base Class / Prototype] --> B[Child Class]
-B --> C[Inherited Methods]
-C --> D[Override if needed]
+A[Person Class] --> B[Customer Class]
+A --> C[Admin Class]
+B --> D[Order Class]
+D --> E[Payment Strategy]
+D --> F[Notifier Composition]
 ```
 
-### Code example
+### 1) Class and Object
 
 ```js
-class User {
+class Product {
+  constructor(id, name, price) {
+    this.id = id;
+    this.name = name;
+    this.price = price;
+  }
+
+  label() {
+    return `${this.name} - Rs.${this.price}`;
+  }
+}
+
+const pen = new Product(1, "Pen", 10);
+console.log(pen.label());
+```
+
+Output:
+
+```txt
+Pen - Rs.10
+```
+
+What happened:
+
+- Product is the class (blueprint)
+- pen is an object (instance)
+- label method is shared via prototype
+
+### 2) Encapsulation (with private fields)
+
+```js
+class Wallet {
+  #balance;
+
+  constructor(initialAmount = 0) {
+    this.#balance = initialAmount;
+  }
+
+  deposit(amount) {
+    if (amount <= 0) throw new Error("Amount must be positive");
+    this.#balance += amount;
+  }
+
+  getBalance() {
+    return this.#balance;
+  }
+}
+
+const w = new Wallet(1000);
+w.deposit(500);
+console.log(w.getBalance());
+```
+
+Output:
+
+```txt
+1500
+```
+
+Why this is encapsulation:
+
+- #balance cannot be changed directly from outside
+- all updates go through controlled methods
+
+### 3) Abstraction (hide internal complexity)
+
+```js
+class PaymentService {
+  pay(orderAmount) {
+    // Internal steps hidden from caller:
+    // 1) validate
+    // 2) connect gateway
+    // 3) retry if temporary failure
+    // 4) return final status
+    return `Paid Rs.${orderAmount}`;
+  }
+}
+
+const payment = new PaymentService();
+console.log(payment.pay(1200));
+```
+
+Output:
+
+```txt
+Paid Rs.1200
+```
+
+Why this is abstraction:
+
+- Caller only uses pay()
+- Caller does not need gateway internals
+
+### 4) Inheritance
+
+```js
+class Person {
   constructor(name) {
     this.name = name;
   }
 
-  greet() {
-    return `Hello ${this.name}`;
+  getRole() {
+    return "Person";
   }
 }
+
+class Customer extends Person {
+  constructor(name, loyaltyPoints) {
+    super(name);
+    this.loyaltyPoints = loyaltyPoints;
+  }
+
+  getRole() {
+    return "Customer";
+  }
+}
+
+const c = new Customer("Nisha", 120);
+console.log(c.name);
+console.log(c.getRole());
+```
+
+Output:
+
+```txt
+Nisha
+Customer
+```
+
+Why this is inheritance:
+
+- Customer reuses Person properties
+- Child extends and specializes parent behavior
+
+### 5) Polymorphism (same method, different behavior)
+
+```js
+class PaymentMethod {
+  pay(amount) {
+    return `Base payment: ${amount}`;
+  }
+}
+
+class CardPayment extends PaymentMethod {
+  pay(amount) {
+    return `Card charged: Rs.${amount}`;
+  }
+}
+
+class UpiPayment extends PaymentMethod {
+  pay(amount) {
+    return `UPI paid: Rs.${amount}`;
+  }
+}
+
+function processPayment(method, amount) {
+  console.log(method.pay(amount));
+}
+
+processPayment(new CardPayment(), 900);
+processPayment(new UpiPayment(), 900);
+```
+
+Output:
+
+```txt
+Card charged: Rs.900
+UPI paid: Rs.900
+```
+
+Why this is polymorphism:
+
+- processPayment uses one interface: pay()
+- runtime object decides actual implementation
+
+### 6) Composition (has-a relationship)
+
+```js
+class EmailNotifier {
+  send(message) {
+    return `Email: ${message}`;
+  }
+}
+
+class SmsNotifier {
+  send(message) {
+    return `SMS: ${message}`;
+  }
+}
+
+class Order {
+  constructor(notifier) {
+    this.notifier = notifier;
+  }
+
+  confirm(orderId) {
+    return this.notifier.send(`Order ${orderId} confirmed`);
+  }
+}
+
+const emailOrder = new Order(new EmailNotifier());
+const smsOrder = new Order(new SmsNotifier());
+
+console.log(emailOrder.confirm("ORD-101"));
+console.log(smsOrder.confirm("ORD-102"));
+```
+
+Output:
+
+```txt
+Email: Order ORD-101 confirmed
+SMS: Order ORD-102 confirmed
+```
+
+Why composition is powerful:
+
+- behavior is injected, not hardcoded
+- easy to replace, test, and extend
+
+### 7) Static methods and static properties
+
+```js
+class Invoice {
+  static gstRate = 0.18;
+
+  static withTax(amount) {
+    return amount + amount * Invoice.gstRate;
+  }
+}
+
+console.log(Invoice.withTax(1000));
+```
+
+Output:
+
+```txt
+1180
+```
+
+Why static:
+
+- utility belongs to class itself
+- no object creation required
+
+### 8) Getter and Setter
+
+```js
+class Account {
+  #email = "";
+
+  set email(value) {
+    if (!value.includes("@")) {
+      throw new Error("Invalid email");
+    }
+    this.#email = value;
+  }
+
+  get email() {
+    return this.#email;
+  }
+}
+
+const acc = new Account();
+acc.email = "nisha@example.com";
+console.log(acc.email);
+```
+
+Output:
+
+```txt
+nisha@example.com
+```
+
+Why getter/setter:
+
+- validates data at write time
+- keeps class API clean (`acc.email = ...`)
+
+### Prototype vs Class (diff table)
+
+| Topic | Prototype style | Class style |
+|---|---|---|
+| Readability | Verbose for beginners | Cleaner and structured |
+| Inheritance | Manual setup | `extends` + `super` |
+| Private state | Closure tricks/manual | `#privateField` support |
+| Industry usage | Still valid | Preferred for app models |
+
+### Constructor function + prototype (under the hood)
+
+```js
+function User(name) {
+  this.name = name;
+}
+
+User.prototype.greet = function () {
+  return `Hello ${this.name}`;
+};
 
 const u = new User("Karan");
 console.log(u.greet());
 ```
 
-### Output
+Output:
 
 ```txt
 Hello Karan
 ```
 
+This shows class syntax is a nicer layer over prototype mechanics.
+
+### OOP checklist for real projects
+
+- Is inheritance really needed, or is composition better?
+- Are important fields protected (private + setter validation)?
+- Are static utilities separated from instance behavior?
+- Is each class focused on one responsibility?
+- Can behavior vary via polymorphism instead of if-else chains?
+
 ### Edge cases
 
-- Forgetting `new` with constructor functions
+- Forgetting super() in child constructor before using this
+- Trying to access private fields outside class (`obj.#x` is invalid)
 - Confusing static methods with instance methods
+- Overusing inheritance for cases better solved by composition
 
 ### Common mistakes
 
-- Creating duplicate methods inside constructor unnecessarily
+- Putting too much logic in one class
+- Duplicating methods inside constructor (wastes memory)
+- Using inheritance where there is no true is-a relationship
+- Mixing data validation in many places instead of central setter/service
 
 ### Best practices
 
-- Put shared behavior on prototype or class methods
-- Use classes for clear domain models
+- Prefer composition for changing behavior
+- Keep class methods small and purpose-driven
+- Use private fields for sensitive/internal state
+- Use polymorphism for extensibility
+- Document class responsibilities clearly
 
 ### Summary
 
-Prototypes and classes are essential for reusable object-oriented design.
+Prototype and class understanding gives you production-level OOP design in JavaScript. With encapsulation, abstraction, inheritance, polymorphism, and composition, you can build scalable and maintainable real-world systems.
 
 ---
 
