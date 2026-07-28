@@ -1,11 +1,14 @@
 let str = "welcome to javascript world";
 
-  let revStr =  str.split(" ").reverse().join(" ");
+let revStr = str.split(" ").reverse().join(" ");
 
-  console.log(revStr);
+console.log(revStr);
 
   let arr = [1,2,3,4];
 
   console.log(arr);
   // Changes made in dummy file.
   
+let arr = [1, 2, 3, 4];
+
+console.log("kkjhg");
