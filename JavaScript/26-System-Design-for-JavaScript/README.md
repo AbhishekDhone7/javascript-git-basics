@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `system-design-fundamentals-and-tradeoffs.js` - Caching, pagination, and design trade-off examples
 
 ## Real-World Applications
 Senior interviews and production architecture discussions require system design thinking.

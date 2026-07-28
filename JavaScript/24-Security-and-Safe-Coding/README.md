@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `security-validation-sanitization-and-safe-handling.js` - Validation, escaping, and safe data handling
 
 ## Real-World Applications
 Security issues can impact legal compliance, trust, and revenue.

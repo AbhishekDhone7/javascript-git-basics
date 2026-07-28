@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `coding-exercises-basics-and-solutions.js` - Practice drills for strings, vowels, and max-value problems
 
 ## Real-World Applications
 Interview coding rounds reward consistent practice on core problem types.

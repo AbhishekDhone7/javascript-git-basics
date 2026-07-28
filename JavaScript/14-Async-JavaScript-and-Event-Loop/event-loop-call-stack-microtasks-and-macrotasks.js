@@ -84,3 +84,24 @@ console.log("--- Notes ---");
 // setTimeout callbacks go to the macrotask/callback queue.
 // The event loop drains microtasks before it picks the next macrotask.
 // Rendering is a browser concern; this Node-friendly example focuses on ordering only.
+
+console.log("--- Async behavior notes ---");
+console.log("JavaScript is synchronous by default, but Web APIs make common operations non-blocking.");
+console.log("The browser or runtime hosts timers, fetch, storage, and DOM-related APIs.");
+console.log("The main call stack processes one thing at a time.");
+
+console.log("--- Web API and queue model ---");
+console.log("setTimeout and fetch start in the host environment, then their callbacks are queued later.");
+console.log("Promise callbacks enter the microtask queue.");
+console.log("MutationObserver callbacks also enter the microtask queue.");
+console.log("The callback/macrotask queue waits until the current stack and microtasks are empty.");
+
+console.log("--- Rendering note ---");
+console.log("Rendering is browser-specific and happens between event-loop turns when the DOM or styles change.");
+console.log("If the call stack and microtask queue stay busy for too long, rendering can feel blocked.");
+
+console.log("--- Starvation note ---");
+console.log("If the microtask queue keeps getting new work, macrotasks may wait a long time.");
+
+console.log("--- Visualizer tip ---");
+console.log("Tools like Loupe or JSV9000 can help visualize the call stack and queues.");

@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `module-factory-strategy-and-layered-architecture.js` - Factory, strategy, and layered architecture examples
 
 ## Real-World Applications
 Large products stay maintainable through strong architecture and consistent patterns.

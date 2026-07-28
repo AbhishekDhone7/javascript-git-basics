@@ -13,6 +13,7 @@ Async behavior controls responsiveness, data loading, and execution order in mod
 - Event loop ordering and scheduling
 - Promises and combinators
 - async/await patterns
+- Rendering, browser Web APIs, and queue starvation
 
 ## Learning Objectives
 By the end of this section, you should be able to:

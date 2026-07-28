@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `performance-bottlenecks-memoization-and-debounce.js` - Memoization, debounce, and optimization basics
 
 ## Real-World Applications
 Faster apps improve conversion, SEO, and customer satisfaction.

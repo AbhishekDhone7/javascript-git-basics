@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `runtime-context-and-call-stack-basics.js` - Execution contexts, call stack order, and recursion basics
 
 ## Real-World Applications
 Debugging production errors becomes faster when developers can trace call flow correctly.

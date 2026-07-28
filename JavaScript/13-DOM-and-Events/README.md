@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `dom-selection-events-and-delegation-basics.js` - DOM selection, event listeners, and delegation patterns
 
 ## Real-World Applications
 Every interactive web app depends on DOM updates and robust event handling.

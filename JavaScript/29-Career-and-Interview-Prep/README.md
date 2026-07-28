@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `career-revision-and-interview-answers.js` - STAR answers and revision checklist habits
 
 ## Real-World Applications
 Career progression depends on both technical depth and clear communication.

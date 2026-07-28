@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `browser-storage-session-state-and-expiration.js` - State snapshots, storage behavior, and expiration patterns
 
 ## Real-World Applications
 Shopping carts, preferences, and draft forms depend on robust client-side state handling.

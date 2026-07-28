@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `javascript-interview-question-bank.js` - Core interview questions and concise answer framing
 
 ## Real-World Applications
 Focused interview practice improves clarity and response speed in hiring rounds.

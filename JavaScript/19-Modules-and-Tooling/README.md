@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `modules-import-export-and-npm-basics.js` - Module structure, package management, and tooling notes
 
 ## Real-World Applications
 Team projects require consistent structure, dependency management, and code quality checks.

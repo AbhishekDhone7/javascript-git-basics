@@ -29,7 +29,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `testing-assertions-and-quality-checks.js` - Assertions, quality checks, and test mindset examples
 
 ## Real-World Applications
 Teams with strong tests deploy more frequently with fewer production failures.
