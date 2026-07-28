@@ -10,6 +10,8 @@
 - [4. Type Coercion and Equality](#4-type-coercion-and-equality)
 - [5. Operators, Statements, and Loops](#5-operators-statements-and-loops)
 - [6. Functions Deep Dive](#6-functions-deep-dive)
+- [6A. String Methods Deep Dive](#6a-string-methods-deep-dive)
+- [6B. Number Methods Deep Dive](#6b-number-methods-deep-dive)
 - [7. Arrays and Array Methods](#7-arrays-and-array-methods)
 - [8. Objects and Object Patterns](#8-objects-and-object-patterns)
 - [9. this, call, apply, bind](#9-this-call-apply-bind)
@@ -18,7 +20,7 @@
 - [12. Async JavaScript](#12-async-javascript)
 - [13. APIs, Fetch, Axios, and REST Basics](#13-apis-fetch-axios-and-rest-basics)
 - [14. Error Handling and Debugging](#14-error-handling-and-debugging)
-- [15. Useful Built-ins: Date, Math, Map, Set](#15-useful-built-ins-date-math-map-set)
+- [15. Useful Built-ins: String, Number, Date, Math, Map, Set](#15-useful-built-ins-string-number-date-math-map-set)
 - [16. Modern JS Features (ES6+)](#16-modern-js-features-es6)
 - [17. Interview Question Bank](#17-interview-question-bank)
 - [18. Final Learning Roadmap](#18-final-learning-roadmap)
@@ -2020,6 +2022,294 @@ Functions are the building blocks of JavaScript architecture. Understanding func
 
 ---
 
+## 6A. String Methods Deep Dive
+
+### What is it?
+
+String methods are built-in tools to clean, search, split, combine, and format text.
+
+Important concept:
+
+- Strings are immutable in JavaScript
+- Methods return a new string (original string is not changed)
+
+### Real-world scenarios
+
+- Clean user input from forms (`trim`)
+- Case-insensitive search (`toLowerCase` + `includes`)
+- Extract parts from IDs/emails (`slice`, `substring`)
+- Parse CSV text from API (`split`)
+
+### String method families
+
+| Family | Methods | Real-world use |
+|---|---|---|
+| Case conversion | `toUpperCase`, `toLowerCase` | search normalization |
+| Cleanup | `trim` | remove accidental spaces |
+| Search | `includes`, `startsWith`, `endsWith`, `indexOf` | validations/filters |
+| Extract | `slice`, `substring`, `charAt` | preview/masking |
+| Replace | `replace`, `replaceAll` | text transformation |
+| Convert | `split` | convert text to array |
+| Build | `concat`, template literals, `repeat` | output messages/UI |
+
+### String method selection flow
+
+```mermaid
+flowchart TD
+A[Need text operation] --> B{Need search?}
+B -- Yes --> C[includes/startsWith/endsWith/indexOf]
+B -- No --> D{Need extract?}
+D -- Yes --> E[slice/substring/charAt]
+D -- No --> F{Need cleanup?}
+F -- Yes --> G[trim/toLowerCase/toUpperCase]
+F -- No --> H{Need replace?}
+H -- Yes --> I[replace/replaceAll]
+H -- No --> J[split/concat/repeat]
+```
+
+### String methods with return type
+
+| Method | What it does | Return type |
+|---|---|---|
+| `length` | count characters | `number` |
+| `toUpperCase()` | upper-case text | `string` |
+| `toLowerCase()` | lower-case text | `string` |
+| `trim()` | remove outer spaces | `string` |
+| `includes()` | substring exists? | `boolean` |
+| `startsWith()` | prefix check | `boolean` |
+| `endsWith()` | suffix check | `boolean` |
+| `indexOf()` | first index or `-1` | `number` |
+| `slice()` | extract part | `string` |
+| `substring()` | extract part | `string` |
+| `charAt()` | character at index | `string` |
+| `replace()` | replace first match | `string` |
+| `replaceAll()` | replace all matches | `string` |
+| `split()` | convert to array | `array` |
+| `concat()` | join strings | `string` |
+| `repeat()` | repeat text | `string` |
+
+### Code example 1: Cleanup and search
+
+```js
+const raw = "  Nisha Dhone  ";
+const cleaned = raw.trim();
+
+console.log(cleaned);
+console.log(cleaned.toLowerCase());
+console.log(cleaned.includes("Dhone"));
+console.log(cleaned.startsWith("Nisha"));
+console.log(cleaned.endsWith("Dhone"));
+```
+
+### Output
+
+```txt
+Nisha Dhone
+nisha dhone
+true
+true
+true
+```
+
+### Code example 2: Extract and replace
+
+```js
+const orderId = "ORD-2026-001";
+
+console.log(orderId.slice(0, 3));
+console.log(orderId.substring(4, 8));
+console.log(orderId.charAt(0));
+console.log(orderId.replace("-", "_"));
+console.log(orderId.replaceAll("-", "/"));
+```
+
+### Output
+
+```txt
+ORD
+2026
+O
+ORD_2026-001
+ORD/2026/001
+```
+
+### Code example 3: Convert and build
+
+```js
+const csv = "js,node,api";
+const parts = csv.split(",");
+
+console.log(parts);
+console.log("Hello ".concat("Nisha"));
+console.log("ha".repeat(3));
+console.log("javascript".indexOf("script"));
+```
+
+### Output
+
+```txt
+[ 'js', 'node', 'api' ]
+Hello Nisha
+hahaha
+4
+```
+
+### Edge cases
+
+- `replace()` changes only first match
+- `indexOf()` returns `-1` when not found
+- String methods do not mutate original string
+
+### Common mistakes
+
+- Forgetting to `trim()` user input
+- Case-sensitive search without normalization
+- Expecting `split()` to return string instead of array
+
+### Best practices
+
+- Normalize text before comparisons
+- Use `replaceAll` when replacing repeated patterns
+- Validate empty strings after `trim()`
+
+### Summary
+
+String methods are essential for input cleaning, validation, search, and output formatting in real applications.
+
+---
+
+## 6B. Number Methods Deep Dive
+
+### What is it?
+
+Number methods and numeric helpers are used for parsing, validating, formatting, and calculating numeric values.
+
+### Real-world scenarios
+
+- Convert form/API input strings into numbers
+- Format currency display with fixed decimal places
+- Validate integer quantities in carts and stock
+- Round totals for invoices and reporting
+
+### Number processing flow
+
+```mermaid
+flowchart TD
+A[Input value] --> B{Numeric input?}
+B -- No --> C[Convert Number/parseInt/parseFloat]
+B -- Yes --> D[Validate Number.isNaN / Number.isInteger]
+C --> D
+D --> E[Calculate]
+E --> F[Format with toFixed/toPrecision]
+```
+
+### Number methods and helpers table
+
+| Method/helper | What it does | Return type | Typical use |
+|---|---|---|---|
+| `Number(value)` | convert to number | `number` | input conversion |
+| `parseInt(str, 10)` | parse integer | `number` | numeric id extraction |
+| `parseFloat(str)` | parse decimal | `number` | decimal input parsing |
+| `Number.isNaN(v)` | strict NaN check | `boolean` | invalid number detection |
+| `Number.isInteger(v)` | integer check | `boolean` | quantity validation |
+| `toFixed(n)` | fixed decimal string | `string` | currency display |
+| `toPrecision(n)` | significant digits string | `string` | compact reports |
+| `Math.round(n)` | nearest int | `number` | rounded totals |
+| `Math.floor(n)` | round down | `number` | page/index count |
+| `Math.ceil(n)` | round up | `number` | package count |
+| `Math.max(...)` | max value | `number` | highest score/price |
+| `Math.min(...)` | min value | `number` | lowest price |
+| `Math.random()` | pseudo random 0-1 | `number` | OTP/test values |
+
+### Code example 1: Parse and validate
+
+```js
+const qtyInput = "3";
+const qty = Number(qtyInput);
+const invalid = Number("abc");
+
+console.log(qty);
+console.log(Number.isInteger(qty));
+console.log(Number.isNaN(invalid));
+```
+
+### Output
+
+```txt
+3
+true
+true
+```
+
+### Code example 2: Format and round
+
+```js
+const price = 199.456;
+
+console.log(price.toFixed(2));
+console.log(price.toPrecision(4));
+console.log(Math.round(4.6));
+console.log(Math.floor(4.9));
+console.log(Math.ceil(4.1));
+```
+
+### Output
+
+```txt
+199.46
+199.5
+5
+4
+5
+```
+
+### Code example 3: Practical billing scenario
+
+```js
+const amount = Number("1200.50");
+const taxRate = 0.18;
+const tax = amount * taxRate;
+const total = amount + tax;
+
+console.log(tax.toFixed(2));
+console.log(total.toFixed(2));
+console.log(Math.max(10, 20, 5));
+console.log(Math.min(10, 20, 5));
+```
+
+### Output
+
+```txt
+216.09
+1416.59
+20
+5
+```
+
+### Edge cases
+
+- `toFixed()` returns string, not number
+- Floating point precision issue: `0.1 + 0.2 !== 0.3`
+- `Number("")` becomes `0`, which can be surprising
+
+### Common mistakes
+
+- Doing calculations before input conversion
+- Using `parseInt` for decimal currency values
+- Forgetting radix in `parseInt`
+
+### Best practices
+
+- Convert and validate at input boundary
+- Keep raw numeric values for calculations
+- Use formatted strings only for display
+
+### Summary
+
+Number methods and helpers are critical for safe calculations, reliable validation, and clean financial/data output.
+
+---
+
 ## 7. Arrays and Array Methods
 
 ### What is it?
@@ -3259,16 +3549,147 @@ Good error handling improves reliability and user trust.
 
 ---
 
-## 15. Useful Built-ins: Date, Math, Map, Set
+## 15. Useful Built-ins: String, Number, Date, Math, Map, Set
 
 ### What is it?
 
 JavaScript provides built-in objects for common tasks.
 
+- `String`: text formatting, search, slicing
+- `Number`: numeric parsing, precision handling
 - `Math`: calculations
 - `Date`: time handling
 - `Map`: key-value with any key type
 - `Set`: unique values collection
+
+### Coverage note (from your notes set)
+
+This section now includes practical String and Number methods aligned with your practice files around:
+
+- `strings.js`
+- `numbers.js`
+- `numbers2.js`
+
+### A) String methods
+
+Strings are used in names, search boxes, emails, order ids, and API messages.
+
+#### Common String methods table
+
+| Method | What it does | Return type | Real-world use |
+|---|---|---|---|
+| `length` | counts characters | `number` | password length check |
+| `toUpperCase()` | uppercase text | `string` | normalize search/filter |
+| `toLowerCase()` | lowercase text | `string` | case-insensitive comparison |
+| `trim()` | remove outer spaces | `string` | clean form input |
+| `includes()` | substring exists? | `boolean` | keyword search |
+| `startsWith()` | prefix check | `boolean` | validate code format |
+| `endsWith()` | suffix check | `boolean` | file extension/email domain |
+| `slice(start,end)` | extract part | `string` | mask IDs |
+| `substring(start,end)` | extract part | `string` | preview text |
+| `replace(a,b)` | replace first match | `string` | message cleanup |
+| `replaceAll(a,b)` | replace all matches | `string` | global formatting |
+| `split(sep)` | convert to array | `array` | CSV/tag parsing |
+| `concat()` | join strings | `string` | build output messages |
+| `repeat(n)` | repeat text n times | `string` | UI separators |
+| `charAt(i)` | character at index | `string` | initial extraction |
+| `indexOf()` | first index or -1 | `number` | keyword position |
+
+#### String method examples
+
+```js
+const rawName = "  nisha dhone  ";
+const cleaned = rawName.trim();
+
+console.log(cleaned);
+console.log(cleaned.toUpperCase());
+console.log(cleaned.includes("dhone"));
+console.log(cleaned.startsWith("nisha"));
+console.log(cleaned.slice(0, 5));
+console.log("a,b,c".split(","));
+console.log("order-id".replace("-", "_"));
+console.log("ha".repeat(3));
+```
+
+#### Output
+
+```txt
+nisha dhone
+NISHA DHONE
+true
+true
+nisha
+[ 'a', 'b', 'c' ]
+order_id
+hahaha
+```
+
+#### String scenarios to consider
+
+- User enters extra spaces in login/email field
+- Search should work even with uppercase/lowercase differences
+- Message templates need dynamic string formatting
+
+### B) Number methods
+
+Numbers are used in price calculations, quantity updates, tax, discounts, and analytics.
+
+#### Common Number methods and helpers table
+
+| Method/helper | What it does | Return type | Real-world use |
+|---|---|---|---|
+| `Number(value)` | convert to number | `number` | form input conversion |
+| `Number.isNaN(v)` | strict NaN check | `boolean` | validation before math |
+| `Number.isInteger(v)` | integer check | `boolean` | quantity validation |
+| `toFixed(n)` | fixed decimal string | `string` | currency display |
+| `toPrecision(n)` | fixed significant digits | `string` | reports/charts |
+| `parseInt(str,10)` | parse integer | `number` | extract numeric ID part |
+| `parseFloat(str)` | parse decimal | `number` | decimal input parsing |
+| `Math.round(n)` | nearest integer | `number` | rounded price |
+| `Math.floor(n)` | round down | `number` | page count/indexing |
+| `Math.ceil(n)` | round up | `number` | package/unit planning |
+| `Math.max(...)` | maximum value | `number` | highest score/sale |
+| `Math.min(...)` | minimum value | `number` | lowest price |
+| `Math.random()` | random 0 to 1 | `number` | OTP/test data |
+
+#### Number method examples
+
+```js
+const qty = Number("3");
+const price = 199.456;
+
+console.log(qty);
+console.log(Number.isInteger(qty));
+console.log((price * qty).toFixed(2));
+console.log(parseInt("42px", 10));
+console.log(parseFloat("10.75kg"));
+console.log(Math.round(4.6));
+console.log(Math.floor(4.9));
+console.log(Math.ceil(4.1));
+console.log(Math.max(10, 20, 5));
+console.log(Number.isNaN(Number("abc")));
+```
+
+#### Output
+
+```txt
+3
+true
+598.37
+42
+10.75
+5
+4
+5
+20
+true
+```
+
+#### Number scenarios to consider
+
+- Input comes as string from form/API and must be converted
+- Floating point precision issues (example: `0.1 + 0.2`)
+- Display formatting differs from internal calculation value
 
 ### Real-world scenario
 
@@ -3301,23 +3722,60 @@ console.log(uniqueTags);
 [ 'js', 'api' ]
 ```
 
+### C) Date/Math/Map/Set quick practical examples
+
+```js
+// Date
+const now = new Date();
+console.log(now.getFullYear() > 2000);
+
+// Math
+console.log(Math.round(12.49));
+
+// Map
+const stockMap = new Map([
+  ["pen", 10],
+  ["book", 5]
+]);
+console.log(stockMap.get("book"));
+
+// Set
+const tags = new Set(["js", "api", "js"]);
+console.log(tags.size);
+```
+
+### Output
+
+```txt
+true
+12
+5
+2
+```
+
 ### Edge cases
 
 - Date parsing varies by input format
 - Floating point math precision issues
+- `toFixed()` returns string, not number
+- `parseInt("08")` should include radix like `parseInt("08", 10)`
 
 ### Common mistakes
 
 - Using object where Map is better for frequent dynamic keys
+- Comparing numeric strings without conversion
+- Using localized date strings directly in logic
 
 ### Best practices
 
 - Use ISO date formats
 - Use Set for uniqueness and Map for lookup-heavy logic
+- Convert number inputs explicitly before calculations
+- Keep display formatting (`toFixed`) separate from raw numeric value
 
 ### Summary
 
-Built-ins reduce code and improve clarity.
+String and Number methods, along with Date/Math/Map/Set, reduce code and improve clarity for real-world JavaScript development.
 
 ---
 
