@@ -388,16 +388,77 @@ Variable is a named container for data.
 
 Scope is the area where a variable can be accessed.
 
+In JavaScript, understanding variables means understanding three things together:
+
+1. Declaration keyword (`var`, `let`, `const`)
+2. Scope (where value can be used)
+3. Data type (what kind of value it stores)
+
 JavaScript keywords:
 
 - `var`: function scope, older style
 - `let`: block scope, can reassign
 - `const`: block scope, cannot reassign reference
 
+Scope types:
+
+- Global scope: accessible from almost everywhere in the file/runtime
+- Function scope: accessible only inside that function
+- Block scope: accessible only inside `{ ... }` block
+
+### Types of scope and variable access rules
+
+| Scope type | Where it is created | Who can access it | Who cannot access it |
+|---|---|---|---|
+| Global scope | Outside all functions and blocks | Global code and inner scopes | N/A (top-level scope) |
+| Function scope | Inside a function body | That function and its inner blocks | Outside that function |
+| Block scope | Inside `{}` like `if`, `for`, `while`, `switch` block | Only inside that block | Outside that block |
+
+Access rule in one line:
+
+- Inner scope can read outer scope variables
+- Outer scope cannot read inner scope variables
+
+### Scope access hierarchy diagram
+
+```mermaid
+flowchart TD
+A[Global Scope] --> B[Function Scope]
+B --> C[Block Scope]
+C --> D[Read local first]
+D --> E[If not found, look in parent scope]
+E --> F[If nowhere found, ReferenceError]
+```
+
+### Variable lookup (scope chain) diagram
+
+```mermaid
+flowchart LR
+A[Need variable x in block] --> B{Found in block?}
+B -- Yes --> C[Use block value]
+B -- No --> D{Found in function scope?}
+D -- Yes --> E[Use function value]
+D -- No --> F{Found in global scope?}
+F -- Yes --> G[Use global value]
+F -- No --> H[ReferenceError]
+```
+
 Data types:
 
 - Primitive: string, number, boolean, null, undefined, bigint, symbol
 - Non-primitive: object, array, function
+
+Quick type meaning:
+
+| Type | Meaning | Example |
+|---|---|---|
+| string | text value | `"hello"` |
+| number | numeric value | `42`, `3.14` |
+| boolean | true/false value | `true` |
+| undefined | declared but no value yet | `let x;` |
+| null | intentionally empty value | `let user = null` |
+| object | grouped key-value data | `{ name: "Asha" }` |
+| array | ordered list | `[10, 20, 30]` |
 
 ### Real-world scenario
 
@@ -407,6 +468,12 @@ In login page:
 - `let attempts` changes after each failed login
 - Avoid using `var` to prevent scope confusion
 
+In cart page:
+
+- `const taxRate = 0.18` should stay fixed
+- `let cartTotal` changes when user adds/removes items
+- Product list is often an array, user info is usually an object
+
 ### Flow diagram
 
 ```mermaid
@@ -415,6 +482,65 @@ A[Need Variable] --> B{Will value change?}
 B -- No --> C[Use const]
 B -- Yes --> D[Use let]
 D --> E[Avoid var in modern code]
+```
+
+### Scope flow diagram
+
+```mermaid
+flowchart TD
+A[Global Scope] --> B[Function Scope]
+B --> C[Block Scope if/for]
+C --> D[Variable accessible only inside block]
+```
+
+### Hoisting and TDZ with execution context
+
+Hoisting means JavaScript prepares declarations before running code lines.
+
+Global Execution Context (GEC) is created first.
+Then, whenever a function is called, JavaScript creates a sub execution context (Function Execution Context).
+
+Both global and function contexts run in two phases:
+
+1. Memory creation phase
+2. Execution phase
+
+### Global and function context flow
+
+```mermaid
+flowchart TD
+A[Script Starts] --> B[Create Global Execution Context]
+B --> C[Global Memory Creation]
+C --> D[Global Execution]
+D --> E{Function Call?}
+E -- Yes --> F[Create Function Execution Context]
+F --> G[Function Memory Creation]
+G --> H[Function Execution]
+H --> I[Return and remove function context]
+I --> D
+E -- No --> J[Program Ends]
+```
+
+### Memory creation impact on var, let, const
+
+| Keyword | Memory creation phase | Before declaration line in execution phase | After declaration line |
+|---|---|---|---|
+| `var` | Created and initialized as `undefined` | Accessible as `undefined` | Gets assigned value |
+| `let` | Created but uninitialized | In TDZ, access throws `ReferenceError` | Gets assigned value |
+| `const` | Created but uninitialized | In TDZ, access throws `ReferenceError` | Must be initialized once |
+
+### TDZ and access behavior flow
+
+```mermaid
+flowchart LR
+A[Scope starts] --> B{Keyword type}
+B -- var --> C[Value is undefined initially]
+B -- let/const --> D[TDZ active]
+D --> E{Access before declaration?}
+E -- Yes --> F[ReferenceError]
+E -- No --> G[Declaration executes]
+G --> H[Value usable]
+C --> H
 ```
 
 ### Code example
@@ -432,25 +558,246 @@ console.log(appName, attempts);
 ShopEasy 1
 ```
 
+### Code example 2: Scope behavior
+
+```js
+const company = "ACME";
+
+function showUser() {
+  const user = "Riya";
+  if (true) {
+    const role = "Admin";
+    console.log(company, user, role);
+  }
+  // console.log(role); // would fail: role is block scoped
+}
+
+showUser();
+```
+
+### Output
+
+```txt
+ACME Riya Admin
+```
+
+### Code example 2.1: Global -> function -> block access
+
+```js
+const globalName = "Global";
+
+function scopeDemo() {
+  const functionName = "Function";
+
+  if (true) {
+    const blockName = "Block";
+    console.log(globalName, functionName, blockName);
+  }
+}
+
+scopeDemo();
+```
+
+### Output
+
+```txt
+Global Function Block
+```
+
+### Code example 2.2: Outer cannot access inner scope
+
+```js
+function account() {
+  const pin = 1234;
+  console.log("Inside function:", pin);
+}
+
+account();
+
+try {
+  console.log(pin);
+} catch (error) {
+  console.log(error.name);
+}
+```
+
+### Output
+
+```txt
+Inside function: 1234
+ReferenceError
+```
+
+### Code example 2.3: Block scope with let/const vs var
+
+```js
+if (true) {
+  var varValue = "I am var";
+  let letValue = "I am let";
+  const constValue = "I am const";
+  console.log(varValue, letValue, constValue);
+}
+
+console.log(varValue);
+
+try {
+  console.log(letValue);
+} catch (error) {
+  console.log(error.name);
+}
+
+try {
+  console.log(constValue);
+} catch (error) {
+  console.log(error.name);
+}
+```
+
+### Output
+
+```txt
+I am var I am let I am const
+I am var
+ReferenceError
+ReferenceError
+```
+
+### Code example 3: `const` object mutation edge
+
+```js
+const profile = { name: "Asha", city: "Pune" };
+profile.city = "Mumbai"; // allowed
+console.log(profile.city);
+
+// profile = { name: "Asha" }; // not allowed
+```
+
+### Output
+
+```txt
+Mumbai
+```
+
+### Code example 4: Check data types with `typeof`
+
+```js
+const title = "Phone";
+const price = 999;
+const inStock = true;
+const tags = ["new", "sale"];
+const meta = { brand: "XYZ" };
+
+console.log(typeof title);
+console.log(typeof price);
+console.log(typeof inStock);
+console.log(typeof tags);
+console.log(typeof meta);
+```
+
+### Output
+
+```txt
+string
+number
+boolean
+object
+object
+```
+
+### Code example 5: Hoisting with `var`
+
+```js
+console.log(score);
+var score = 100;
+console.log(score);
+```
+
+### Output
+
+```txt
+undefined
+100
+```
+
+### Code example 6: TDZ with `let` using try/catch
+
+```js
+try {
+  console.log(points);
+} catch (error) {
+  console.log(error.name);
+}
+
+let points = 50;
+console.log(points);
+```
+
+### Output
+
+```txt
+ReferenceError
+50
+```
+
+### Code example 7: Sub execution context (function memory and execution)
+
+```js
+var globalValue = "G";
+
+function demo(a) {
+  console.log(a);
+  console.log(localVar);
+  var localVar = "L";
+  console.log(localVar, globalValue);
+}
+
+demo("A");
+```
+
+### Output
+
+```txt
+A
+undefined
+L G
+```
+
+In this function example:
+
+- During function memory creation, `a` is initialized from argument and `localVar` becomes `undefined`
+- During function execution, `localVar` gets value `"L"` on its assignment line
+
 ### Edge cases
 
 - `const` object properties can still change
 - `var` declared in loop can leak outside block
+- `typeof null` returns `"object"` (historical JavaScript behavior)
+- Accessing block-scoped variable outside block throws `ReferenceError`
+- Using same variable name in nested scopes can confuse debugging
+- Accessing `let`/`const` before declaration line causes TDZ error
+- Hoisting confusion can hide bugs when `var` appears as `undefined`
 
 ### Common mistakes
 
 - Using `var` in modern code
 - Accessing `let` or `const` before declaration
+- Using unclear variable names like `a`, `x1`, `tmp` in business logic
+- Assuming array type will show as `array` in `typeof`
+- Assuming `let` and `const` behave like `var` during hoisting
 
 ### Best practices
 
 - Use `const` by default
 - Use `let` only when reassignment is required
 - Keep variable names descriptive
+- Group related values in objects instead of many loose variables
+- Validate and normalize incoming data types from APIs/forms
+- Declare variables before usage for readability, even if hoisting exists
+- Prefer `let`/`const` to avoid accidental `undefined` from `var`
 
 ### Summary
 
-Correct variable and scope choices prevent many early bugs.
+Correct variable, scope, and data type handling prevents silent bugs, improves readability, and makes debugging much faster.
 
 ---
 
@@ -460,14 +807,41 @@ Correct variable and scope choices prevent many early bugs.
 
 Type coercion means JavaScript converts one data type to another automatically in some operations.
 
+There are two broad forms:
+
+- Implicit coercion: JavaScript converts types automatically
+- Explicit coercion: developer converts types manually using `Number()`, `String()`, `Boolean()`
+
+Equality checks compare values, but strictness level matters.
+
 Equality operators:
 
 - `==` loose equality (allows type conversion)
 - `===` strict equality (no type conversion)
 
+Quick rule:
+
+- Use `===` for predictable behavior
+- Use `==` only when you fully understand its coercion rules
+
+### Coercion quick table
+
+| Expression | Result | Why |
+|---|---|---|
+| `"10" + 2` | `"102"` | `+` with string does concatenation |
+| `"10" - 2` | `8` | `-` forces numeric conversion |
+| `true + 1` | `2` | `true` becomes `1` |
+| `false + 5` | `5` | `false` becomes `0` |
+| `Number("42")` | `42` | explicit numeric conversion |
+
 ### Real-world scenario
 
 In payment validation, string input from form may be compared with numeric value. Wrong comparison can approve invalid data.
+
+Another practical case:
+
+- Quantity from input is `"2"` and price is number `500`
+- If handled carelessly with `+`, total can become text instead of number
 
 ### Flow diagram
 
@@ -477,6 +851,17 @@ A[Comparison Requested] --> B{Use === ?}
 B -- Yes --> C[No type conversion]
 B -- No --> D[Possible coercion]
 D --> E[Unexpected result risk]
+```
+
+### Conversion decision diagram
+
+```mermaid
+flowchart LR
+A[Input Value] --> B{Type is correct?}
+B -- Yes --> C[Use directly]
+B -- No --> D[Convert explicitly]
+D --> E[Validate converted value]
+E --> F[Use in logic]
 ```
 
 ### Code example
@@ -497,24 +882,89 @@ false
 8
 ```
 
+### Code example 2: Boolean coercion behavior
+
+```js
+console.log(Boolean(0));
+console.log(Boolean(1));
+console.log(Boolean(""));
+console.log(Boolean("hello"));
+```
+
+### Output
+
+```txt
+false
+true
+false
+true
+```
+
+### Code example 3: Safe input handling (real-world)
+
+```js
+const qtyFromInput = "2";
+const price = 500;
+
+const qty = Number(qtyFromInput);
+const total = qty * price;
+
+console.log(total);
+console.log(typeof total);
+```
+
+### Output
+
+```txt
+1000
+number
+```
+
+### Code example 4: Tricky equality interview cases
+
+```js
+console.log("" == 0);
+console.log("" === 0);
+console.log(null == undefined);
+console.log(null === undefined);
+console.log(NaN === NaN);
+```
+
+### Output
+
+```txt
+true
+false
+true
+false
+false
+```
+
 ### Edge cases
 
 - `"" == 0` is true
 - `null == undefined` is true, but `null === undefined` is false
+- `NaN === NaN` is false (special numeric behavior)
+- `0 == false` is true because of coercion
+- `[] == false` can evaluate to true in loose comparison
 
 ### Common mistakes
 
 - Using `==` in critical business logic
 - Assuming `+` always does numeric addition
+- Forgetting to parse number inputs from forms/APIs
+- Assuming all non-empty strings are valid numbers
 
 ### Best practices
 
 - Prefer `===` and `!==`
 - Convert input explicitly: `Number(value)`, `String(value)`
+- Validate conversion results with `Number.isNaN()` where needed
+- Keep business rules type-safe at boundaries (API/form layer)
 
 ### Summary
 
-Understand coercion clearly to avoid hidden logical bugs.
+Type coercion is powerful but risky when ignored. Use strict equality and explicit conversions to keep logic predictable and production-safe.
 
 ---
 
@@ -524,6 +974,11 @@ Understand coercion clearly to avoid hidden logical bugs.
 
 Operators perform actions on values.
 
+Statements decide which code should run and when.
+Loops help you repeat logic without writing duplicate lines.
+
+This topic is the core of decision-making in JavaScript.
+
 Main categories:
 
 - Arithmetic: `+ - * / % **`
@@ -531,11 +986,28 @@ Main categories:
 - Comparison: `> < >= <= ===`
 - Logical: `&& || !`
 
+Operator priorities matter. For example:
+
+- `*` runs before `+`
+- Parentheses `()` can force custom order
+
 Statements control flow:
 
 - `if...else`
 - `switch`
 - loops: `for`, `while`, `do...while`, `for...of`, `for...in`
+
+### Quick decision table
+
+| Need | Best structure |
+|---|---|
+| Two-way condition | `if...else` |
+| Many fixed options | `switch` |
+| Fixed count repetition | `for` |
+| Repeat while condition true | `while` |
+| At least one run required | `do...while` |
+| Iterate array values | `for...of` |
+| Iterate object keys | `for...in` |
 
 ### Real-world scenario
 
@@ -581,24 +1053,122 @@ console.log(`Discount: ${discount}%`);
 Discount: 5%
 ```
 
+### Code example 2: Operator precedence
+
+```js
+const result1 = 10 + 2 * 5;
+const result2 = (10 + 2) * 5;
+
+console.log(result1);
+console.log(result2);
+```
+
+### Output
+
+```txt
+20
+60
+```
+
+### Code example 3: `switch` for status mapping
+
+```js
+const orderStatus = "shipped";
+let message;
+
+switch (orderStatus) {
+  case "pending":
+    message = "Order received";
+    break;
+  case "shipped":
+    message = "Order is on the way";
+    break;
+  case "delivered":
+    message = "Order delivered";
+    break;
+  default:
+    message = "Unknown status";
+}
+
+console.log(message);
+```
+
+### Output
+
+```txt
+Order is on the way
+```
+
+### Code example 4: `for...of` vs `for...in`
+
+```js
+const items = ["pen", "book", "bag"];
+
+for (const value of items) {
+  console.log(`value: ${value}`);
+}
+
+for (const key in items) {
+  console.log(`index: ${key}`);
+}
+```
+
+### Output
+
+```txt
+value: pen
+value: book
+value: bag
+index: 0
+index: 1
+index: 2
+```
+
+### Code example 5: While loop safety pattern
+
+```js
+let attempts = 0;
+
+while (attempts < 3) {
+  attempts++;
+  console.log(`Attempt ${attempts}`);
+}
+```
+
+### Output
+
+```txt
+Attempt 1
+Attempt 2
+Attempt 3
+```
+
 ### Edge cases
 
 - Infinite loop if condition never changes
 - `for...in` on arrays can give unexpected keys
+- Missing `break` in `switch` can cause fall-through bugs
+- `NaN` comparisons are tricky (`NaN === NaN` is false)
+- Wrong logical grouping (`&&` / `||`) can approve invalid business conditions
 
 ### Common mistakes
 
 - Using `for...in` instead of `for...of` for arrays
 - Missing `break` inside `switch`
+- Writing complex `if` blocks without intermediate variables
+- Updating wrong loop variable, causing endless loop
 
 ### Best practices
 
 - Use `for...of` for array values
 - Keep loop body short and readable
+- Use parentheses in complex conditions for clarity
+- Keep `switch` cases explicit and always handle `default`
+- Use guard clauses to reduce deep nested `if` blocks
 
 ### Summary
 
-Control flow and loops are core tools for program logic.
+Operators, statements, and loops are the foundation of application logic. Clear conditions and safe loops directly improve correctness and maintainability.
 
 ---
 
