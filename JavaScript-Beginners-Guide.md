@@ -1488,6 +1488,131 @@ Advanced function patterns:
 - Closure
 - Currying
 
+### Function definitions (all important types)
+
+| Term | Definition | Simple example |
+|---|---|---|
+| Function | Reusable block of code that performs a task | `function add(a, b) { return a + b; }` |
+| Parameter | Variable listed in function definition | `a`, `b` in `function add(a, b)` |
+| Argument | Actual value passed during function call | `10`, `20` in `add(10, 20)` |
+| Return value | Value sent back by function | `return a + b` |
+| Function Declaration | Named function defined with `function` statement | `function greet() {}` |
+| Function Expression | Function assigned to variable | `const greet = function () {};` |
+| Arrow Function | Short function syntax using `=>` | `const sum = (a, b) => a + b;` |
+| Anonymous Function | Function without explicit name | `function () {}` |
+| Named Function Expression | Function expression with internal name | `const fn = function helper() {};` |
+| IIFE | Function that runs immediately after creation | `(function(){ ... })();` |
+| Callback Function | Function passed into another function | `setTimeout(() => {}, 1000)` |
+| Higher-Order Function | Function that takes/returns a function | `arr.map(x => x * 2)` |
+| Pure Function | Same input always returns same output and no side effects | `x => x * 2` |
+| Recursive Function | Function that calls itself with stopping condition | `factorial(n)` |
+| Closure | Inner function remembering outer scope variables | `makeCounter()` pattern |
+| Curried Function | Function transformed into chain of single-argument functions | `sum(a)(b)` |
+
+### Real-world use cases by function type
+
+| Function type | Use case 1 | Use case 2 | Use case 3 |
+|---|---|---|---|
+| Function Declaration | Core utility like `calculateTotal()` | Validation helpers like `validateEmail()` | Shared formatters like `formatDate()` |
+| Function Expression | Config-based behavior mapping | Event handler assignment | Conditional strategy selection |
+| Arrow Function | Array callbacks (`map`, `filter`) | Inline API response transforms | Short UI event callbacks |
+| IIFE | One-time bootstrapping code | Isolated setup scope to avoid global pollution | Immediate feature-flag initialization |
+| Callback Function | API success/error handlers | File read/process sequence | Timer completion actions (`setTimeout`) |
+| Higher-Order Function | Reusable permission wrappers | Retry/debounce/throttle utilities | Array pipeline transformations |
+| Recursive Function | Tree/category menu traversal | Nested comments rendering | Folder/file traversal logic |
+| Closure | Private counters/state | Factory functions with saved config | Encapsulated module-like utilities |
+| Curried Function | Pre-configured tax/discount calculators | Reusable logger with fixed prefix | Layered validation rules |
+
+> [!INFO]
+> Practical rule: choose function style based on readability and reuse need. Declaration is best for core reusable logic, arrow/expression is best for inline behavior, and closure/currying is best when you need preserved state or pre-configured logic.
+
+### Interview Q&A by function type
+
+| Function type | Common interview question | Practical answer |
+|---|---|---|
+| Function Declaration | What is function declaration and why is it important? | It is a named function defined with the function keyword. It is fully hoisted, so it can be called before its definition line. Good for core reusable business logic. |
+| Function Expression | Function declaration vs function expression? | Function expression is assigned to a variable, so it becomes callable only after assignment line. Declaration is hoisted fully, expression is not. |
+| Arrow Function | Arrow function vs normal function? | Arrow function has shorter syntax and lexical this. Normal function has its own dynamic this based on call site. |
+| IIFE | What is IIFE and when is it used? | IIFE executes immediately after creation. It is useful for one-time setup and for avoiding global variable pollution. |
+| Callback Function | What is callback function? | A callback is a function passed as argument to another function and executed later, often after async events or inside utility functions. |
+| Higher-Order Function | What is higher-order function? | A higher-order function takes a function as input or returns a function as output. It helps build reusable and composable logic. |
+| Recursive Function | What is recursion and risk in recursion? | Recursion is when a function calls itself. It must have a base condition, otherwise call stack overflow occurs. |
+| Closure | What is closure in JavaScript? | Closure means inner function keeps access to outer variables even after outer function ends. Used for private state and function factories. |
+| Curried Function | What is currying and where is it useful? | Currying converts multi-argument function into nested single-argument calls. Useful for pre-configured reusable functions. |
+| Pure Function | What is pure function and why preferred? | Pure function gives same output for same input and has no side effects. It is easier to test and reason about. |
+
+### Quick interview ready snippets
+
+```js
+// Q: Why declaration is hoisted?
+sayHello();
+function sayHello() {
+  console.log("hello");
+}
+
+// Q: Why expression fails before assignment?
+try {
+  greetNow();
+} catch (error) {
+  console.log(error.name);
+}
+const greetNow = function () {
+  console.log("hi");
+};
+
+// Q: Closure proof
+function createId(prefix) {
+  let count = 0;
+  return function () {
+    count++;
+    return `${prefix}-${count}`;
+  };
+}
+
+const orderId = createId("ORD");
+console.log(orderId());
+console.log(orderId());
+```
+
+### Output
+
+```txt
+hello
+ReferenceError
+ORD-1
+ORD-2
+```
+
+### Quick code snippets for definitions
+
+```js
+// Parameter and argument
+function multiply(x, y) {
+  return x * y; // return value
+}
+console.log(multiply(3, 4)); // 3 and 4 are arguments
+
+// Anonymous function used as callback
+setTimeout(function () {
+  console.log("Timer done");
+}, 10);
+
+// Named function expression
+const parser = function parseText(value) {
+  return value.trim();
+};
+
+console.log(parser("  hello  "));
+```
+
+### Output
+
+```txt
+12
+hello
+Timer done
+```
+
 ### Function lifecycle in execution context
 
 When function runs, JavaScript does:
