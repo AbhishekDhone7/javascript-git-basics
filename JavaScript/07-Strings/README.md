@@ -11,6 +11,10 @@ Text processing is essential for user input, search, formatting, and APIs.
 - Search and extraction methods
 - Replace and split
 - Formatting patterns
+- Character and Unicode methods (`charAt`, `charCodeAt`, `fromCharCode`)
+- Search APIs (`indexOf`, `lastIndexOf`, `search`, `match`)
+- Prefix/suffix and contains checks (`startsWith`, `endsWith`, `includes`)
+- Escape sequences and special characters
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -19,17 +23,20 @@ By the end of this section, you should be able to:
 - Avoid common immutability mistakes
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with [string-manipulation-and-formatting-methods.js](string-manipulation-and-formatting-methods.js).
+2. Continue with [string-search-and-match-methods.js](string-search-and-match-methods.js).
+3. Finish with [string-special-characters-and-escapes.js](string-special-characters-and-escapes.js).
+4. Write one variation of each example.
+5. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 06-Functions
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- [string-manipulation-and-formatting-methods.js](string-manipulation-and-formatting-methods.js) - Core transformation, extraction, formatting, and split patterns
+- [string-search-and-match-methods.js](string-search-and-match-methods.js) - Search and pattern-match methods with practical checks
+- [string-special-characters-and-escapes.js](string-special-characters-and-escapes.js) - Escape sequences and special-character behavior
 
 ## Real-World Applications
 Login, search, and content tools rely on robust string handling.

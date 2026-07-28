@@ -8,9 +8,17 @@ Objects model real-world entities and are the default structure for application 
 
 ## Concepts Covered
 - Object creation and access
+- Dot notation vs bracket notation
+- Nested objects, nested arrays, and object methods
+- Iteration using `for...in`
+- Object mutation (add/delete properties)
+- Computed properties in object literals
+- Property shorthand in factory functions
+- Property existence checks with `in`
+- Object key order behavior
 - Destructuring
 - Spread and assign
-- Object utility methods
+- Object utility methods (`Object.values`, `JSON.stringify`)
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -19,17 +27,25 @@ By the end of this section, you should be able to:
 - Apply immutable object updates
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with `object-creation-and-property-access.js`.
+2. Continue with `object-methods-this-and-nested-values.js`.
+3. Continue with `object-iteration-with-for-in.js`.
+4. Continue with `object-built-in-methods-values-and-stringify.js`.
+5. Continue with `object-mutation-and-computed-properties.js`.
+6. Finish with `object-factory-shorthand-in-operator-and-order.js`.
+7. Write one variation for each concept and note edge cases.
 
 ## Prerequisites
 09-Arrays
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `object-creation-and-property-access.js` - Object declaration and property access patterns
+- `object-methods-this-and-nested-values.js` - Object methods, `this`, and nested data
+- `object-iteration-with-for-in.js` - Iteration patterns for objects and nested objects
+- `object-built-in-methods-values-and-stringify.js` - `Object.values` and JSON serialization
+- `object-mutation-and-computed-properties.js` - Add/delete properties, reserved keys, and computed properties
+- `object-factory-shorthand-in-operator-and-order.js` - Factory shorthand, existence checks, and key order rules
 
 ## Real-World Applications
 Profile, order, and configuration systems are object-driven.
@@ -40,4 +56,6 @@ Profile, order, and configuration systems are object-driven.
 ## Related Topics
 - [12-Prototypes-and-Classes](../12-Prototypes-and-Classes/README.md)
 - [20-Browser-Storage-and-State](../20-Browser-Storage-and-State/README.md)
+- [11-This-and-Function-Binding](../11-This-and-Function-Binding/README.md)
+- [09-Arrays](../09-Arrays/README.md)
 

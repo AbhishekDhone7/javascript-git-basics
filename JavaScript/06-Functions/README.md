@@ -11,6 +11,9 @@ Functions are the core unit of reuse, testing, and maintainable architecture in 
 - Arrow functions
 - IIFE and callbacks
 - Closures, currying, recursion
+- Function scope and outer-variable access
+- Returning multiple values via array/object
+- Returning values vs returning functions
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -19,17 +22,24 @@ By the end of this section, you should be able to:
 - Use closures and recursion correctly
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with `function-scope-parameters-and-outer-variables.js`.
+2. Continue with `closure-multiplier-function.js`.
+3. Continue with `returning-multiple-values-array-and-object.js`.
+4. Continue with `return-values-vs-returned-functions.js`.
+5. Finish with `iife-patterns.js`.
+6. Write one variation of each example.
+7. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 05-Operators-Control-Flow-and-Loops
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `function-scope-parameters-and-outer-variables.js` - Local scope, outer variable access, and parameter copy behavior
+- `closure-multiplier-function.js` - Closure example using a returned function with preserved state
+- `returning-multiple-values-array-and-object.js` - Multiple return patterns with destructuring
+- `return-values-vs-returned-functions.js` - Difference between computed values and deferred returned functions
+- `iife-patterns.js` - Immediately Invoked Function Expression patterns
 
 ## Real-World Applications
 Clean service functions reduce duplicate logic and simplify debugging.
