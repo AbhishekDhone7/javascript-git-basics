@@ -20,7 +20,7 @@
 - [12. Async JavaScript](#12-async-javascript)
 - [13. APIs, Fetch, Axios, and REST Basics](#13-apis-fetch-axios-and-rest-basics)
 - [14. Error Handling and Debugging](#14-error-handling-and-debugging)
-- [15. Useful Built-ins: String, Number, Date, Math, Map, Set](#15-useful-built-ins-string-number-date-math-map-set)
+- [15. Useful Built-ins: Date, Math, Map, Set](#15-useful-built-ins-date-math-map-set)
 - [16. Modern JS Features (ES6+)](#16-modern-js-features-es6)
 - [17. Interview Question Bank](#17-interview-question-bank)
 - [18. Final Learning Roadmap](#18-final-learning-roadmap)
@@ -28,232 +28,272 @@
 ---
 
 ## 1. JavaScript at a Glance
-
+## 15. Useful Built-ins: Date, Math, Map, Set
 ### What is it?
 
 JavaScript is a programming language that tells your app what to do at runtime.
 
 Runtime means "when code is actually running".
 
-JavaScript is also:
-
 - High-level: you write human-friendly code, not machine-level instructions
 - Dynamic: data type can be decided while the program runs
 - Interpreted/JIT-compiled by engine: browser engine reads and optimizes code at runtime
 - Event-driven: code can run when events happen (click, submit, timer, response)
+String methods are already deeply covered in Section 6A.
+Number methods are already deeply covered in Section 6B.
 
-In simple words, JavaScript is the decision-maker of your application.
-It reads input, applies logic, and produces output for users.
-
-JavaScript can:
-
-- Read user actions (click, type, scroll)
-- Process data (validate, filter, calculate)
-- Update UI (show error, open modal, render list)
-- Talk to server APIs (get products, save orders)
-
-JavaScript is used in:
-
-- Browsers (frontend)
-- Servers using Node.js (backend)
-- Mobile and desktop apps through frameworks
-
-### Core building blocks (beginner view)
-
-| Building block | Simple meaning | Example |
-|---|---|---|
-| Variable | Store a value | `let age = 21` |
-| Condition | Make decisions | `if (age >= 18)` |
-| Loop | Repeat task | `for (...)` |
-| Function | Reusable logic block | `function add(a,b){}` |
-| Object/Array | Structured data | user object, items array |
-
-### Where JavaScript runs
-
-| Environment | Common use | Real-world example |
-|---|---|---|
-| Browser | Interactive UI | Add-to-cart, form validation |
-| Node.js server | Business logic/API | Save order in database |
-| Hybrid/mobile frameworks | App features | Notifications, list rendering |
-
-### Real-world scenario
-
-In an e-commerce app:
-
-- User clicks Add to Cart
-- JavaScript adds item in local state
-- JavaScript updates cart count badge
-- JavaScript sends API call to store cart
-
-### Flow diagram
-
-```mermaid
-flowchart LR
-A[User Action] --> B[JavaScript Logic]
-B --> C[Update UI]
-B --> D[Send API Request]
-D --> E[Receive Response]
-E --> C
-```
-
-### Code example 1: Basic output
-
-```js
-const productName = "Laptop";
-const price = 59999;
-console.log(`${productName} added. Price: ${price}`);
-```
-
-### Output
-
-```txt
-Laptop added. Price: 59999
-```
-
-### Code example 2: Decision making
-
-```js
-const stock = 3;
-
-if (stock > 0) {
-  console.log("In stock");
-} else {
-  console.log("Out of stock");
-}
-```
-
-### Output
-
-```txt
-In stock
-```
-
-### Code example 3: Function + input processing
-
-```js
-function calculateTotal(price, quantity) {
-  return price * quantity;
-}
-
-const total = calculateTotal(499, 2);
-console.log(`Total amount: ${total}`);
-```
-
-### Output
-
-```txt
-Total amount: 998
-```
-
-### Code example 4: Array processing (real-world cart)
-
-```js
-const cartPrices = [199, 299, 99];
-const cartTotal = cartPrices.reduce((sum, itemPrice) => sum + itemPrice, 0);
-console.log(`Cart total: ${cartTotal}`);
-```
-
-### Output
-
-```txt
-Cart total: 597
-```
-
-### Edge cases (real-world)
-
-- If API call fails, UI should show error instead of spinner forever
-- If user clicks Pay button multiple times, app can create duplicate orders
-- If product price comes as string (`"499"`) and logic is wrong, total can become incorrect
-
-### Quick checklist for beginners
-
-- Read input carefully (user form, API response)
+This section is now focused on Date, Math, Map, and Set in depth.
 - Validate data before using it
 - Show clear success or error messages
 - Keep logic in small reusable functions
 
 ### Common mistakes
 
+- Use Math for pricing, random IDs, and numeric utilities
 - Thinking JavaScript and Java are same language
 - Thinking JavaScript runs only in browser
 - Writing long code without functions
 - Not handling invalid user input
 
-### Best practices
-
-- Build fundamentals before frameworks
-- Practice daily with small problems
-- Read console errors line by line
+A[Data or operation need] --> B{Need time/date logic?}
+B -- Yes --> C[Use Date]
+B -- No --> D{Need math utilities?}
+D -- Yes --> E[Use Math]
+D -- No --> F{Need unique values?}
+F -- Yes --> G[Use Set]
+F -- No --> H{Need key-value with non-string keys?}
+H -- Yes --> I[Use Map]
+H -- No --> J[Use Object/Array]
 - Start with `const`, then use `let` if value must change
 - Name variables by purpose, not by short unclear names
+### Date deep dive
 
+Date is used for timestamps, scheduling, expiry logic, and reporting periods.
+
+Common Date operations:
+
+- current time (`new Date()`)
+- parse ISO date (`new Date("2026-07-28T10:00:00Z")`)
+- extract parts (`getFullYear`, `getMonth`, `getDate`)
+- arithmetic using milliseconds
+- formatting for display
+
+#### Date methods quick table
+
+| Method | Use |
+|---|---|
+| `Date.now()` | current epoch milliseconds |
+| `new Date()` | current date-time object |
+| `getFullYear()` | year number |
+| `getMonth()` | month index (0-11) |
+| `getDate()` | day of month |
+| `getTime()` | epoch milliseconds from Date object |
+| `toISOString()` | standard UTC string |
+
+#### Date example: order age calculation
 ### Summary
 
-JavaScript is the behavior engine of modern applications. It takes inputs, applies logic, and creates outputs users can see and trust.
+const createdAt = new Date("2026-07-20T10:00:00Z");
+const now = new Date("2026-07-28T10:00:00Z");
 
----
+const diffMs = now.getTime() - createdAt.getTime();
+const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+console.log(diffDays);
+console.log(createdAt.toISOString());
 
 ## 2. Runtime Model: Execution Context and Call Stack
 
 ![JavaScript Execution Context](assets/screenshots/javascript-execution.png)
 
-### What is it?
+8
+2026-07-20T10:00:00.000Z
 
 Execution context is the internal runtime environment where JavaScript executes code.
+### Date timeline diagram
 
+```mermaid
+flowchart LR
+A[Order created timestamp] --> B[Convert to milliseconds]
+B --> C[Current timestamp milliseconds]
+C --> D[Subtract]
+D --> E[Convert ms to days/hours]
+```
+
+### Math deep dive
+
+Math provides deterministic numeric helpers and pseudo-random generation.
+
+#### Math methods quick table
+
+| Method | Real-world use |
+|---|---|
+| `Math.round` | nearest integer billing/score |
+| `Math.floor` | pagination, bucket index |
+| `Math.ceil` | package count, page count |
+| `Math.max` | highest price/score |
+| `Math.min` | lowest price/score |
+| `Math.random` | random token/test sample |
+| `Math.abs` | distance, delta normalization |
+| `Math.pow` | exponent calculations |
+
+#### Math example: pricing and random coupon
 Each context stores:
 
-- Variables in scope
-- Function declarations and references
-- `this` value
-- Current instruction pointer
+const subtotal = 999.49;
+const taxRate = 0.18;
+const total = subtotal + subtotal * taxRate;
 
-It also keeps hidden engine metadata used for scope lookup and control flow.
+const roundedTotal = Math.round(total);
+const absDelta = Math.abs(120 - 165);
+const couponNumber = Math.floor(1000 + Math.random() * 9000);
 
-Every execution context runs in two internal phases:
-
-1. Memory creation phase
-2. Execution phase
-
-In memory creation phase:
-
-- Function declarations become fully available
-- `var` is created with `undefined`
-- `let` and `const` are created but not accessible before declaration line (TDZ)
+console.log(roundedTotal);
+console.log(absDelta);
+console.log(couponNumber >= 1000 && couponNumber <= 9999);
 
 In execution phase:
 
 - JavaScript runs statements line by line
 - Values are assigned
-- Functions are called and new contexts are created when needed
-
-Main types:
-
+1179
+45
+true
 - Global Execution Context (created first)
-- Function Execution Context (created on each function call)
 
-Each function call is pushed to call stack, and removed when complete.
+### Map deep dive
 
-### Quick mental model
+Map stores key-value pairs where keys can be any type, including objects and functions.
 
-| Term | Simple meaning | Why it matters |
+Why Map over Object:
+
+- predictable iteration order
+- key types are not limited to strings/symbols
+- better APIs for dynamic key-value workloads
+
+#### Map operations table
+
+| Operation | Method |
+|---|---|
+| Add/update | `map.set(key, value)` |
+| Read | `map.get(key)` |
+| Exists | `map.has(key)` |
+| Delete one | `map.delete(key)` |
+| Clear all | `map.clear()` |
+| Size | `map.size` |
+
+#### Map example: inventory by object key
+
+```js
+const p1 = { sku: "PEN-1" };
+const p2 = { sku: "BOOK-1" };
+
+const inventory = new Map();
+inventory.set(p1, { qty: 10, price: 12 });
+inventory.set(p2, { qty: 5, price: 120 });
+
+console.log(inventory.get(p1).qty);
+console.log(inventory.has(p2));
+console.log(inventory.size);
+```
+
+### Output
+
+```txt
+10
+true
+2
+```
+
+### Set deep dive
+
+Set stores only unique values.
+
+Common uses:
+
+- remove duplicates
+- maintain selected IDs
+- quick membership checks
+
+#### Set operations table
+
+| Operation | Method |
+|---|---|
+| Add | `set.add(value)` |
+| Exists | `set.has(value)` |
+| Delete | `set.delete(value)` |
+| Clear | `set.clear()` |
+| Count | `set.size` |
+
+#### Set example: deduplicate and membership checks
+
+```js
+const rawTags = ["js", "api", "js", "frontend", "api"];
+const uniqueTags = new Set(rawTags);
+
+console.log([...uniqueTags]);
+console.log(uniqueTags.has("api"));
+
+uniqueTags.delete("api");
+console.log(uniqueTags.has("api"));
+console.log(uniqueTags.size);
+```
+
+### Output
+
+```txt
+[ 'js', 'api', 'frontend' ]
+true
+false
+2
+```
+
+### Map vs Object and Set vs Array (diff table)
+
+| Comparison | Use first | Why |
 |---|---|---|
+| Map vs Object | Map for dynamic dictionaries | non-string keys, dedicated APIs, easier size checks |
+| Set vs Array | Set for uniqueness/membership | O(1)-like membership pattern with clear intent |
+
+### Built-in selection diagram
+
+```mermaid
+flowchart TD
+A[Need to store data] --> B{Unique values only?}
+B -- Yes --> C[Set]
+B -- No --> D{Key-value mapping?}
+D -- Yes --> E{Need non-string keys or high dynamic ops?}
+E -- Yes --> F[Map]
+E -- No --> G[Object]
+D -- No --> H[Array]
+```
+
+### Edge cases
+
+- `getMonth()` is zero-based (January is 0)
+- Date parsing of non-ISO strings can vary by environment
+- `Math.random()` is not cryptographically secure
+- Set uniqueness for objects uses reference equality, not deep equality
+- Map keys that look same but are different object references are treated separately
+- Function Execution Context (created on each function call)
 | Global context | First runtime context | Starting point of whole script |
 | Function context | Context created per function call | Keeps local data isolated |
-| Call stack | LIFO stack of active function calls | Explains execution order and errors |
-| Stack trace | Error path of nested calls | Helps debug quickly |
-
+- Assuming Date month is 1-based
+- Using Array includes repeatedly when Set is better for membership checks
+- Using Object when Map is required for object keys
+- Using random values from Math.random for security tokens
 ### Real-world scenario
 
 In checkout flow:
 
 - `placeOrder()` calls `validateCart()`
-- `validateCart()` calls `checkStock()`
-- If `checkStock()` fails, stack trace helps locate exact failure point
+- Convert dates to UTC or agreed timezone before comparisons
+- Keep math and date utilities in small helper functions
+- Prefer clear data structures over clever shortcuts
 
 ### Flow diagram
 
-```mermaid
+Date, Math, Map, and Set are high-impact built-ins for production JavaScript. Choosing the right one improves correctness, performance, and readability across real applications.
 flowchart TD
 A[Global Context Created] --> B[Global Code Runs]
 B --> C{Function Called?}
