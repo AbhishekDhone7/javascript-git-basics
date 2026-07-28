@@ -2,6 +2,12 @@
 
 {
   let array = [1, 2, 3, 4, 5, 6];
+  let opration = array.join(" ");
+  console.log(opration);
+  console.log(array);
+}
+{
+  let array = [1, 2, 3, 4, 5, 6];
   let opration = array.push(7);
   console.log(opration);
   console.log(array);
@@ -86,21 +92,21 @@
 }
 {
   let array = [1, 2, 3, 4, 5, 6];
-//   let opration = array.splice(1,3);
-  let opration = array.splice(1,3,7,8);
+  //   let opration = array.splice(1,3);
+  let opration = array.splice(1, 3, 7, 8);
   console.log(opration);
   console.log(array);
 }
 {
   let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.slice(1,4);
+  let opration = array.slice(1, 4);
   console.log(opration);
   console.log(array);
 }
 {
   let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.every((cv, i ,array) => {
-    return cv < 7
+  let opration = array.every((cv, i, array) => {
+    return cv < 7;
     // return cv < 5
   });
   console.log(opration);
@@ -108,9 +114,9 @@
 }
 {
   let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.some((cv, i ,array) => {
+  let opration = array.some((cv, i, array) => {
     // return cv < 7
-    return cv < 2
+    return cv < 2;
   });
   console.log(opration);
   console.log(array);
@@ -118,25 +124,25 @@
 {
   let array = [
     {
-        id: 1,
-        name: "Abhishek"
+      id: 1,
+      name: "Abhishek",
     },
     {
-        id: 2,
-        name: "Rohit"
+      id: 2,
+      name: "Rohit",
     },
     {
-        id: 3,
-        name: "Shubham"
+      id: 3,
+      name: "Shubham",
     },
     {
-        id: 4,
-        name: "Sagar"
+      id: 4,
+      name: "Sagar",
     },
   ];
-  let opration = array.find((cv, i ,array) => {
+  let opration = array.find((cv, i, array) => {
     // return cv.id === 2
-    return cv.id > 2
+    return cv.id > 2;
   });
   console.log(opration);
   console.log(array);
@@ -144,27 +150,25 @@
 {
   let array = [
     {
-        id: 1,
-        price: 10_000
+      id: 1,
+      price: 10_000,
     },
     {
-        id: 2,
-        price: 10_100
+      id: 2,
+      price: 10_100,
     },
     {
-        id: 3,
-        price: 20_000
+      id: 3,
+      price: 20_000,
     },
     {
-        id: 4,
-        price: 10_030
+      id: 4,
+      price: 10_030,
     },
   ];
-  let opration = array.reduce((acc, cv, i ,array) => {
-    return acc + cv.price
+  let opration = array.reduce((acc, cv, i, array) => {
+    return acc + cv.price;
   }, 0);
   console.log(opration);
   console.log(array);
 }
-
-
