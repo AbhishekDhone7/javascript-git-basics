@@ -8,7 +8,10 @@ Professional developers are judged by how quickly and safely they diagnose and f
 
 ## Concepts Covered
 - try/catch/finally
-- Custom errors
+- throw and custom errors
+- Error object properties and stack traces
+- Rethrowing and wrapping exceptions
+- Custom error inheritance
 - Debugging tools and stack traces
 - Retry and fallback patterns
 
@@ -19,17 +22,18 @@ By the end of this section, you should be able to:
 - Use debugging workflow effectively
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with `error-handling-try-catch-finally-and-custom-errors.js`.
+2. Read the concepts in the listed topic order.
+3. Run every code sample manually.
+4. Write one variation of each example.
+5. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 15-APIs-Fetch-and-Axios
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `error-handling-try-catch-finally-and-custom-errors.js` - Runtime error handling, custom errors, rethrowing, and wrapping exceptions
 
 ## Real-World Applications
 Production incidents require fast root-cause analysis and safe recovery paths.

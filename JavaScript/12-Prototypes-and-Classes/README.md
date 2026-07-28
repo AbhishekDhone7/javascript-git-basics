@@ -10,6 +10,8 @@ Understanding prototypal inheritance and class syntax enables scalable object-or
 - Prototype basics
 - Constructor functions and instance creation with `new`
 - Prototype methods and shared properties
+- Prototypal inheritance with `__proto__`
+- Getter/setter accessors on objects and classes
 - Class syntax
 - Inheritance and polymorphism
 - Getters, setters, static members
@@ -31,7 +33,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- `constructor-functions-and-prototypes.js` - Constructor functions, prototype methods, object instances, and `new` behavior
+- `constructor-functions-and-prototypes.js` - Constructor functions, prototype methods, prototypal inheritance, accessors, and `new` behavior
 
 ## Real-World Applications
 Large apps use reusable models and abstractions for maintainability.

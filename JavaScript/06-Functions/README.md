@@ -36,11 +36,12 @@ By the end of this section, you should be able to:
 2. Continue with `function-scope-parameters-and-outer-variables.js`.
 3. Continue with `closure-multiplier-function.js`.
 4. Continue with `callbacks-and-higher-order-functions.js`.
-5. Continue with `returning-multiple-values-array-and-object.js`.
-6. Continue with `return-values-vs-returned-functions.js`.
-7. Finish with `iife-patterns.js`.
-8. Write one variation of each example.
-9. Add your own notes for confusing edge cases.
+5. Continue with `closure-higher-order-currying-and-recursion.js`.
+6. Continue with `returning-multiple-values-array-and-object.js`.
+7. Continue with `return-values-vs-returned-functions.js`.
+8. Finish with `iife-patterns.js`.
+9. Write one variation of each example.
+10. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 05-Operators-Control-Flow-and-Loops
@@ -51,6 +52,7 @@ By the end of this section, you should be able to:
 - `function-scope-parameters-and-outer-variables.js` - Local scope, outer variable access, and parameter copy behavior
 - `closure-multiplier-function.js` - Nested function and closure patterns with preserved/private state examples
 - `callbacks-and-higher-order-functions.js` - Callback fundamentals, async callback flow, and higher-order function patterns
+- `closure-higher-order-currying-and-recursion.js` - Closures, higher-order functions, currying, and recursive problem solving
 - `returning-multiple-values-array-and-object.js` - Multiple return patterns with destructuring
 - `return-values-vs-returned-functions.js` - Difference between computed values and deferred returned functions
 - `iife-patterns.js` - Immediately Invoked Function Expression patterns

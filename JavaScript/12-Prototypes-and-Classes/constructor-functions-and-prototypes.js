@@ -121,3 +121,148 @@ welcomeModal.display();
 // Optional: inspecting property ownership.
 console.log("user1 hasOwnProperty name:", Object.hasOwn(user1, "name"));
 console.log("user1 hasOwnProperty greet:", Object.hasOwn(user1, "greet"));
+
+// ---------------- Prototypal inheritance ----------------
+const country = {
+  nation: "India",
+  greatFor: "Unity in Diversity",
+  patriotSays() {
+    console.log("India is the best country in the world");
+  },
+  locatedIn() {
+    console.log("It is located in Asia continent");
+  },
+  set politicalHead(value) {
+    [this.fname, this.lname] = value.split(" ");
+  },
+  get politicalHead() {
+    return `${this.fname} ${this.lname}`;
+  },
+};
+
+const state = {
+  sname: "Maharashtra",
+  greatFor: "Culture, Business and Highest GSDP",
+  locatedIn() {
+    console.log("It is located in India's western part");
+  },
+};
+
+state.__proto__ = country;
+console.log("Inherited nation from country:", state.nation);
+state.patriotSays();
+country.patriotSays();
+console.log("Child own greatFor:", state.greatFor);
+console.log("Parent greatFor:", country.greatFor);
+country.locatedIn();
+state.locatedIn();
+
+country.politicalHead = "Narendra Modi";
+state.politicalHead = "Eknath Shinde";
+console.log("Country politicalHead fields:", country.fname, country.lname);
+console.log("State politicalHead fields:", state.fname, state.lname);
+
+// Inherited properties show up in for...in, but not Object.keys.
+const animal = {
+  eats: true,
+};
+
+const rabbit = {
+  jumps: true,
+  __proto__: animal,
+};
+
+console.log("Object.keys(rabbit):", Object.keys(rabbit));
+for (const prop in rabbit) {
+  console.log("for...in prop:", prop);
+}
+
+for (const prop in rabbit) {
+  const isOwn = rabbit.hasOwnProperty(prop);
+  console.log(isOwn ? `Own: ${prop}` : `Inherited: ${prop}`);
+}
+
+// Reading through prototype chain.
+const longEar = {
+  earLength: 10,
+  __proto__: rabbit,
+};
+console.log("longEar.jumps:", longEar.jumps);
+console.log("longEar.eats:", longEar.eats);
+
+// Writing always affects the object itself.
+rabbit.walk = function () {
+  return "Rabbit! Bounce-bounce!";
+};
+console.log(rabbit.walk());
+
+// Accessors on the prototype use the receiving object as `this`.
+const user = {
+  name: "John",
+  surname: "Smith",
+  set fullName(value) {
+    [this.name, this.surname] = value.split(" ");
+  },
+  get fullName() {
+    return `${this.name} ${this.surname}`;
+  },
+};
+
+const admin = {
+  __proto__: user,
+  isAdmin: true,
+};
+
+console.log("admin.fullName before set:", admin.fullName);
+admin.fullName = "Alice Cooper";
+console.log("admin.fullName after set:", admin.fullName);
+console.log("user.fullName remains:", user.fullName);
+
+// Methods work with the current receiver object.
+const sleepingAnimal = {
+  walk() {
+    if (!this.isSleeping) {
+      console.log("I walk");
+    }
+  },
+  sleep() {
+    this.isSleeping = true;
+  },
+};
+
+const whiteRabbit = {
+  name: "White Rabbit",
+  __proto__: sleepingAnimal,
+};
+
+whiteRabbit.sleep();
+console.log("whiteRabbit.isSleeping:", whiteRabbit.isSleeping);
+console.log("sleepingAnimal.isSleeping:", sleepingAnimal.isSleeping);
+
+// A quick getter/setter example on a class to match the accessor discussion.
+class CoffeeMachine {
+  constructor(power) {
+    this._power = power;
+    this._waterAmount = 0;
+  }
+
+  set waterAmount(value) {
+    if (value < 0) value = 0;
+    this._waterAmount = value;
+  }
+
+  get waterAmount() {
+    return this._waterAmount + "ML";
+  }
+
+  get power() {
+    return this._power;
+  }
+}
+
+const cm1 = new CoffeeMachine(100);
+cm1.waterAmount = 10;
+console.log("CoffeeMachine waterAmount:", cm1.waterAmount);
+cm1.waterAmount = -10;
+console.log("CoffeeMachine waterAmount after negative:", cm1.waterAmount);
+console.log("CoffeeMachine power:", cm1.power);
