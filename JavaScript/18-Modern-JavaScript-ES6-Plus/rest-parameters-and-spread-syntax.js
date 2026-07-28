@@ -50,10 +50,10 @@ const arr4 = [8, 9, 15];
 const merged = [0, ...arr3, 2, ...arr4];
 console.log(merged);
 
-const arr = [1, 2, 3];
-const arrCopy = [...arr];
-console.log(JSON.stringify(arr) === JSON.stringify(arrCopy));
-console.log(arr === arrCopy);
+const originalValues = [1, 2, 3];
+const copiedValues = [...originalValues];
+console.log(JSON.stringify(originalValues) === JSON.stringify(copiedValues));
+console.log(originalValues === copiedValues);
 
 const scores = [98, 95, 93, 90, 88, 85];
 const [top1, top2, ...others] = scores;
@@ -104,10 +104,10 @@ const user = { name: "John Doe", age: 28 };
 const updatedUser = { ...user, location: "USA", age: 30 };
 console.log(updatedUser);
 
-function sumAll(...args) {
+function sumAll(...values) {
   let total = 0;
-  for (const arg of args) {
-    total += arg;
+  for (const currentValue of values) {
+    total += currentValue;
   }
   return total;
 }
@@ -125,14 +125,14 @@ console.log(copiedUser);
 const mergedList = [...[1, 2], ...[3, 4], 5];
 console.log(mergedList);
 
-let obj = { a: 1, b: 2, c: 3 };
-let objCopy = { ...obj };
-console.log(JSON.stringify(obj) === JSON.stringify(objCopy));
-console.log(obj === objCopy);
+let sourceObject = { a: 1, b: 2, c: 3 };
+let copiedObject = { ...sourceObject };
+console.log(JSON.stringify(sourceObject) === JSON.stringify(copiedObject));
+console.log(sourceObject === copiedObject);
 
-obj.d = 4;
-console.log(JSON.stringify(obj));
-console.log(JSON.stringify(objCopy));
+sourceObject.d = 4;
+console.log(JSON.stringify(sourceObject));
+console.log(JSON.stringify(copiedObject));
 
 console.log("--- Rest and spread together in destructuring ---");
 const userProfile = {

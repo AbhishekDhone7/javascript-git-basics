@@ -129,7 +129,7 @@ async function runAxiosExamples() {
 }
 
 runAxiosExamples().catch((error) => {
-  console.error("Axios demo failed:", error);
+  console.error("Axios example flow failed:", error);
 });
 
 console.log("--- Notes ---");

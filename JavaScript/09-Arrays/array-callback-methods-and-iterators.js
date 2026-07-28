@@ -35,14 +35,14 @@ numbers.forEach(function forEachDemo(value, index) {
 console.log("forEach concatenated text:", concatenatedText);
 
 // Third callback parameter is the same array reference.
-const callbackReferenceDemo = [10, 20, 30];
-callbackReferenceDemo.forEach(function mutateWithThirdParam(value, index, originalArray) {
+const mutableReferenceExample = [10, 20, 30];
+mutableReferenceExample.forEach(function mutateWithThirdParam(value, index, originalArray) {
   if (index === 0) {
     originalArray[2] = 999;
   }
   console.log("forEach value after possible mutation:", value);
 });
-console.log("Third-parameter mutation demo:", callbackReferenceDemo);
+console.log("Third-parameter mutation example:", mutableReferenceExample);
 
 // map returns a new transformed array.
 const doubledNumbers = numbers.map(function mapDemo(value) {
@@ -57,10 +57,10 @@ const over18 = numbers.filter(function filterDemo(value) {
 console.log("filter numbers > 18:", over18.slice(0, 10), "...");
 
 // reduce combines array values into one result.
-const sum = numbers.reduce(function reduceDemo(total, value) {
+const totalSum = numbers.reduce(function reduceDemo(total, value) {
   return total + value;
 }, 0);
-console.log("reduce sum:", sum);
+console.log("reduce sum:", totalSum);
 
 const sumWithInitial = numbers.reduce(function reduceWithInitial(total, value) {
   return total + value;
@@ -106,17 +106,17 @@ const fromArrayLike = Array.from(arrayLikeObject);
 console.log("Array.from array-like object:", fromArrayLike);
 
 // keys() and entries() return iterators (single-use iteration state).
-const cityKeys = cities.keys();
+const cityIndexIterator = cities.keys();
 let keyText = "";
-for (const key of cityKeys) {
-  keyText += key + " ";
+for (const cityIndex of cityIndexIterator) {
+  keyText += cityIndex + " ";
 }
 console.log("keys iterator output:", keyText.trim());
 
 // Recreate iterator before iterating again.
-for (const key of cities.keys()) {
-  if (key < 3) {
-    console.log("key sample:", key);
+for (const cityIndex of cities.keys()) {
+  if (cityIndex < 3) {
+    console.log("key sample:", cityIndex);
   }
 }
 

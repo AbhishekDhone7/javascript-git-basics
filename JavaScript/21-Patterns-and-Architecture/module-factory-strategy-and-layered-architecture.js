@@ -41,7 +41,7 @@ console.log("Strategy pattern:", applyStrategy(formatters.upper, "architecture")
 const serviceLayer = {
   repository: {
     findUser(id) {
-      return { id, name: "Demo User" };
+      return { id, name: "Sample User" };
     },
   },
   service: {

@@ -9,15 +9,15 @@ let outerSum;
 let globalSum;
 
 function addition() {
-  const a = 2;
-  const b = 3;
-  const c = a + b;
+  const firstOperand = 2;
+  const secondOperand = 3;
+  const localSum = firstOperand + secondOperand;
 
   // Safe explicit global assignment for demonstration.
-  globalSum = a + b + c;
-  outerSum = a + b;
+  globalSum = firstOperand + secondOperand + localSum;
+  outerSum = firstOperand + secondOperand;
 
-  return c;
+  return localSum;
 }
 
 addition();

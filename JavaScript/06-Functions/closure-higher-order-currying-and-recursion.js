@@ -40,18 +40,18 @@ const anotherCounter = createCounter();
 anotherCounter.decrement();
 
 // Each closure keeps its own captured value.
-function f() {
-  const x = Math.random();
+function createRandomValueLogger() {
+  const capturedRandomValue = Math.random();
 
   return function () {
-    console.log("Captured x:", x);
+    console.log("Captured random value:", capturedRandomValue);
   };
 }
 
-const arr = [f(), f(), f()];
-arr[0]();
-arr[1]();
-arr[2]();
+const randomValueLoggers = [createRandomValueLogger(), createRandomValueLogger(), createRandomValueLogger()];
+randomValueLoggers[0]();
+randomValueLoggers[1]();
+randomValueLoggers[2]();
 
 // Higher-order function that takes another function as an argument.
 function repeatOperation(times, operation) {
@@ -140,15 +140,15 @@ function factorial(n) {
 console.log("Factorial of 5:", factorial(5));
 
 // Recursive sum.
-function sum(n) {
-  if (n <= 1) {
-    return n;
+function recursiveSum(maxNumber) {
+  if (maxNumber <= 1) {
+    return maxNumber;
   }
 
-  return n + sum(n - 1);
+  return maxNumber + recursiveSum(maxNumber - 1);
 }
 
-console.log("Sum of 10:", sum(10));
+console.log("Sum of 10:", recursiveSum(10));
 
 // Recursive Fibonacci.
 function fibonacci(n) {

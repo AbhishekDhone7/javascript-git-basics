@@ -12,7 +12,7 @@ let firstValue = 15;
 let secondValue = 20;
 secondValue = firstValue + secondValue; // Reassignment with let is allowed
 
-const PI = 3.14; // const cannot be reassigned
+const piValue = 3.14; // const cannot be reassigned
 var firstVariable = "one";
 let firstvariable = "two";
 
@@ -22,7 +22,7 @@ console.log(firstvariable);
 
 // Additional output for clarity.
 console.log("secondValue after reassignment:", secondValue);
-console.log("PI:", PI);
+console.log("PI:", piValue);
 
 // Identifier naming notes:
 // Allowed: letters, digits (not as first character), underscore (_), dollar sign ($)

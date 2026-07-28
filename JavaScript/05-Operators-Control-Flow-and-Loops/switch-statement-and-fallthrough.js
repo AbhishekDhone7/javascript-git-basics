@@ -5,10 +5,10 @@
 */
 
 // 1) Basic switch statement
-const day = 3;
+const dayNumber = 3;
 let dayName;
 
-switch (day) {
+switch (dayNumber) {
   case 1:
     dayName = "Monday";
     break;

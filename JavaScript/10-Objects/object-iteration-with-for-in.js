@@ -18,21 +18,21 @@ const person = {
 };
 
 console.log("Top-level iteration:");
-for (const key in person) {
-  console.log(`Property: ${key} | Value: ${person[key]}`);
+for (const propertyName in person) {
+  console.log(`Property: ${propertyName} | Value: ${person[propertyName]}`);
 }
 
 console.log("\nNested object-aware iteration:");
-for (const key in person) {
-  const value = person[key];
+for (const propertyName in person) {
+  const value = person[propertyName];
 
   if (typeof value === "object" && value !== null && !Array.isArray(value)) {
-    console.log(`Nested object: ${key}`);
+    console.log(`Nested object: ${propertyName}`);
 
     for (const nestedKey in value) {
       console.log(`  ${nestedKey}: ${value[nestedKey]}`);
     }
   } else {
-    console.log(`Property: ${key} | Value: ${value}`);
+    console.log(`Property: ${propertyName} | Value: ${value}`);
   }
 }

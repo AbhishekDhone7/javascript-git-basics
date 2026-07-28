@@ -10,13 +10,13 @@ function memoize(fn) {
   const cache = new Map();
 
   return function (...args) {
-    const key = JSON.stringify(args);
-    if (cache.has(key)) {
-      return cache.get(key);
+    const cacheKey = JSON.stringify(args);
+    if (cache.has(cacheKey)) {
+      return cache.get(cacheKey);
     }
 
     const result = fn(...args);
-    cache.set(key, result);
+    cache.set(cacheKey, result);
     return result;
   };
 }

@@ -7,23 +7,23 @@
 // return ends function execution immediately.
 function earlyReturnExample() {
   console.log("This function returns after conditional check");
-  let a = 2;
-  let b = 20;
-  a = a * a;
-  b = b * b;
+  let firstValue = 2;
+  let secondValue = 20;
+  firstValue = firstValue * firstValue;
+  secondValue = secondValue * secondValue;
 
-  if (a > 10) {
-    return a;
+  if (firstValue > 10) {
+    return firstValue;
   }
 
-  const c = a + b;
-  return c;
+  const totalValue = firstValue + secondValue;
+  return totalValue;
 }
 
 console.log("Early return result:", earlyReturnExample());
 
-function calculateWithCallback(logic, a, b) {
-  return logic(a, b);
+function calculateWithCallback(logic, firstOperand, secondOperand) {
+  return logic(firstOperand, secondOperand);
 }
 
 function sum(x, y) {
@@ -40,9 +40,9 @@ try {
   console.log("Calling a number as function error:", error.name);
 }
 
-function returnFunction(logic, a, b) {
+function returnFunction(logic, firstOperand, secondOperand) {
   return function deferredExecution() {
-    return logic(a, b);
+    return logic(firstOperand, secondOperand);
   };
 }
 
@@ -77,8 +77,10 @@ function getPerson() {
 const alice = getPerson();
 console.log(alice.name, alice.age, alice.city);
 
-function returnStatementExample(a, b, c) {
-  return a + b + c === 15 ? a + b + c : "Not 15";
+function returnStatementExample(firstValue, secondValue, thirdValue) {
+  return firstValue + secondValue + thirdValue === 15
+    ? firstValue + secondValue + thirdValue
+    : "Not 15";
 }
 
 console.log(returnStatementExample(5, 5, 5));

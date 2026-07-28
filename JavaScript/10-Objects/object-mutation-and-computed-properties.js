@@ -34,9 +34,9 @@ console.log("Space-containing key:", user["likes birds"]);
 
 // Computed property
 const fruit = "apple";
-const bag = {
+const fruitInventory = {
   [fruit]: 5
 };
 
-console.log("Computed property value:", bag.apple);
-console.log("Computed property value by variable:", bag[fruit]);
+console.log("Computed property value:", fruitInventory.apple);
+console.log("Computed property value by variable:", fruitInventory[fruit]);

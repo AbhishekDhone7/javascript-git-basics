@@ -5,7 +5,7 @@
 */
 
 // Basic arrow syntax examples.
-const add = (num1, num2) => {
+const calculateScaledSum = (num1, num2) => {
   const total = num1 + num2;
   return total * 10;
 };
@@ -15,7 +15,7 @@ const noParams = () => 110;
 const implicitReturn = (a, b) => a + b;
 const returnObject = (name, age) => ({ name, age });
 
-console.log("add(2, 3):", add(2, 3));
+console.log("add(2, 3):", calculateScaledSum(2, 3));
 console.log("singleParam('Alice'):", singleParam("Alice"));
 console.log("noParams():", noParams());
 console.log("implicitReturn(10, 5):", implicitReturn(10, 5));
@@ -42,7 +42,7 @@ console.log("sumArrayPair():", sumArrayPair());
 console.log("sumObjectPair():", sumObjectPair());
 
 // Lexical this inside object methods.
-const obj1 = {
+const lexicalContextObject = {
   a: 123,
   b: 20,
   c: 277,
@@ -57,21 +57,21 @@ const obj1 = {
   },
 
   nestedFunc() {
-    function nesFunc() {
+    function nestedRegularFunction() {
       console.log("nested normal function this.a and this.b:", this.a, this.b);
       return this.a + this.b;
     }
 
-    return nesFunc();
+    return nestedRegularFunction();
   },
 
   getSum() {
-    const af = () => {
+    const nestedArrowFunction = () => {
       console.log("nested arrow this.a and this.b:", this.a, this.b);
       return this.a + this.b;
     };
 
-    return af();
+    return nestedArrowFunction();
   },
 
   getSumAgain() {
@@ -82,37 +82,37 @@ const obj1 = {
   },
 };
 
-console.log("obj1.getSum():", obj1.getSum());
-console.log("obj1.getSumAgain():", obj1.getSumAgain());
-console.log("obj1.sumFunc():", obj1.sumFunc());
-console.log("obj1.sumMethod():", obj1.sumMethod());
-console.log("obj1.nestedFunc():", obj1.nestedFunc());
+console.log("lexicalContextObject.getSum():", lexicalContextObject.getSum());
+console.log("lexicalContextObject.getSumAgain():", lexicalContextObject.getSumAgain());
+console.log("lexicalContextObject.sumFunc():", lexicalContextObject.sumFunc());
+console.log("lexicalContextObject.sumMethod():", lexicalContextObject.sumMethod());
+console.log("lexicalContextObject.nestedFunc():", lexicalContextObject.nestedFunc());
 
 // Arrow functions do not have their own `this`.
-const obj2 = {
+const arrowMethodContextExample = {
   a: 10,
   b: 20,
   c: "no value",
   getSum: function () {
     console.log("Yes you can see me");
-    const m = () => {
-      const sum = this.a + this.b;
-      console.log("Arrow inside method sum:", sum);
-      return sum;
+    const nestedArrow = () => {
+      const combinedValue = this.a + this.b;
+      console.log("Arrow inside method sum:", combinedValue);
+      return combinedValue;
     };
-    console.log("m():", m());
-    return m();
+    console.log("nestedArrow():", nestedArrow());
+    return nestedArrow();
   },
 
   getOtherSum: () => {
-    const sum = this.a + this.b;
-    console.log("Arrow method getOtherSum sum:", sum);
-    return sum;
+    const combinedValue = this.a + this.b;
+    console.log("Arrow method getOtherSum sum:", combinedValue);
+    return combinedValue;
   },
 };
 
-console.log("obj2.getSum():", obj2.getSum());
-console.log("obj2.getOtherSum():", obj2.getOtherSum());
+console.log("arrowMethodContextExample.getSum():", arrowMethodContextExample.getSum());
+console.log("arrowMethodContextExample.getOtherSum():", arrowMethodContextExample.getOtherSum());
 
 // Call/apply/bind do not change an arrow function's lexical this.
 const lexicalContext = {
@@ -134,16 +134,16 @@ console.log("Arrow call() result:", arrowFunction.call({ title: "ignored" }));
 console.log("Arrow bind() result:", arrowFunction.bind({ title: "ignored" })());
 
 // Using arrow functions with setTimeout keeps the outer method context.
-const obj3 = {
+const delayedUpdateExample = {
   count: 10,
   doSomethingLater() {
     setTimeout(() => {
       this.count++;
-      console.log("obj3.count after timeout:", this.count);
+      console.log("delayedUpdateExample.count after timeout:", this.count);
     }, 10);
   },
 };
-obj3.doSomethingLater();
+delayedUpdateExample.doSomethingLater();
 
 // Arrow functions do not work well as object methods when you need object-bound this.
 const group = {

@@ -1,75 +1,75 @@
 //? Array Methods
 
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.join(" ");
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.join(" ");
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.push(7);
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.push(7);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.pop();
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.pop();
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.shift();
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.shift();
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.unshift(7);
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.unshift(7);
+  console.log(operationResult);
+  console.log(numbers);
 }
 
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.map((cv, i, array) => {
-    return cv * 2;
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.map((currentValue) => {
+    return currentValue * 2;
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.filter((cv, i, array) => {
-    return cv % 2 !== 0;
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.filter((currentValue) => {
+    return currentValue % 2 !== 0;
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.forEach((cv, i, array) => {
-    return cv * 2;
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.forEach((currentValue) => {
+    return currentValue * 2;
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = ["Suraj", "Abhishek", "Chaitany"];
-  let opration = array.sort();
+  let names = ["Suraj", "Abhishek", "Chaitany"];
+  let operationResult = names.sort();
   //   .reverse();
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(names);
 }
 {
-  let array = [1, 2, 13, 4, 5, 16, 3, 4, 5, 6];
-  let opration = array.sort((a, b) => a - b); // -> (a,b) =>  b - a
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 13, 4, 5, 16, 3, 4, 5, 6];
+  let operationResult = numbers.sort((leftValue, rightValue) => leftValue - rightValue); // -> (leftValue, rightValue) => rightValue - leftValue
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [
+  let employees = [
     {
       empId: 123,
       name: "Charlie",
@@ -86,43 +86,43 @@
       location: "Wonderland",
     },
   ];
-  let opration = array.sort((a, b) => a.name.localeCompare(b.name));
-  console.log(opration);
-  console.log(array);
+  let operationResult = employees.sort((leftEmployee, rightEmployee) => leftEmployee.name.localeCompare(rightEmployee.name));
+  console.log(operationResult);
+  console.log(employees);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  //   let opration = array.splice(1,3);
-  let opration = array.splice(1, 3, 7, 8);
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  //   let operationResult = numbers.splice(1, 3);
+  let operationResult = numbers.splice(1, 3, 7, 8);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.slice(1, 4);
-  console.log(opration);
-  console.log(array);
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.slice(1, 4);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.every((cv, i, array) => {
-    return cv < 7;
-    // return cv < 5
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.every((currentValue) => {
+    return currentValue < 7;
+    // return currentValue < 5
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [1, 2, 3, 4, 5, 6];
-  let opration = array.some((cv, i, array) => {
-    // return cv < 7
-    return cv < 2;
+  let numbers = [1, 2, 3, 4, 5, 6];
+  let operationResult = numbers.some((currentValue) => {
+    // return currentValue < 7
+    return currentValue < 2;
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(numbers);
 }
 {
-  let array = [
+  let users = [
     {
       id: 1,
       name: "Abhishek",
@@ -140,15 +140,15 @@
       name: "Sagar",
     },
   ];
-  let opration = array.find((cv, i, array) => {
-    // return cv.id === 2
-    return cv.id > 2;
+  let operationResult = users.find((currentUser) => {
+    // return currentUser.id === 2
+    return currentUser.id > 2;
   });
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(users);
 }
 {
-  let array = [
+  let products = [
     {
       id: 1,
       price: 10_000,
@@ -166,9 +166,9 @@
       price: 10_030,
     },
   ];
-  let opration = array.reduce((acc, cv, i, array) => {
-    return acc + cv.price;
+  let operationResult = products.reduce((totalPrice, currentProduct) => {
+    return totalPrice + currentProduct.price;
   }, 0);
-  console.log(opration);
-  console.log(array);
+  console.log(operationResult);
+  console.log(products);
 }

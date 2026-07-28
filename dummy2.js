@@ -1,8 +1,8 @@
-let str = "welcome to javascript world";
+let sentence = "welcome to javascript world";
 
-  let revStr =  str.split(" ").reverse().join(" ");
+  let reversedSentence = sentence.split(" ").reverse().join(" ");
 
-  console.log(revStr);
+  console.log(reversedSentence);
 
-  let arr = [1,2,3,4];
+  let numbers = [1, 2, 3, 4];
   

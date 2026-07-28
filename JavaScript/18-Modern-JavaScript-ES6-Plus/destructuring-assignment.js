@@ -23,24 +23,24 @@ console.log(h);
 console.log(main);
 
 console.log("--- Default values ---");
-const elem = {
+const profile = {
   myName: "Abhishek",
   nickName: "Arjun",
 };
 function getNick() {
   return "No Nick Name";
 }
-const { nickName = getNick(), myName } = elem;
+const { nickName = getNick(), myName } = profile;
 console.log(nickName);
 console.log(myName);
 
 console.log("--- Partial destructuring ---");
-const emp = {
-  emp_name: "Labourdeep",
-  lname: "swazchmuller",
+const employee = {
+  employeeName: "Harshdeep",
+  lname: "Schwarzmuller",
 };
-const { emp_name } = emp;
-console.log(emp_name);
+const { employeeName } = employee;
+console.log(employeeName);
 
 console.log("--- Object rest pattern ---");
 const restOptions = {
@@ -74,7 +74,7 @@ const users = {
 
 const {
   email: { id, mail },
-  fullName: [fname, sname],
+  fullName: [firstName, lastName],
   regular,
   city,
   state = "maharashtra",
@@ -82,8 +82,8 @@ const {
 
 console.log(id);
 console.log(mail);
-console.log(fname);
-console.log(sname);
+console.log(firstName);
+console.log(lastName);
 console.log(regular);
 console.log(city);
 console.log(state);

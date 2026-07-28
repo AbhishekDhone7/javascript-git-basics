@@ -4,65 +4,65 @@
 
   //? Solution 1
 
-  function revStr(str) {
-    return str.split("").reverse().join("");
+  function reverseStringUsingBuiltIns(inputText) {
+    return inputText.split("").reverse().join("");
   }
-  console.log(revStr("abcdef"));
+  console.log(reverseStringUsingBuiltIns("abcdef"));
 
   //? Solution 2
 
-  function revStr2(str) {
-    let result = "";
-    for (let i = str.length - 1; i >= 0; i--) {
-      result = result + str[i];
+  function reverseStringUsingLoop(inputText) {
+    let reversedText = "";
+    for (let charIndex = inputText.length - 1; charIndex >= 0; charIndex--) {
+      reversedText = reversedText + inputText[charIndex];
     }
-    return result;
+    return reversedText;
   }
-  console.log(revStr2("abcdef"));
+  console.log(reverseStringUsingLoop("abcdef"));
 
   //? Solution 3
 
-  function revStr3(str) {
-    if (str === "") return "";
-    return revStr3(str.slice(1)) + str[0];
+  function reverseStringUsingRecursion(inputText) {
+    if (inputText === "") return "";
+    return reverseStringUsingRecursion(inputText.slice(1)) + inputText[0];
 
     // bcdef + a
     // cdef + a + b
   }
-  console.log(revStr3("abcdef"));
+  console.log(reverseStringUsingRecursion("abcdef"));
 
   //   for arry sort using reverce
 
-  function sortUsingReduce(arr) {
-    return arr.reduceRight((acc, cv) => {
-      acc.push(cv);
-      return acc;
+  function reverseArrayUsingReduceRight(numbers) {
+    return numbers.reduceRight((reversedValues, currentValue) => {
+      reversedValues.push(currentValue);
+      return reversedValues;
     }, []);
   }
-  console.log(sortUsingReduce([10, 5, 25, 40, 15]));
+  console.log(reverseArrayUsingReduceRight([10, 5, 25, 40, 15]));
 }
 {
   // 1. Check Palindrome
   // "madam" <-> "madam"
 
   //? Solution 1
-  function palindrome2(str) {
-    return str === str.split("").reverse().join("");
+  function isPalindromeUsingReverse(inputText) {
+    return inputText === inputText.split("").reverse().join("");
   }
-  console.log(palindrome2("abcdef"));
-  console.log(palindrome2("madam"));
+  console.log(isPalindromeUsingReverse("abcdef"));
+  console.log(isPalindromeUsingReverse("madam"));
 
   //? Solution 2
 
-  function palindrome2(str) {
-    let result = "";
-    for (let i = str.length - 1; i >= 0; i--) {
-      result = result + str[i];
+  function isPalindromeUsingLoop(inputText) {
+    let reversedText = "";
+    for (let charIndex = inputText.length - 1; charIndex >= 0; charIndex--) {
+      reversedText = reversedText + inputText[charIndex];
     }
-    return result === str;
+    return reversedText === inputText;
   }
-  console.log(palindrome2("abcdef"));
-  console.log(palindrome2("madam"));
+  console.log(isPalindromeUsingLoop("abcdef"));
+  console.log(isPalindromeUsingLoop("madam"));
 }
 {
   // 1. Find the Largest Number in an Array
@@ -70,86 +70,86 @@
   //   Output: 40;
 
   //? Solution 1
-  function findLargest(arr) {
-    return arr.sort((a, b) => b - a)[0];
+  function findLargestUsingSort(numbers) {
+    return numbers.sort((leftValue, rightValue) => rightValue - leftValue)[0];
   }
-  console.log(findLargest([10, 5, 25, 40, 15]));
+  console.log(findLargestUsingSort([10, 5, 25, 40, 15]));
 
   //? Solution 2
 
-  function findLargest(arr) {
-    let max = arr[0];
-    for (let i = 0; i < arr.length; i++) {
-      if (max < arr[i]) {
-        max = arr[i];
+  function findLargestUsingLoop(numbers) {
+    let largestNumber = numbers[0];
+    for (let index = 0; index < numbers.length; index++) {
+      if (largestNumber < numbers[index]) {
+        largestNumber = numbers[index];
       }
     }
 
-    return max;
+    return largestNumber;
   }
-  console.log(findLargest([10, 5, 25, 40, 15]));
+  console.log(findLargestUsingLoop([10, 5, 25, 40, 15]));
 
   //? 3 Math.max(...[])
 
   //! BubbleSort usefull for max, min, second Used only for sorting array
 
-  function BubboleSort(arr) {
-    for (let i = 0; i < arr.length; i++) {
-      for (let j = 0; j < arr.length; j++) {
-        if (arr[i] > arr[j]) {
-          let temp = arr[i];
-          arr[i] = arr[j];
-          arr[j] = temp;
+  function bubbleSortDescending(numbers) {
+    for (let leftIndex = 0; leftIndex < numbers.length; leftIndex++) {
+      for (let rightIndex = 0; rightIndex < numbers.length; rightIndex++) {
+        if (numbers[leftIndex] > numbers[rightIndex]) {
+          let tempValue = numbers[leftIndex];
+          numbers[leftIndex] = numbers[rightIndex];
+          numbers[rightIndex] = tempValue;
         }
       }
     }
-    return arr;
+    return numbers;
   }
-  console.log(BubboleSort([10, 5, 25, 40, 15]));
+  console.log(bubbleSortDescending([10, 5, 25, 40, 15]));
 }
 
 // 5. Remove Duplicates from an Array
 
 // ?1
-function removeDuplicates(arr) {
-  return [...new Set(arr)];
+function removeDuplicatesUsingSet(numbers) {
+  return [...new Set(numbers)];
 }
 
-console.log(removeDuplicates([1, 2, 2, 3, 4, 4, 5]));
+console.log(removeDuplicatesUsingSet([1, 2, 2, 3, 4, 4, 5]));
 
 // ?2
 
-function removeDuplicates(arr) {
-  return arr.filter((cv, i) => arr.indexOf(cv) === i);
+function removeDuplicatesUsingFilter(numbers) {
+  return numbers.filter((currentValue, index) => numbers.indexOf(currentValue) === index);
 }
 
-console.log(removeDuplicates([1, 2, 2, 3, 4, 4, 5]));
+console.log(removeDuplicatesUsingFilter([1, 2, 2, 3, 4, 4, 5]));
 
 //? 3
 
-function removeDuplicates(arr) {
-  let result = [];
+function removeDuplicatesUsingLoop(numbers) {
+  let uniqueNumbers = [];
 
-  for (let i = 0; i < arr.length; i++) {
-    if (!result.includes(arr[i])) {
-      result.push(arr[i]);
+  for (let index = 0; index < numbers.length; index++) {
+    if (!uniqueNumbers.includes(numbers[index])) {
+      uniqueNumbers.push(numbers[index]);
     }
   }
-  return result;
+  return uniqueNumbers;
 }
 
-console.log(removeDuplicates([1, 2, 2, 3, 4, 4, 5]));
+console.log(removeDuplicatesUsingLoop([1, 2, 2, 3, 4, 4, 5]));
 
 //? 4
 
-function removeDuplicates(arr) {
-  return arr.reduce((acc, cv) => {
-    if (!acc.includes(cv)) acc.push(cv);
-    return acc;
+function removeDuplicatesUsingReduce(numbers) {
+  return numbers.reduce((uniqueNumbers, currentValue) => {
+    if (!uniqueNumbers.includes(currentValue)) uniqueNumbers.push(currentValue);
+    return uniqueNumbers;
   }, []);
 }
 
-console.log(removeDuplicates([1, 2, 2, 3, 4, 4, 5]));
+console.log(removeDuplicatesUsingReduce([1, 2, 2, 3, 4, 4, 5]));
 
 // 6. Count Character Frequency
 
@@ -168,34 +168,34 @@ console.log(removeDuplicates([1, 2, 2, 3, 4, 4, 5]));
 //   t:1
 // }
 
-function frequency(str) {
-  return str.split("").reduce((acc, cv) => {
-    if (!acc[cv]) {
-      acc[cv] = 1;
+function getCharacterFrequencyUsingReduce(inputText) {
+  return inputText.split("").reduce((frequencyMap, currentCharacter) => {
+    if (!frequencyMap[currentCharacter]) {
+      frequencyMap[currentCharacter] = 1;
     } else {
-      acc[cv] = acc[cv] + 1;
+      frequencyMap[currentCharacter] = frequencyMap[currentCharacter] + 1;
     }
-    return acc;
+    return frequencyMap;
   }, {});
 }
-console.log(frequency("javascript"));
+console.log(getCharacterFrequencyUsingReduce("javascript"));
 
-function frequency(str) {
-  let acc = {};
-  for (let i = 0; i < str.length; i++) {
-    let cv = str[i];
-    if (!acc[cv]) {
-      acc[cv] = 1;
+function getCharacterFrequencyUsingLoop(inputText) {
+  let frequencyMap = {};
+  for (let index = 0; index < inputText.length; index++) {
+    let currentCharacter = inputText[index];
+    if (!frequencyMap[currentCharacter]) {
+      frequencyMap[currentCharacter] = 1;
     } else {
-      acc[cv] = acc[cv] + 1;
+      frequencyMap[currentCharacter] = frequencyMap[currentCharacter] + 1;
     }
   }
-  return acc;
+  return frequencyMap;
 }
-console.log(frequency("javascript"));
+console.log(getCharacterFrequencyUsingLoop("javascript"));
 
-let obj = {};
-console.log(obj.name);
+let userRecord = {};
+console.log(userRecord.name);
 
 console.log(Boolean(undefined));
 
@@ -210,18 +210,18 @@ console.log(Boolean(undefined));
 
 // 1 + 2 + 3 + 4 + 5 = 15
 
-function findSum(n) {
-  if (n === 1) return 1;
-  return n + findSum(n - 1);
+function calculateSumFromOneToN(maxNumber) {
+  if (maxNumber === 1) return 1;
+  return maxNumber + calculateSumFromOneToN(maxNumber - 1);
 }
 
-function findMissingNumber(arr, n) {
-  const sum = findSum(n); // 15
-  const total = arr.reduce((acc, cv) => acc + cv); // 11
-  return sum - total;
+function findMissingNumber(numbers, maxNumber) {
+  const expectedTotal = calculateSumFromOneToN(maxNumber); // 15
+  const actualTotal = numbers.reduce((runningTotal, currentValue) => runningTotal + currentValue); // 11
+  return expectedTotal - actualTotal;
 }
 
-console.log(findMissingNumber([1, 2, 3, 5], 5))
+console.log(findMissingNumber([1, 2, 3, 5], 5));
 
 
 
@@ -241,14 +241,14 @@ console.log(findMissingNumber([1, 2, 3, 5], 5))
 
 
 
-function inAnagram(str1,str2){
-  if(str1.length !== str2.length) return false;
-  console.log(str1.split("").sort().join(""));
-  console.log(str2.split("").sort().join(""));
+function areAnagrams(firstText, secondText) {
+  if (firstText.length !== secondText.length) return false;
+  console.log(firstText.split("").sort().join(""));
+  console.log(secondText.split("").sort().join(""));
 
-  return str1.split("").sort().join("") === str2.split("").sort().join("");
+  return firstText.split("").sort().join("") === secondText.split("").sort().join("");
 }
-console.log(inAnagram("listenfgd" , "silent") )
+console.log(areAnagrams("listenfgd", "silent"));
 
 
 // 10. Factorial of a Number
@@ -296,26 +296,26 @@ console.log(inAnagram("listenfgd" , "silent") )
 // "I love JavaScript"
 // Output:
 // "I evol tpircSavaJ"
-let str = "I love JavaScript"
-let result = []
-let word = ""
-for(let i = 0; i <  str.length; i++){
-  if(str.length - 1 === i) {
-    // console.log(word)
-    word = word + str[i]
-    result.push(word);
-    word = null;
-  }else if (str[i] === " ") {
-    // console.log("Word => ", word)
-    result.push(word);
-    // console.log("Array => ", result)
-    word = ""
+let sentence = "I love JavaScript";
+let words = [];
+let currentWord = "";
+for (let charIndex = 0; charIndex < sentence.length; charIndex++) {
+  if (sentence.length - 1 === charIndex) {
+    // console.log(currentWord)
+    currentWord = currentWord + sentence[charIndex];
+    words.push(currentWord);
+    currentWord = null;
+  } else if (sentence[charIndex] === " ") {
+    // console.log("Word => ", currentWord)
+    words.push(currentWord);
+    // console.log("Array => ", words)
+    currentWord = "";
   } else {
-    word = word + str[i]
+    currentWord = currentWord + sentence[charIndex];
   }
 }
 
-console.log(result)
+console.log(words);
 
 // 14. Count Vowels in a String
 // Problem

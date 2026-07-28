@@ -1,42 +1,42 @@
-let a = 10;
-let b = 20;
+let firstNumber = 10;
+let secondNumber = 20;
 
-function sum(a = 10, b = 20) {
-  return a + b;
+function calculateSumWithDefaults(firstOperand = 10, secondOperand = 20) {
+  return firstOperand + secondOperand;
 }
 
-let result = sum();
+let defaultSumResult = calculateSumWithDefaults();
 
-console.log(sum());
+console.log(calculateSumWithDefaults());
 
-const sum2 = (a, b) => a + b;
+const addWithArrowFunction = (firstOperand, secondOperand) => firstOperand + secondOperand;
 
-function closerFunction() {
+function createCounter() {
   let count = 0;
-  return function inner() {
+  return function incrementCounter() {
     count++;
     console.log(count);
   };
 }
 
-let counter = closerFunction();
-counter();
-counter();
-counter();
+let firstCounterInstance = createCounter();
+firstCounterInstance();
+firstCounterInstance();
+firstCounterInstance();
 
-let counter2 = closerFunction();
-counter2();
-counter2();
-counter2();
+let secondCounterInstance = createCounter();
+secondCounterInstance();
+secondCounterInstance();
+secondCounterInstance();
 
-function sum(a, b) {
-  return a + b;
+function addTwoNumbers(firstOperand, secondOperand) {
+  return firstOperand + secondOperand;
 }
 
-function a(a) {
-  return function b(b) {
-    return a + b;
+function createAdder(baseValue) {
+  return function addToBase(valueToAdd) {
+    return baseValue + valueToAdd;
   };
 }
 
-console.log(a(5)(10))
+console.log(createAdder(5)(10));

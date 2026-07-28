@@ -89,11 +89,11 @@ console.log(templateGreeting);
 
 // String interpolation and expressions.
 const name = "Alice";
-const age = 25;
-const traditionalIntroduction = "My name is " + name + " and I am " + age + " years old.";
+const personAge = 25;
+const traditionalIntroduction = "My name is " + name + " and I am " + personAge + " years old.";
 console.log(traditionalIntroduction);
 
-const templateIntroduction = `My name is ${name} and I am ${age} years old.`;
+const templateIntroduction = `My name is ${name} and I am ${personAge} years old.`;
 console.log(templateIntroduction);
 
 const price = 10;

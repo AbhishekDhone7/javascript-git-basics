@@ -5,8 +5,8 @@
 */
 
 // 1) Primitive data types
-const age = 25 + 12 - 11 / 2;
-console.log("age type:", typeof age); // number
+const calculatedAge = 25 + 12 - 11 / 2;
+console.log("age type:", typeof calculatedAge); // number
 
 const firstName = "John";
 const fullName = "John" + " Raja " + "Smith";

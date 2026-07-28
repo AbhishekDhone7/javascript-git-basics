@@ -5,26 +5,26 @@
 {
   //? 1.
 
-  console.log(a);
-  var a = 10;
-  console.log(a);
+  console.log(hoistedVarValue);
+  var hoistedVarValue = 10;
+  console.log(hoistedVarValue);
 
   // output
   // undefined
   // 10
 
   // ? Reason
-  // var a;
-  // console.log(a);
-  // a = 10;
-  // console.log(a);
+  // var hoistedVarValue;
+  // console.log(hoistedVarValue);
+  // hoistedVarValue = 10;
+  // console.log(hoistedVarValue);
 }
 
 {
   //? 2
 
-  console.log(a);
-  let a = 10;
+  console.log(blockScopedValue);
+  let blockScopedValue = 10;
   // ReferenceError
   // ? Reason
   // let is hoisted but remains in the Temporal Dead Zone (TDZ) until initialized.
@@ -32,56 +32,56 @@
 
 {
   //? 3
-  var a = 10;
+  var outerValue = 10;
 
-  function test() {
-    console.log(a);
-    var a = 20;
+  function printFunctionScopedHoisting() {
+    console.log(outerValue);
+    var outerValue = 20;
   }
 
-  test();
+  printFunctionScopedHoisting();
 
   //undefined
 }
 
 {
-  let a = 10;
+  let globalScopedValue = 10;
 
-  function test() {
-    console.log(a);
+  function printOuterScopeValue() {
+    console.log(globalScopedValue);
   }
 
-  test();
+  printOuterScopeValue();
 
   // 10
 }
 
 {
-  var a = 10;
+  var outerScopedVar = 10;
 
-  function test() {
-    console.log(a);
-    let a = 20;
+  function demonstrateTdzInFunction() {
+    console.log(outerScopedVar);
+    let outerScopedVar = 20;
   }
 
-  test();
+  demonstrateTdzInFunction();
 
   // ReferenceError: Cannot access 'a' before initialization
 }
 
 {
-  console.log(a);
+  console.log(declaredGreeter);
 
-  function a() {
+  function declaredGreeter() {
     console.log("Hello");
   }
-  // [Function: a]
+  // [Function: declaredGreeter]
 }
 
 {
-  console.log(test);
+  console.log(expressionGreeter);
 
-  var test = function () {
+  var expressionGreeter = function () {
     console.log("Hello");
   };
 
@@ -89,47 +89,47 @@
 }
 
 {
-  test();
+  expressionGreeter();
 
-  var test = function () {
+  var expressionGreeter = function () {
     console.log("Hello");
   };
-  //   TypeError: test is not a function
+  //   TypeError: expressionGreeter is not a function
 }
 
 {
-  var a = 10;
+  var moduleLevelValue = 10;
 
-  function test() {
-    console.log(a);
+  function printModuleLevelValue() {
+    console.log(moduleLevelValue);
   }
 
-  function demo() {
-    var a = 20;
-    test();
+  function callFromDifferentScope() {
+    var moduleLevelValue = 20;
+    printModuleLevelValue();
   }
 
-  demo(); // 10
+  callFromDifferentScope(); // 10
 }
 
 {
-  var a = 10;
+  var outerScopeValue = 10;
 
-  function demo() {
-    var a = 20;
-    function test() {
-      console.log(a);
+  function runNestedScopeDemo() {
+    var innerScopeValue = 20;
+    function printInnerScopeValue() {
+      console.log(innerScopeValue);
     }
-    test();
+    printInnerScopeValue();
   }
 
-  demo(); // 20
+  runNestedScopeDemo(); // 20
 }
 
 {
-  for (var i = 0; i < 5; i++) {
+  for (var loopIndex = 0; loopIndex < 5; loopIndex++) {
     setTimeout(() => {
-      console.log(i);
+      console.log(loopIndex);
     }, 0);
   }
 
@@ -138,13 +138,13 @@
   //   5;
   //   5;
   //   5;
-  //? Reason: var has function scope, so all callbacks share the same i. After the loop ends, i is 5.
+  //? Reason: var has function scope, so all callbacks share the same loopIndex. After the loop ends, loopIndex is 5.
 }
 
 {
-  for (let i = 0; i < 5; i++) {
+  for (let loopIndex = 0; loopIndex < 5; loopIndex++) {
     setTimeout(() => {
-      console.log(i);
+      console.log(loopIndex);
     }, 0);
   }
 
@@ -156,12 +156,12 @@
 }
 
 {
-  for (var i = 0; i < 5; i++) {
-    (function(x){
+  for (var loopIndex = 0; loopIndex < 5; loopIndex++) {
+    (function (capturedIndex) {
         setTimeout(() => {
-          console.log(x);
+          console.log(capturedIndex);
         }, 0);
-    })(i)
+    })(loopIndex);
   }
 
   //   0;

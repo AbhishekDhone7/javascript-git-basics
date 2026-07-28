@@ -43,8 +43,8 @@ function showLetBlockScope() {
 showLetBlockScope();
 
 // const cannot be reassigned
-const pi = 3.14;
-console.log("Pi value:", pi);
+const piConstant = 3.14;
+console.log("Pi value:", piConstant);
 
 // Hoisting with var: declaration is hoisted, value is undefined until assignment
 console.log("Hoisted var before assignment:", hoistedVar);

@@ -45,21 +45,21 @@ console.log("call with args:", empDetails.fullName.call(employee1, "Bangalore", 
 console.log("call with args:", empDetails.fullName.call(employee2, "Nashik", "India", "Football"));
 console.log("apply with array:", empDetails.fullName.apply(employee1, ["Bangalore", "India", "Cricket"]));
 
-function childFunc(arg1, arg2) {
-  console.log(this.daddy, arg1, arg2);
+function childFunction(firstArgument, secondArgument) {
+  console.log(this.parentMessage, firstArgument, secondArgument);
 }
 
 const parentObj = {
-  daddy: "This is a xyz",
+  parentMessage: "Parent context message",
 };
 
-childFunc("Hey", "Hello!");
-childFunc.call(parentObj, "Hello", "Guys");
-childFunc.apply(parentObj, ["Hello", "Guys"]);
+childFunction("Hey", "Hello!");
+childFunction.call(parentObj, "Hello", "Team");
+childFunction.apply(parentObj, ["Hello", "Team"]);
 
 // bind returns a new function with this permanently set.
-const boundChildFunc = childFunc.bind(parentObj, "arg1");
-boundChildFunc("arg2");
+const boundChildFunction = childFunction.bind(parentObj, "firstArgument");
+boundChildFunction("secondArgument");
 
 // Method borrowing: one object reuses another object's method.
 const member = {
@@ -96,8 +96,8 @@ const callback = person4.display.bind(person4);
 console.log("Callback with bind:", callback());
 
 // apply can be used with built-in functions like Math.max.
-const arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-console.log("Math.max(...arr):", Math.max(...arr));
-console.log("Math.max.apply(null, arr):", Math.max.apply(null, arr));
+const numberList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+console.log("Math.max(...numberList):", Math.max(...numberList));
+console.log("Math.max.apply(null, numberList):", Math.max.apply(null, numberList));
 
 // Strict-mode note: call/apply/bind control the runtime this value for normal functions.

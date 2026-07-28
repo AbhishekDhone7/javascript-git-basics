@@ -5,9 +5,9 @@
 */
 
 // Current date and time.
-const now = new Date();
-console.log("Current date and time:", now.toString());
-console.log("Current date and time in milliseconds:", now.getTime());
+const currentDateTime = new Date();
+console.log("Current date and time:", currentDateTime.toString());
+console.log("Current date and time in milliseconds:", currentDateTime.getTime());
 
 // Date from ISO string.
 const dateFromIsoString = new Date("2024-02-03T12:36:20Z");
@@ -33,23 +33,23 @@ const fromMilliseconds = new Date(86400000);
 console.log("Date from 86400000 ms:", fromMilliseconds.toString());
 
 // Formatting methods.
-console.log("toString():", now.toString());
-console.log("toDateString():", now.toDateString());
-console.log("toUTCString():", now.toUTCString());
-console.log("toISOString():", now.toISOString());
+console.log("toString():", currentDateTime.toString());
+console.log("toDateString():", currentDateTime.toDateString());
+console.log("toUTCString():", currentDateTime.toUTCString());
+console.log("toISOString():", currentDateTime.toISOString());
 
 // Date component getters.
-console.log("Year:", now.getFullYear());
-console.log("Month:", now.getMonth());
-console.log("Date:", now.getDate());
-console.log("Day:", now.getDay());
-console.log("Hours:", now.getHours());
-console.log("Minutes:", now.getMinutes());
-console.log("Seconds:", now.getSeconds());
-console.log("Milliseconds:", now.getMilliseconds());
-console.log("UTC Full year:", now.getUTCFullYear());
-console.log("UTC Month:", now.getUTCMonth());
-console.log("UTC Date:", now.getUTCDate());
+console.log("Year:", currentDateTime.getFullYear());
+console.log("Month:", currentDateTime.getMonth());
+console.log("Date:", currentDateTime.getDate());
+console.log("Day:", currentDateTime.getDay());
+console.log("Hours:", currentDateTime.getHours());
+console.log("Minutes:", currentDateTime.getMinutes());
+console.log("Seconds:", currentDateTime.getSeconds());
+console.log("Milliseconds:", currentDateTime.getMilliseconds());
+console.log("UTC Full year:", currentDateTime.getUTCFullYear());
+console.log("UTC Month:", currentDateTime.getUTCMonth());
+console.log("UTC Date:", currentDateTime.getUTCDate());
 
 // Autocorrection examples.
 const overflowMonth = new Date(2018, 15, 24, 10, 33, 30);

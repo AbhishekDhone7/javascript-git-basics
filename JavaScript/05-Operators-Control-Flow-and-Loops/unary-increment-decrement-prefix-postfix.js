@@ -25,16 +25,16 @@ console.log("After value--:", value);
 console.log("After --value:", value);
 
 // Postfix assignment behavior
-const b = value++;
-console.log("b from value++:", b);
+const postIncrementCapturedValue = value++;
+console.log("b from value++:", postIncrementCapturedValue);
 console.log("value after postfix assignment:", value);
 
 // Prefix assignment behavior
-const c = ++value;
-console.log("c from ++value:", c);
+const preIncrementCapturedValue = ++value;
+console.log("c from ++value:", preIncrementCapturedValue);
 console.log("value after prefix assignment:", value);
 
 // Compound assignment
-let doubled = c * 2;
+let doubled = preIncrementCapturedValue * 2;
 doubled *= 2;
 console.log("Doubled value after *= 2:", doubled);

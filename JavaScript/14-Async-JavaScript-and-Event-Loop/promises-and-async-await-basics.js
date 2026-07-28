@@ -316,29 +316,29 @@ fetchDataAndProcess();
 console.log("--- Async/Await practice complete ---");
 
 console.log("--- Async/Await mini practice ---");
-function add(n1, n2) {
-  console.log(n1 + n2);
+function addNumbers(firstNumber, secondNumber) {
+  console.log(firstNumber + secondNumber);
 }
 
 console.log("before resolved");
 
-const funcasy = async () => {
+const runAsyncSequence = async () => {
   console.log("first resolved");
   setTimeout(() => {
     console.log("resolved after");
   }, 200);
-  await add(4, 5);
+  await addNumbers(4, 5);
   console.log("second resolved");
 };
 
-funcasy();
+runAsyncSequence();
 console.log("after resolved");
 
 console.log("--- Async Await advanced practice ---");
 
 async function fetchMultipleUrls(urls) {
   try {
-    const responses = await Promise.all(urls.map((url) => fetch(url)));
+    const responses = await Promise.all(urls.map((requestUrl) => fetch(requestUrl)));
     const data = await Promise.all(responses.map((response) => response.json()));
     console.log("Data from all URLs:", data);
   } catch (error) {
@@ -353,7 +353,7 @@ fetchMultipleUrls([
 
 async function fetchRace(urls) {
   try {
-    const response = await Promise.race(urls.map((url) => fetch(url)));
+    const response = await Promise.race(urls.map((requestUrl) => fetch(requestUrl)));
     const data = await response.json();
     console.log("First response data:", data);
   } catch (error) {
@@ -368,7 +368,7 @@ fetchRace([
 
 async function fetchAllSettled(urls) {
   const results = await Promise.allSettled(
-    urls.map((url) => fetch(url).then((response) => response.json()))
+    urls.map((requestUrl) => fetch(requestUrl).then((response) => response.json()))
   );
 
   results.forEach((result, index) => {
@@ -387,7 +387,7 @@ fetchAllSettled([
 
 async function fetchAny(urls) {
   try {
-    const response = await Promise.any(urls.map((url) => fetch(url)));
+    const response = await Promise.any(urls.map((requestUrl) => fetch(requestUrl)));
     const data = await response.json();
     console.log("First successful response data:", data);
   } catch (error) {
@@ -402,7 +402,7 @@ fetchAny([
 
 async function fetchMultipleUrlsWithErrorHandling(urls) {
   try {
-    const result = await Promise.all(urls.map((url) => fetch(url).then((response) => response.json())));
+    const result = await Promise.all(urls.map((requestUrl) => fetch(requestUrl).then((response) => response.json())));
     console.log(result);
   } catch (error) {
     console.error("One or more requests failed:", error);
@@ -415,8 +415,8 @@ fetchMultipleUrlsWithErrorHandling([
 ]);
 
 async function processUrls(urls) {
-  for (const url of urls) {
-    const response = await fetch(url);
+  for (const requestUrl of urls) {
+    const response = await fetch(requestUrl);
     const data = await response.json();
     console.log(data);
   }
@@ -428,8 +428,8 @@ processUrls([
 ]);
 
 async function processUrlsConcurrently(urls) {
-  const promises = urls.map(async (url) => {
-    const response = await fetch(url);
+  const promises = urls.map(async (requestUrl) => {
+    const response = await fetch(requestUrl);
     return response.json();
   });
 
@@ -443,13 +443,13 @@ processUrlsConcurrently([
 ]);
 
 async function processUrlsWithIndividualErrorHandling(urls) {
-  for (const url of urls) {
+  for (const requestUrl of urls) {
     try {
-      const response = await fetch(url);
+      const response = await fetch(requestUrl);
       const data = await response.json();
       console.log(data);
     } catch (error) {
-      console.error(`Failed to fetch ${url}:`, error);
+      console.error(`Failed to fetch ${requestUrl}:`, error);
     }
   }
 }

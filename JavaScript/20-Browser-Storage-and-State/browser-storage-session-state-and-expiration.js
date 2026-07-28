@@ -19,8 +19,8 @@ const snapshot = createStateSnapshot("Abhishek", "dark");
 console.log("State snapshot:", snapshot);
 
 if (typeof localStorage !== "undefined") {
-  localStorage.setItem("demo-state", JSON.stringify(snapshot));
-  const restored = JSON.parse(localStorage.getItem("demo-state"));
+  localStorage.setItem("user-preference-state", JSON.stringify(snapshot));
+  const restored = JSON.parse(localStorage.getItem("user-preference-state"));
   console.log("Restored from localStorage:", restored);
 } else {
   console.log("localStorage is not available in Node, so the example stays as a state model here.");

@@ -5,8 +5,8 @@
 */
 
 // Addition (+)
-const sum = 5 + 3;
-console.log("Addition Result:", sum); // 8
+const additionResult = 5 + 3;
+console.log("Addition Result:", additionResult); // 8
 
 // Subtraction (-)
 const difference = 10 - 4;

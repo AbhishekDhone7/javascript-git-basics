@@ -135,10 +135,10 @@ async function runRestExamples() {
 }
 
 runRestExamples().catch((error) => {
-  console.log("REST demo failed:", error.message);
+  console.log("REST example flow failed:", error.message);
 });
 
 console.log("--- Notes ---");
 // Fetch is promise-based and well suited to REST-style APIs.
 // Use response.ok to detect HTTP-level failures.
-// JSONPlaceholder is a demo API used here for readable examples.
+// JSONPlaceholder is a sample API used here for readable examples.

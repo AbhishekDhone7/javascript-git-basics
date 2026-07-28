@@ -90,15 +90,15 @@ for (const color of colors) {
 }
 
 console.log("--- Map and Set ---");
-const map = new Map();
-map.set("name", "Map Demo");
-map.set({ id: 1 }, "object key works");
-console.log("map size:", map.size);
-console.log("map get name:", map.get("name"));
+const userRoleMap = new Map();
+userRoleMap.set("name", "Map Example");
+userRoleMap.set({ id: 1 }, "Object key is supported");
+console.log("map size:", userRoleMap.size);
+console.log("map get name:", userRoleMap.get("name"));
 
-const set = new Set([1, 2, 2, 3]);
-set.add(4);
-console.log("set values:", [...set]);
+const uniqueNumberSet = new Set([1, 2, 2, 3]);
+uniqueNumberSet.add(4);
+console.log("set values:", [...uniqueNumberSet]);
 
 console.log("--- Symbol ---");
 const id = Symbol("id");

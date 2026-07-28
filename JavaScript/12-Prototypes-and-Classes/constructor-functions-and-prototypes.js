@@ -44,12 +44,12 @@ Animal.prototype.makeSound = function () {
 
 Animal.prototype.pet = true;
 
-const dog = new Animal("Dog", "Woof");
-const cat = new Animal("Cat", "Meow");
-console.log(dog.makeSound());
-console.log(dog.pet);
-console.log(cat.makeSound());
-console.log(cat.pet);
+const dogAnimal = new Animal("Dog", "Woof");
+const catAnimal = new Animal("Cat", "Meow");
+console.log(dogAnimal.makeSound());
+console.log(dogAnimal.pet);
+console.log(catAnimal.makeSound());
+console.log(catAnimal.pet);
 
 // Constructors with explicit return values.
 function Vehicle(type) {
@@ -260,12 +260,12 @@ class CoffeeMachine {
   }
 }
 
-const cm1 = new CoffeeMachine(100);
-cm1.waterAmount = 10;
-console.log("CoffeeMachine waterAmount:", cm1.waterAmount);
-cm1.waterAmount = -10;
-console.log("CoffeeMachine waterAmount after negative:", cm1.waterAmount);
-console.log("CoffeeMachine power:", cm1.power);
+const coffeeMachineInstance = new CoffeeMachine(100);
+coffeeMachineInstance.waterAmount = 10;
+console.log("CoffeeMachine waterAmount:", coffeeMachineInstance.waterAmount);
+coffeeMachineInstance.waterAmount = -10;
+console.log("CoffeeMachine waterAmount after negative:", coffeeMachineInstance.waterAmount);
+console.log("CoffeeMachine power:", coffeeMachineInstance.power);
 
 // ---------------- Static methods and static properties ----------------
 class User1 {
@@ -288,11 +288,11 @@ class User3 {
 
 User1.userStaticMethod();
 
-const obj2 = new User2();
-obj2.userStaticMethod();
+const user2Instance = new User2();
+user2Instance.userStaticMethod();
 
-const obj3 = new User3();
-obj3.userStaticMethod();
+const user3Instance = new User3();
+user3Instance.userStaticMethod();
 
 class ArticleStatic {
   constructor(name, date) {

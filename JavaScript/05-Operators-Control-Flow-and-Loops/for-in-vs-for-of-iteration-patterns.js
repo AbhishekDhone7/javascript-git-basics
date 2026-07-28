@@ -28,9 +28,9 @@ const personObject = {
 };
 
 console.log("Using for...in with objects:");
-for (const key in personObject) {
-  if (Object.hasOwn(personObject, key)) {
-    console.log(`${key}: ${personObject[key]}`);
+for (const propertyName in personObject) {
+  if (Object.hasOwn(personObject, propertyName)) {
+    console.log(`${propertyName}: ${personObject[propertyName]}`);
   }
 }
 console.log("------------------------");
@@ -41,14 +41,14 @@ personWithPrototype.name = "John";
 personWithPrototype.age = 30;
 
 console.log("for...in without own-property check includes inherited keys:");
-for (const key in personWithPrototype) {
-  console.log(`${key}: ${personWithPrototype[key]}`);
+for (const propertyName in personWithPrototype) {
+  console.log(`${propertyName}: ${personWithPrototype[propertyName]}`);
 }
 
 console.log("for...in with own-property check excludes inherited keys:");
-for (const key in personWithPrototype) {
-  if (Object.hasOwn(personWithPrototype, key)) {
-    console.log(`${key}: ${personWithPrototype[key]}`);
+for (const propertyName in personWithPrototype) {
+  if (Object.hasOwn(personWithPrototype, propertyName)) {
+    console.log(`${propertyName}: ${personWithPrototype[propertyName]}`);
   }
 }
 console.log("------------------------");
@@ -101,8 +101,8 @@ console.log("------------------------");
 
 // Example 7: nested objects with for...in
 console.log("Using for...in with nested objects:");
-for (const key in nestedPersonObject) {
-  console.log(`${key}: ${nestedPersonObject[key].name}`);
+for (const propertyName in nestedPersonObject) {
+  console.log(`${propertyName}: ${nestedPersonObject[propertyName].name}`);
 }
 console.log("------------------------");
 
