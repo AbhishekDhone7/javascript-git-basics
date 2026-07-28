@@ -11,6 +11,7 @@ Modern syntax improves code clarity, maintainability, and collaboration across t
 - Optional chaining and nullish coalescing
 - Template literals and defaults
 - Logical assignment operators
+- Arrow functions and lexical `this`
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -19,7 +20,7 @@ By the end of this section, you should be able to:
 - Write cleaner module-ready code
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
+1. Start with `arrow-functions-and-lexical-this.js`.
 2. Run every code sample manually.
 3. Write one variation of each example.
 4. Add your own notes for confusing edge cases.
@@ -29,7 +30,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `arrow-functions-and-lexical-this.js` - Arrow syntax, implicit returns, callbacks, and lexical `this` behavior
 
 ## Real-World Applications
 Modern codebases expect ES6+ fluency in reviews and interviews.

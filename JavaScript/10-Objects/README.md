@@ -10,6 +10,8 @@ Objects model real-world entities and are the default structure for application 
 - Object creation and access
 - Dot notation vs bracket notation
 - Nested objects, nested arrays, and object methods
+- Object method syntax, shorthand methods, and `this` binding
+- Method borrowing with `call()` and `bind()`
 - Iteration using `for...in`
 - Object mutation (add/delete properties)
 - Computed properties in object literals
@@ -41,7 +43,7 @@ By the end of this section, you should be able to:
 ## Folder Contents
 - README.md (this guide)
 - `object-creation-and-property-access.js` - Object declaration and property access patterns
-- `object-methods-this-and-nested-values.js` - Object methods, `this`, and nested data
+- `object-methods-this-and-nested-values.js` - Object method syntax, `this`, nested data, and method borrowing patterns
 - `object-iteration-with-for-in.js` - Iteration patterns for objects and nested objects
 - `object-built-in-methods-values-and-stringify.js` - `Object.values` and JSON serialization
 - `object-mutation-and-computed-properties.js` - Add/delete properties, reserved keys, and computed properties

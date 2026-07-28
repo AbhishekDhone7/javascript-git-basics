@@ -12,6 +12,7 @@ Context bugs are among the most confusing JavaScript issues, especially in callb
 - Arrow function context behavior
 - Method extraction pitfalls
 - Arrow implicit return and object-return syntax
+- Method borrowing and callback-safe binding
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -21,10 +22,11 @@ By the end of this section, you should be able to:
 
 ## Recommended Learning Order
 1. Start with `this-context-and-arrow-function-behavior.js`.
-2. Compare object method `this` with regular function and arrow `this`.
-3. Verify arrow implicit return and object-return examples.
-4. Write one variation of each example.
-5. Add your own notes for confusing edge cases.
+2. Continue with `call-apply-bind-and-method-borrowing.js`.
+3. Compare object method `this` with regular function and arrow `this`.
+4. Verify arrow implicit return and object-return examples.
+5. Write one variation of each example.
+6. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 10-Objects
@@ -32,6 +34,7 @@ By the end of this section, you should be able to:
 ## Folder Contents
 - README.md (this guide)
 - `this-context-and-arrow-function-behavior.js` - Method context, Node top-level `this`, and arrow-return patterns
+- `call-apply-bind-and-method-borrowing.js` - Explicit this binding, method borrowing, and callback-safe function reuse
 
 ## Real-World Applications
 Event handlers and framework callbacks frequently fail due to incorrect this binding.

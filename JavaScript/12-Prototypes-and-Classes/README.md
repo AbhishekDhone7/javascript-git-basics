@@ -8,6 +8,8 @@ Understanding prototypal inheritance and class syntax enables scalable object-or
 
 ## Concepts Covered
 - Prototype basics
+- Constructor functions and instance creation with `new`
+- Prototype methods and shared properties
 - Class syntax
 - Inheritance and polymorphism
 - Getters, setters, static members
@@ -19,7 +21,7 @@ By the end of this section, you should be able to:
 - Apply encapsulation and composition
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
+1. Start with `constructor-functions-and-prototypes.js`.
 2. Run every code sample manually.
 3. Write one variation of each example.
 4. Add your own notes for confusing edge cases.
@@ -29,7 +31,7 @@ By the end of this section, you should be able to:
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `constructor-functions-and-prototypes.js` - Constructor functions, prototype methods, object instances, and `new` behavior
 
 ## Real-World Applications
 Large apps use reusable models and abstractions for maintainability.
