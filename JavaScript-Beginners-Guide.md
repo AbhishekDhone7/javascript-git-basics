@@ -2088,6 +2088,75 @@ H -- No --> J[split/concat/repeat]
 | `concat()` | join strings | `string` |
 | `repeat()` | repeat text | `string` |
 
+### String method snippet bank (all methods one by one)
+
+```js
+// length
+const s1 = "JavaScript";
+console.log(s1.length); // 10
+
+// toUpperCase
+const s2 = "nisha";
+console.log(s2.toUpperCase()); // NISHA
+
+// toLowerCase
+const s3 = "NISHA";
+console.log(s3.toLowerCase()); // nisha
+
+// trim
+const s4 = "  hello  ";
+console.log(s4.trim()); // hello
+
+// includes
+const s5 = "javascript";
+console.log(s5.includes("script")); // true
+
+// startsWith
+const s6 = "ORD-2026";
+console.log(s6.startsWith("ORD")); // true
+
+// endsWith
+const s7 = "report.pdf";
+console.log(s7.endsWith(".pdf")); // true
+
+// indexOf
+const s8 = "frontend";
+console.log(s8.indexOf("end")); // 4
+
+// slice
+const s9 = "ABCDEFG";
+console.log(s9.slice(2, 5)); // CDE
+
+// substring
+const s10 = "ABCDEFG";
+console.log(s10.substring(2, 5)); // CDE
+
+// charAt
+const s11 = "Nisha";
+console.log(s11.charAt(0)); // N
+
+// replace (first match only)
+const s12 = "a-b-c";
+console.log(s12.replace("-", "_")); // a_b-c
+
+// replaceAll
+const s13 = "a-b-c";
+console.log(s13.replaceAll("-", "_")); // a_b_c
+
+// split
+const s14 = "js,node,api";
+console.log(s14.split(",")); // [ 'js', 'node', 'api' ]
+
+// concat
+const first = "Hello ";
+const second = "Nisha";
+console.log(first.concat(second)); // Hello Nisha
+
+// repeat
+const s15 = "ha";
+console.log(s15.repeat(3)); // hahaha
+```
+
 ### Code example 1: Cleanup and search
 
 ```js
@@ -2220,6 +2289,57 @@ E --> F[Format with toFixed/toPrecision]
 | `Math.max(...)` | max value | `number` | highest score/price |
 | `Math.min(...)` | min value | `number` | lowest price |
 | `Math.random()` | pseudo random 0-1 | `number` | OTP/test values |
+
+### Number and Math method snippet bank (all methods one by one)
+
+```js
+// Number(value)
+const n1 = Number("42");
+console.log(n1); // 42
+
+// parseInt(str, 10)
+const n2 = parseInt("42px", 10);
+console.log(n2); // 42
+
+// parseFloat(str)
+const n3 = parseFloat("99.75kg");
+console.log(n3); // 99.75
+
+// Number.isNaN(v)
+const n4 = Number("abc");
+console.log(Number.isNaN(n4)); // true
+
+// Number.isInteger(v)
+const n5 = 12;
+console.log(Number.isInteger(n5)); // true
+
+// toFixed(n)
+const n6 = 199.456;
+console.log(n6.toFixed(2)); // 199.46
+
+// toPrecision(n)
+const n7 = 199.456;
+console.log(n7.toPrecision(4)); // 199.5
+
+// Math.round(n)
+console.log(Math.round(4.6)); // 5
+
+// Math.floor(n)
+console.log(Math.floor(4.9)); // 4
+
+// Math.ceil(n)
+console.log(Math.ceil(4.1)); // 5
+
+// Math.max(...)
+console.log(Math.max(10, 20, 5)); // 20
+
+// Math.min(...)
+console.log(Math.min(10, 20, 5)); // 5
+
+// Math.random()
+const otpLike = Math.floor(1000 + Math.random() * 9000);
+console.log(otpLike); // random 4-digit number
+```
 
 ### Code example 1: Parse and validate
 
