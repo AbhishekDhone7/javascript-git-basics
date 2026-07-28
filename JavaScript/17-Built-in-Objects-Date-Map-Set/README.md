@@ -11,6 +11,9 @@ Choosing the right built-in type improves performance, readability, and correctn
 - Math utilities recap
 - Map patterns
 - Set patterns
+- Date construction, parsing, formatting, and getters
+- Map creation, lookup, iteration, and key identity
+- Set uniqueness, membership, iteration, and de-duplication
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -19,17 +22,21 @@ By the end of this section, you should be able to:
 - Use Set for uniqueness and lookup
 
 ## Recommended Learning Order
-1. Read the concepts in the listed topic order.
-2. Run every code sample manually.
-3. Write one variation of each example.
-4. Add your own notes for confusing edge cases.
+1. Start with `date-operations-and-formatting.js`.
+2. Continue with `map-patterns-and-operations.js`.
+3. Continue with `set-patterns-and-operations.js`.
+4. Run every code sample manually.
+5. Write one variation of each example.
+6. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 16-Error-Handling-and-Debugging
 
 ## Folder Contents
 - README.md (this guide)
-- Topic files to be added and expanded incrementally as the syllabus grows
+- `date-operations-and-formatting.js` - Date creation, parsing, formatting, getters, and autocorrection examples
+- `map-patterns-and-operations.js` - Map creation, lookup, iteration, conversion, and key-type examples
+- `set-patterns-and-operations.js` - Set uniqueness, membership, iteration, and duplicate-removal examples
 
 ## Real-World Applications
 Scheduling, caching, and de-duplication workflows rely on these built-ins.

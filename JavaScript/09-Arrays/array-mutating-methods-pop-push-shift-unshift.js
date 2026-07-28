@@ -35,3 +35,13 @@ console.log("After unshift:", fruitsForMethods);
 fruitsForMethods.push("Cherry", "Grapes");
 fruitsForMethods.unshift("Mango", "Kiwi");
 console.log("After multiple push and unshift:", fruitsForMethods);
+
+// const arrays can still be mutated (the reference stays the same).
+const constArrayExample = ["A", "B", "C"];
+constArrayExample.push("D");
+console.log("const array after push:", constArrayExample);
+
+// delete removes a slot but leaves a hole in the array.
+delete constArrayExample[1];
+console.log("After delete index 1:", constArrayExample);
+console.log("Deleted index value:", constArrayExample[1]); // undefined

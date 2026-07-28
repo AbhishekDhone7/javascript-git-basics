@@ -67,6 +67,29 @@ console.log("Mixed array:", mixedArray);
 console.log("Object inside array:", mixedArray[1].name);
 mixedArray[3]();
 
+// Basic array indexing with mixed data and nested structures.
+const array1 = [
+  1,
+  "there",
+  {
+    name: "Abhishek",
+    lname: "Dhone",
+  },
+  ["Mustang", "Lamborghini", "Rolls Royce", "Bentley", "Dodge Challenger"],
+];
+
+console.log("array1[0]:", array1[0]);
+console.log("array1[1]:", array1[1]);
+console.log("array1[2].name:", array1[2].name);
+console.log("array1[2].lname:", array1[2].lname);
+console.log("array1[3][0]:", array1[3][0]);
+console.log("array1[3][1]:", array1[3][1]);
+console.log("array1[3][2]:", array1[3][2]);
+console.log("array1[3][3]:", array1[3][3]);
+
+// at(-1) gets the last item without mutating the array.
+console.log("Last element using at(-1):", fruits.at(-1));
+
 // Trailing comma style is valid and common in modern codebases.
 const trailingCommaArray = [
   "Apple",

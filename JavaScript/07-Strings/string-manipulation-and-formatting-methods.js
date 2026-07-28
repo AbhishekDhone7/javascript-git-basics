@@ -68,3 +68,14 @@ console.log("fifth word:", words[4]);
 // valueOf for string object wrappers
 const wrapped = new String("wrapped text");
 console.log("valueOf:", wrapped.valueOf());
+
+// Template literals for multiline formatting and inline expressions.
+const lastNameA = "Dhone";
+const lastNameB = "Soni";
+const lastNameC = "Parekh";
+
+const profileText = `Abhishek ${lastNameA} but
+in MP they call me ${lastNameB} and
+in GJ call me ${false ? "P" : lastNameC}`;
+
+console.log("Template literal output:\n" + profileText);

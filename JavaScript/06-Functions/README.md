@@ -10,12 +10,20 @@ Functions are the core unit of reuse, testing, and maintainable architecture in 
 - Declaration vs expression
 - Function declaration, invocation, and return values
 - Arrow functions
+- Parameters vs arguments
+- Default and rest parameters
 - IIFE and callbacks
+- IIFE expression syntax (declaration vs expression)
 - Closures, currying, recursion
+- Nested functions and lexical access
+- Closures for private state (counter pattern)
 - Function scope and outer-variable access
 - Parameter copy behavior and accidental-global pitfalls
+- Primitive pass-by-value vs object/array mutation through references
 - Returning multiple values via array/object
 - Returning values vs returning functions
+- Early return flow and conditional return patterns
+- Array/object destructuring for returned containers
 
 ## Learning Objectives
 By the end of this section, you should be able to:
@@ -24,21 +32,25 @@ By the end of this section, you should be able to:
 - Use closures and recursion correctly
 
 ## Recommended Learning Order
-1. Start with `function-scope-parameters-and-outer-variables.js`.
-2. Continue with `closure-multiplier-function.js`.
-3. Continue with `returning-multiple-values-array-and-object.js`.
-4. Continue with `return-values-vs-returned-functions.js`.
-5. Finish with `iife-patterns.js`.
-6. Write one variation of each example.
-7. Add your own notes for confusing edge cases.
+1. Start with `function-declaration-expression-arrow-and-parameters.js`.
+2. Continue with `function-scope-parameters-and-outer-variables.js`.
+3. Continue with `closure-multiplier-function.js`.
+4. Continue with `callbacks-and-higher-order-functions.js`.
+5. Continue with `returning-multiple-values-array-and-object.js`.
+6. Continue with `return-values-vs-returned-functions.js`.
+7. Finish with `iife-patterns.js`.
+8. Write one variation of each example.
+9. Add your own notes for confusing edge cases.
 
 ## Prerequisites
 05-Operators-Control-Flow-and-Loops
 
 ## Folder Contents
 - README.md (this guide)
+- `function-declaration-expression-arrow-and-parameters.js` - Declaration/expression/arrow syntax with parameters, defaults, and rest
 - `function-scope-parameters-and-outer-variables.js` - Local scope, outer variable access, and parameter copy behavior
-- `closure-multiplier-function.js` - Closure example using a returned function with preserved state
+- `closure-multiplier-function.js` - Nested function and closure patterns with preserved/private state examples
+- `callbacks-and-higher-order-functions.js` - Callback fundamentals, async callback flow, and higher-order function patterns
 - `returning-multiple-values-array-and-object.js` - Multiple return patterns with destructuring
 - `return-values-vs-returned-functions.js` - Difference between computed values and deferred returned functions
 - `iife-patterns.js` - Immediately Invoked Function Expression patterns

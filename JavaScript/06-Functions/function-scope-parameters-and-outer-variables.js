@@ -64,6 +64,38 @@ console.log("Returned modified value:", modifiedAttribute);
 console.log(globalMessage);
 console.log("Outer variable changed to:", userName);
 
+// Primitive values are passed by value (copy).
+function passByValue(value) {
+  console.log("Inside passByValue - original:", value);
+  value = 20;
+  console.log("Inside passByValue - modified local copy:", value);
+}
+
+const primitiveNumber = 10;
+console.log("Before passByValue:", primitiveNumber);
+passByValue(primitiveNumber);
+console.log("After passByValue (unchanged):", primitiveNumber);
+
+// Objects/arrays: the reference is copied, so mutation affects original data.
+function mutateObject(inputObject) {
+  inputObject.property = "Modified Property";
+}
+
+function mutateArray(inputArray) {
+  inputArray.push("New Element");
+}
+
+const userObject = { property: "Original Property" };
+const numberArray = [1, 2, 3];
+
+console.log("Before mutateObject:", userObject);
+mutateObject(userObject);
+console.log("After mutateObject:", userObject);
+
+console.log("Before mutateArray:", numberArray);
+mutateArray(numberArray);
+console.log("After mutateArray:", numberArray);
+
 // Important note:
 // Assigning to an undeclared variable (for example: accidentalGlobal = 10)
 // creates a global in non-strict mode and is a bad practice.
