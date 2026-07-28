@@ -4846,68 +4846,294 @@ Async JavaScript and the event loop are the backbone of modern frontend behavior
 
 ### What is it?
 
-API is a contract to exchange data between client and server.
+API (Application Programming Interface) is a contract that defines how clients and servers exchange data.
 
-REST basics:
+In frontend apps, API calls are used for:
 
-- GET: read data
-- POST: create data
-- PUT/PATCH: update data
-- DELETE: remove data
+- Login and authentication
+- Product listing and search
+- Cart and checkout
+- Profile update
+- Dashboard analytics
 
-`fetch` is browser-native HTTP client.
-Axios is a popular external HTTP library.
+### REST basics in detail
+
+REST usually maps resources to URLs.
+
+Example resource: products
+
+- `GET /products` -> read list
+- `GET /products/101` -> read one
+- `POST /products` -> create
+- `PUT /products/101` -> full replace
+- `PATCH /products/101` -> partial update
+- `DELETE /products/101` -> remove
+
+### HTTP method diff table
+
+| Method | Typical use | Request body | Idempotent? |
+|---|---|---|---|
+| GET | Read data | Usually no | Yes |
+| POST | Create/action | Yes | No |
+| PUT | Full update | Yes | Yes |
+| PATCH | Partial update | Yes | Usually yes (depends design) |
+| DELETE | Delete resource | Optional | Yes |
+
+### Request-response lifecycle
+
+```mermaid
+sequenceDiagram
+participant UI as Frontend UI
+participant API as Backend API
+participant DB as Database
+
+UI->>API: HTTP Request (method + URL + headers + body)
+API->>DB: Query / update
+DB-->>API: Data / status
+API-->>UI: HTTP Response (status + headers + JSON)
+UI->>UI: Update loading/success/error state
+```
+
+### Anatomy of an HTTP request
+
+- URL: endpoint path and query params
+- Method: GET/POST/PUT/PATCH/DELETE
+- Headers: metadata (content type, auth)
+- Body: payload (mostly JSON for create/update)
+
+Example:
+
+```http
+POST /orders
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "items": [{ "productId": 101, "qty": 2 }],
+  "addressId": "ADDR-1"
+}
+```
+
+### Important status codes
+
+| Range/code | Meaning | UI behavior suggestion |
+|---|---|---|
+| 200/201 | Success | show data/success message |
+| 204 | Success no body | update UI without parse |
+| 400 | Bad request | show validation error |
+| 401 | Unauthorized | redirect login / refresh token |
+| 403 | Forbidden | show permission message |
+| 404 | Not found | empty/not found state |
+| 409 | Conflict | handle duplicate/concurrent update |
+| 422 | Validation issue | show field-level errors |
+| 500+ | Server error | retry option + fallback UI |
+
+### fetch vs axios (diff table)
+
+| Topic | fetch | axios |
+|---|---|---|
+| Built-in | Yes (browser native) | No (install package) |
+| JSON parse | Manual `res.json()` | Auto parse response JSON |
+| Error for non-2xx | No (must check `res.ok`) | Yes (rejects on non-2xx) |
+| Timeout | Manual with AbortController | Built-in timeout option |
+| Interceptors | No | Yes (request/response interceptors) |
 
 ### Real-world scenario
 
-Product page calls GET `/products`; checkout calls POST `/orders`.
+E-commerce flow:
 
-### Flow diagram
+- `GET /products?category=stationary&page=1` to render catalog
+- `POST /cart/items` to add item
+- `POST /orders` to place order
+- `GET /orders/:id` to show confirmation
 
 ```mermaid
 flowchart LR
-A[Frontend Request] --> B[API Endpoint]
-B --> C[Server Logic]
-C --> D[JSON Response]
-D --> E[Render UI]
+A[Load page] --> B[GET products]
+B --> C[Render product cards]
+C --> D[User adds to cart]
+D --> E[POST cart item]
+E --> F[Checkout]
+F --> G[POST order]
+G --> H[Show order confirmation]
 ```
 
-### Code example (fetch)
+### Example 1: GET with fetch + status handling
 
 ```js
-async function getUsers() {
-  const res = await fetch("https://jsonplaceholder.typicode.com/users");
-  const data = await res.json();
-  console.log(data.length);
+async function getProducts() {
+  try {
+    const res = await fetch("https://jsonplaceholder.typicode.com/users");
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log("Count:", data.length);
+  } catch (error) {
+    console.log("Request failed:", error.message);
+  }
 }
 
-getUsers();
+getProducts();
 ```
 
-### Output (example)
+Output (example):
 
 ```txt
-10
+Count: 10
 ```
+
+### Example 2: POST with fetch
+
+```js
+async function createPost() {
+  const payload = {
+    title: "Notebook",
+    body: "Premium quality",
+    userId: 1
+  };
+
+  const res = await fetch("https://jsonplaceholder.typicode.com/posts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const created = await res.json();
+  console.log(created.id);
+}
+```
+
+Output (example):
+
+```txt
+101
+```
+
+### Example 3: Query params and pagination
+
+```js
+function buildProductsUrl(baseUrl, page, limit, search) {
+  const url = new URL(baseUrl);
+  url.searchParams.set("_page", String(page));
+  url.searchParams.set("_limit", String(limit));
+  if (search) url.searchParams.set("q", search);
+  return url.toString();
+}
+
+console.log(buildProductsUrl("https://example.com/products", 2, 20, "pen"));
+```
+
+Output:
+
+```txt
+https://example.com/products?_page=2&_limit=20&q=pen
+```
+
+### Example 4: Abort slow request (important UX)
+
+```js
+async function loadWithTimeout(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timerId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timerId);
+  }
+}
+```
+
+### Example 5: Axios-style client pattern (interceptor concept)
+
+```js
+// Pseudocode style if axios is used
+// const api = axios.create({ baseURL: "https://api.example.com", timeout: 10000 });
+// api.interceptors.request.use((config) => {
+//   config.headers.Authorization = `Bearer ${token}`;
+//   return config;
+// });
+// api.interceptors.response.use(
+//   (res) => res,
+//   (err) => {
+//     if (err.response?.status === 401) {
+//       // refresh token or redirect login
+//     }
+//     return Promise.reject(err);
+//   }
+// );
+```
+
+Why this pattern matters:
+
+- central place for auth headers
+- common error behavior in one place
+- avoids repeating logic in every API call
+
+### API state management flow
+
+```mermaid
+flowchart TD
+A[Start request] --> B[Set loading true]
+B --> C{Success?}
+C -- Yes --> D[Set data]
+C -- No --> E[Set error]
+D --> F[Set loading false]
+E --> F
+```
+
+### Authentication basics
+
+- Token-based auth typically uses `Authorization: Bearer <token>`
+- Never hardcode secret tokens in source code
+- Handle `401` and `403` with user-friendly flows
 
 ### Edge cases
 
-- Network failure or timeout
-- API returns non-200 status
+- Network down / offline mode
+- Slow API causing stale UI state
+- Duplicate submit from repeated clicks
+- Partial success in multi-request workflows
+- Race conditions when user changes filters quickly
 
 ### Common mistakes
 
-- Not checking `res.ok` before parsing JSON
-- Assuming API always returns expected shape
+- Not checking `res.ok` in fetch
+- Parsing JSON blindly for `204 No Content`
+- No timeout/cancel strategy
+- Ignoring retries for transient 5xx failures
+- Coupling UI components tightly to raw API shape
 
 ### Best practices
 
-- Validate response status and schema
-- Show user-friendly loading and error states
+- Use small reusable API service functions
+- Validate response status and data shape
+- Add loading, empty, error, and retry UI states
+- Use AbortController for canceling stale requests
+- Debounce fast search input before firing API calls
+- Keep auth and common headers centralized
+
+### Interview quick answers table
+
+| Question | Short answer |
+|---|---|
+| Why check `res.ok` in fetch? | fetch does not throw on non-2xx by default. |
+| PUT vs PATCH? | PUT replaces full resource; PATCH updates partial fields. |
+| Why use API client wrapper? | Reuse auth, error handling, and base URL setup. |
+| Why cancel requests? | Prevent stale response overwriting latest UI state. |
 
 ### Summary
 
-API handling is a core real-world JavaScript skill.
+API handling is a core real-world JavaScript skill. When you understand HTTP methods, status codes, request lifecycle, and fetch/axios patterns, you can build reliable, secure, and user-friendly data-driven applications.
 
 ---
 
