@@ -5,7 +5,7 @@ This workspace contains beginner-friendly Git learning material, a JavaScript be
 ## What’s Inside
 
 - [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md) - a complete Git guide with workflows, commands, merge conflicts, diagrams, and interview questions.
-- [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md) - a complete JavaScript fundamentals guide with execution context, hoisting, TDZ, functions, closures, currying, Mermaid diagrams, examples, and edge cases.
+- [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md) - complete JavaScript documentation from fundamentals to async, DOM, OOP, APIs, and interview prep with Mermaid diagrams and real-world scenarios.
 - [assets/screenshots](assets/screenshots) - PNG resources used across documentation.
 - [Array.js](Array.js), [dummy2.js](dummy2.js), [Hoisting-TDZ.js](Hoisting-TDZ.js), [functions.js](functions.js), [String.js](String.js), and [coding-exercises.js](coding-exercises.js) - practice JavaScript files.
 
@@ -21,13 +21,15 @@ This workspace contains beginner-friendly Git learning material, a JavaScript be
 
 ### JavaScript Guide Highlights
 
-- JavaScript basics from scratch
-- Global and Function Execution Context
-- Memory Creation Phase and Execution Phase
-- Hoisting, TDZ, and var/let/const differences
-- Function Declaration, Function Expression, and Arrow Functions
-- Closures and Currying with beginner examples
-- Real-world edge cases and interview question bank
+- JavaScript foundations, variables, scope, and data types
+- Execution context, call stack, hoisting, and TDZ
+- Functions, callbacks, higher-order patterns, closure, and currying
+- Arrays, objects, this, call/apply/bind, prototypes, and classes
+- DOM manipulation, event propagation, and event delegation
+- Async JavaScript: timers, promises, async/await, and event loop
+- API basics: REST, fetch, axios, and robust error handling
+- Date, Math, Map, Set, and modern ES6+ features
+- Real-world scenarios, edge cases, and interview question bank
 
 ## How to Use
 

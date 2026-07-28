@@ -1,171 +1,457 @@
-﻿# JavaScript Beginner Guide
+# JavaScript Beginner Guide
 
-> Beginner-first guide for students, interview preparation, and developers coming from other languages.
+> Complete JavaScript documentation in simple English for beginners, interview preparation, and developers moving from other languages.
 
 ## Table of Contents
 
-- [1. What is JavaScript?](#1-what-is-javascript)
-- [2. JavaScript Execution Context (Core Foundation)](#2-javascript-execution-context-core-foundation)
-- [3. Global Execution Context](#3-global-execution-context)
-- [4. Memory Creation Phase and Execution Phase](#4-memory-creation-phase-and-execution-phase)
-- [5. Function Execution Context](#5-function-execution-context)
-- [6. Function Memory Creation and Function Execution Phase](#6-function-memory-creation-and-function-execution-phase)
-- [7. Variable Hoisting and Function Hoisting](#7-variable-hoisting-and-function-hoisting)
-- [8. TDZ (Temporal Dead Zone)](#8-tdz-temporal-dead-zone)
-- [9. let vs const vs var](#9-let-vs-const-vs-var)
-- [10. Function Declaration](#10-function-declaration)
-- [11. Function Expression](#11-function-expression)
-- [12. Arrow Functions](#12-arrow-functions)
-- [13. Closures](#13-closures)
-- [14. Currying](#14-currying)
-- [15. Final Revision Tables](#15-final-revision-tables)
-- [16. Interview Question Bank (All at One Place)](#16-interview-question-bank-all-at-one-place)
+- [1. JavaScript at a Glance](#1-javascript-at-a-glance)
+- [2. Runtime Model: Execution Context and Call Stack](#2-runtime-model-execution-context-and-call-stack)
+- [3. Variables, Scope, and Data Types](#3-variables-scope-and-data-types)
+- [4. Type Coercion and Equality](#4-type-coercion-and-equality)
+- [5. Operators, Statements, and Loops](#5-operators-statements-and-loops)
+- [6. Functions Deep Dive](#6-functions-deep-dive)
+- [7. Arrays and Array Methods](#7-arrays-and-array-methods)
+- [8. Objects and Object Patterns](#8-objects-and-object-patterns)
+- [9. this, call, apply, bind](#9-this-call-apply-bind)
+- [10. Prototype and Classes](#10-prototype-and-classes)
+- [11. DOM and Events](#11-dom-and-events)
+- [12. Async JavaScript](#12-async-javascript)
+- [13. APIs, Fetch, Axios, and REST Basics](#13-apis-fetch-axios-and-rest-basics)
+- [14. Error Handling and Debugging](#14-error-handling-and-debugging)
+- [15. Useful Built-ins: Date, Math, Map, Set](#15-useful-built-ins-date-math-map-set)
+- [16. Modern JS Features (ES6+)](#16-modern-js-features-es6)
+- [17. Interview Question Bank](#17-interview-question-bank)
+- [18. Final Learning Roadmap](#18-final-learning-roadmap)
 
 ---
 
-## 1. What is JavaScript?
+## 1. JavaScript at a Glance
 
 ### What is it?
 
-JavaScript is a programming language used to add behavior to websites and applications.
+JavaScript is a programming language that tells your app what to do at runtime.
 
-A programming language is a way to write instructions that a computer can execute.
+Runtime means "when code is actually running".
 
-Without JavaScript:
+JavaScript can:
 
-- A page mostly shows text and design
-- Buttons may look clickable but do nothing
+- Read user actions (click, type, scroll)
+- Process data (validate, filter, calculate)
+- Update UI (show error, open modal, render list)
+- Talk to server APIs (get products, save orders)
 
-With JavaScript:
+JavaScript is used in:
 
-- A button can open a menu
-- A form can check email format
-- A page can fetch and show live data
+- Browsers (frontend)
+- Servers using Node.js (backend)
+- Mobile and desktop apps through frameworks
 
-### Why do we need it?
+### Real-world scenario
 
-- To make websites interactive
-- To update content without full page reload
-- To validate user input before sending to server
-- To build full applications (browser + server using Node.js)
+In an e-commerce app:
 
-### Real-world analogy
-
-Think of a website like a smart home:
-
-- HTML = walls and rooms
-- CSS = paint and decoration
-- JavaScript = switches, sensors, automation logic
+- User clicks Add to Cart
+- JavaScript adds item in local state
+- JavaScript updates cart count badge
+- JavaScript sends API call to store cart
 
 ### Flow diagram
 
 ```mermaid
 flowchart LR
-A[User opens website] --> B[HTML creates structure]
-B --> C[CSS adds style]
-C --> D[JavaScript adds behavior]
-D --> E[User interacts]
+A[User Action] --> B[JavaScript Logic]
+B --> C[Update UI]
+B --> D[Send API Request]
+D --> E[Receive Response]
+E --> C
 ```
 
 ### Code example
 
 ```js
-console.log("Hello World");
+const productName = "Laptop";
+const price = 59999;
+console.log(`${productName} added. Price: ${price}`);
 ```
 
 ### Output
 
 ```txt
-Hello World
-```
-
-### Simple real-world example
-
-```js
-const loginAttempts = 3;
-console.log("Attempts left:", loginAttempts);
-```
-
-### Output
-
-```txt
-Attempts left: 3
+Laptop added. Price: 59999
 ```
 
 ### Common mistakes
 
-- Thinking JavaScript and Java are the same language
+- Thinking JavaScript and Java are same language
 - Thinking JavaScript runs only in browser
 
 ### Best practices
 
-- Learn basics first: variables, functions, execution context
-- Practice in browser console daily
-- Read errors carefully, do not ignore them
+- Build fundamentals before frameworks
+- Practice daily with small problems
+- Read console errors line by line
 
 ### Summary
 
-JavaScript is the behavior layer of modern web apps.
+JavaScript is the behavior engine of modern applications.
 
 ---
 
-## 2. JavaScript Execution Context (Core Foundation)
-
-> Technical term: Execution Context is the environment where JavaScript executes code.
+## 2. Runtime Model: Execution Context and Call Stack
 
 ![JavaScript Execution Context](assets/screenshots/javascript-execution.png)
 
 ### What is it?
 
-Execution context is the runtime box where JavaScript stores:
+Execution context is the internal runtime environment where JavaScript executes code.
 
-- Variables
-- Function definitions
-- Current line being executed
+Each context stores:
 
-JavaScript first creates a global context. Then every function call creates a new function context.
+- Variables in scope
+- Function declarations and references
+- `this` value
+- Current instruction pointer
 
-### Why do we need it?
+Main types:
 
-Without execution context, JavaScript cannot track:
+- Global Execution Context (created first)
+- Function Execution Context (created on each function call)
 
-- Which variable belongs to which function
-- Which statement should run next
-- Which function should return where
+Each function call is pushed to call stack, and removed when complete.
 
-### Real-world analogy
+### Real-world scenario
 
-Think of a hospital system:
+In checkout flow:
 
-- Main reception = global execution context
-- Doctor room for each patient = function execution context
-- Patient file = variables and values
+- `placeOrder()` calls `validateCart()`
+- `validateCart()` calls `checkStock()`
+- If `checkStock()` fails, stack trace helps locate exact failure point
 
 ### Flow diagram
 
 ```mermaid
 flowchart TD
-A[Program starts] --> B[Create Global Execution Context]
-B --> C[Run global code]
-C --> D{Function called?}
-D -- Yes --> E[Create Function Execution Context]
-E --> F[Run function code]
-F --> G[Return value and remove function context]
-G --> C
-D -- No --> H[Program completes]
+A[Global Context Created] --> B[Global Code Runs]
+B --> C{Function Called?}
+C -- Yes --> D[Create Function Context]
+D --> E[Push to Call Stack]
+E --> F[Execute Function]
+F --> G[Pop from Call Stack]
+G --> B
+C -- No --> H[Program Ends]
 ```
 
 ### Code example
 
 ```js
-var user = "Asha";
-
-function greet() {
-  var message = "Hello";
-  console.log(message, user);
+function one() {
+  two();
 }
 
-greet();
+function two() {
+  console.log("Inside two");
+}
+
+one();
+```
+
+### Output
+
+```txt
+Inside two
+```
+
+### Edge cases
+
+- Deep recursion can cause call stack overflow
+- Large global scope can increase accidental name conflicts
+
+### Common mistakes
+
+- Confusing memory creation with execution order
+- Not reading stack traces while debugging
+
+### Best practices
+
+- Keep functions small and focused
+- Use debugger and breakpoints for call flow
+
+### Summary
+
+Execution context and call stack explain how JavaScript really runs your code.
+
+---
+
+## 3. Variables, Scope, and Data Types
+
+### What is it?
+
+Variable is a named container for data.
+
+Scope is the area where a variable can be accessed.
+
+JavaScript keywords:
+
+- `var`: function scope, older style
+- `let`: block scope, can reassign
+- `const`: block scope, cannot reassign reference
+
+Data types:
+
+- Primitive: string, number, boolean, null, undefined, bigint, symbol
+- Non-primitive: object, array, function
+
+### Real-world scenario
+
+In login page:
+
+- `const apiUrl` should not change
+- `let attempts` changes after each failed login
+- Avoid using `var` to prevent scope confusion
+
+### Flow diagram
+
+```mermaid
+flowchart LR
+A[Need Variable] --> B{Will value change?}
+B -- No --> C[Use const]
+B -- Yes --> D[Use let]
+D --> E[Avoid var in modern code]
+```
+
+### Code example
+
+```js
+const appName = "ShopEasy";
+let attempts = 0;
+attempts = attempts + 1;
+console.log(appName, attempts);
+```
+
+### Output
+
+```txt
+ShopEasy 1
+```
+
+### Edge cases
+
+- `const` object properties can still change
+- `var` declared in loop can leak outside block
+
+### Common mistakes
+
+- Using `var` in modern code
+- Accessing `let` or `const` before declaration
+
+### Best practices
+
+- Use `const` by default
+- Use `let` only when reassignment is required
+- Keep variable names descriptive
+
+### Summary
+
+Correct variable and scope choices prevent many early bugs.
+
+---
+
+## 4. Type Coercion and Equality
+
+### What is it?
+
+Type coercion means JavaScript converts one data type to another automatically in some operations.
+
+Equality operators:
+
+- `==` loose equality (allows type conversion)
+- `===` strict equality (no type conversion)
+
+### Real-world scenario
+
+In payment validation, string input from form may be compared with numeric value. Wrong comparison can approve invalid data.
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Comparison Requested] --> B{Use === ?}
+B -- Yes --> C[No type conversion]
+B -- No --> D[Possible coercion]
+D --> E[Unexpected result risk]
+```
+
+### Code example
+
+```js
+console.log(5 == "5");
+console.log(5 === "5");
+console.log("10" + 2);
+console.log("10" - 2);
+```
+
+### Output
+
+```txt
+true
+false
+102
+8
+```
+
+### Edge cases
+
+- `"" == 0` is true
+- `null == undefined` is true, but `null === undefined` is false
+
+### Common mistakes
+
+- Using `==` in critical business logic
+- Assuming `+` always does numeric addition
+
+### Best practices
+
+- Prefer `===` and `!==`
+- Convert input explicitly: `Number(value)`, `String(value)`
+
+### Summary
+
+Understand coercion clearly to avoid hidden logical bugs.
+
+---
+
+## 5. Operators, Statements, and Loops
+
+### What is it?
+
+Operators perform actions on values.
+
+Main categories:
+
+- Arithmetic: `+ - * / % **`
+- Assignment: `= += -=`
+- Comparison: `> < >= <= ===`
+- Logical: `&& || !`
+
+Statements control flow:
+
+- `if...else`
+- `switch`
+- loops: `for`, `while`, `do...while`, `for...of`, `for...in`
+
+### Real-world scenario
+
+Order discount flow:
+
+- if amount > 5000, apply 10% discount
+- else if amount > 2000, apply 5%
+- else no discount
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Start] --> B[Read Order Amount]
+B --> C{Amount > 5000?}
+C -- Yes --> D[Apply 10%]
+C -- No --> E{Amount > 2000?}
+E -- Yes --> F[Apply 5%]
+E -- No --> G[No Discount]
+D --> H[Show Final Price]
+F --> H
+G --> H
+```
+
+### Code example
+
+```js
+const amount = 3200;
+let discount = 0;
+
+if (amount > 5000) {
+  discount = 10;
+} else if (amount > 2000) {
+  discount = 5;
+}
+
+console.log(`Discount: ${discount}%`);
+```
+
+### Output
+
+```txt
+Discount: 5%
+```
+
+### Edge cases
+
+- Infinite loop if condition never changes
+- `for...in` on arrays can give unexpected keys
+
+### Common mistakes
+
+- Using `for...in` instead of `for...of` for arrays
+- Missing `break` inside `switch`
+
+### Best practices
+
+- Use `for...of` for array values
+- Keep loop body short and readable
+
+### Summary
+
+Control flow and loops are core tools for program logic.
+
+---
+
+## 6. Functions Deep Dive
+
+### What is it?
+
+Function is a reusable block of code.
+
+Main function styles:
+
+- Function Declaration
+- Function Expression
+- Arrow Function
+- IIFE (Immediately Invoked Function Expression)
+
+Advanced function patterns:
+
+- Callback function
+- Higher-order function
+- Recursion
+- Closure
+- Currying
+
+### Real-world scenario
+
+In a report app:
+
+- One function fetches data
+- Another validates rows
+- Another formats output
+- Callback or higher-order function customizes behavior
+
+### Flow diagram
+
+```mermaid
+flowchart LR
+A[Input Data] --> B[Function A: Validate]
+B --> C[Function B: Transform]
+C --> D[Function C: Display]
+```
+
+### Code example
+
+```js
+function greet(name) {
+  return `Hello ${name}`;
+}
+
+const result = greet("Asha");
+console.log(result);
 ```
 
 ### Output
@@ -174,1060 +460,815 @@ greet();
 Hello Asha
 ```
 
-### Edge case (real-world scenario)
-
-A payment page calls helper functions one inside another. If one helper throws error, you need to know which function context was active. Understanding execution context helps trace the issue quickly.
-
-### Common mistakes
-
-- Mixing call stack concept with memory values
-- Assuming JS executes blindly line-by-line with no setup
-
-### Best practices
-
-- Dry-run code with context boxes
-- Keep function scopes small and clear
-
-### Summary
-
-Execution context is the base model behind hoisting, scope, closures, and debugging.
-
----
-
-## 3. Global Execution Context
-
-
-### What is it?
-
-Global Execution Context (GEC) is the first context created when a JS file starts.
-
-Code written outside any function runs in global context.
-
-### Why do we need it?
-
-Every script needs a root space where execution begins.
-
-### Real-world analogy
-
-GEC is the building lobby. All rooms (functions) are entered from the lobby and return back to it.
-
-### Flow diagram
-
-```mermaid
-flowchart LR
-A[Script loads] --> B[Create GEC]
-B --> C[Memory creation in GEC]
-C --> D[Execute global statements]
-```
-
-### Code example
+### Simple examples for key patterns
 
 ```js
-var appName = "ShopEasy";
-
-function showApp() {
-  console.log(appName);
+// Callback
+function processOrder(id, callback) {
+  callback(`Order ${id} processed`);
 }
 
-showApp();
+processOrder(101, (msg) => console.log(msg));
+
+// IIFE
+(function () {
+  console.log("IIFE executed once");
+})();
 ```
 
 ### Output
 
 ```txt
-ShopEasy
+Order 101 processed
+IIFE executed once
 ```
 
-### Edge case (real-world scenario)
+### Edge cases
 
-If two different script files both use `var data = ...` in global scope, one can overwrite the other and break checkout or profile pages. This is called global scope pollution.
+- Calling function expression before assignment causes error
+- Recursive function without base condition causes stack overflow
 
 ### Common mistakes
 
-- Too many global variables
-- Reusing global names across files
+- Huge functions with too many responsibilities
+- Not returning values when caller expects output
 
 ### Best practices
 
-- Minimize global data
-- Wrap related logic in functions/modules
+- Keep single responsibility per function
+- Name functions with verb + purpose
 
 ### Summary
 
-Global context is the root runtime environment, but keep it clean.
+Functions are the building blocks of clean and reusable JavaScript logic.
 
 ---
 
-## 4. Memory Creation Phase and Execution Phase
-
+## 7. Arrays and Array Methods
 
 ### What is it?
 
-Each execution context runs in two phases:
+Array is an ordered list of values.
 
-1. Memory Creation Phase
-2. Execution Phase
+Important methods:
 
-In memory creation:
+- Add/remove: `push`, `pop`, `shift`, `unshift`, `splice`
+- Search: `includes`, `indexOf`, `find`
+- Transform: `map`, `filter`, `reduce`
+- Iterate: `forEach`
+- Sort: `sort` (careful with numbers)
 
-- `var` is created with value `undefined`
-- Function declarations are stored fully
-- `let`/`const` are created but not initialized (TDZ)
+### Real-world scenario
 
-In execution phase:
+Product listing page:
 
-- Values are assigned
-- Function calls execute
-
-### Why do we need it?
-
-This design lets JavaScript know all declarations before running actual statements.
-
-### Real-world analogy
-
-Restaurant workflow:
-
-- Prep kitchen (memory creation): ingredients and tools set up
-- Cooking service (execution): actual dishes made in order
+- Filter category
+- Map to UI card model
+- Reduce to total cart value
 
 ### Flow diagram
 
 ```mermaid
 flowchart TD
-A[Create Context] --> B[Memory Creation]
-B --> C[var -> undefined]
-B --> D[Function declaration -> full function]
-B --> E[let/const -> uninitialized]
-C --> F[Execution Phase]
-D --> F
-E --> F
-F --> G[Assignments and calls run]
+A[Products Array] --> B[filter: inStock]
+B --> C[map: pick fields]
+C --> D[reduce: total price]
 ```
 
 ### Code example
 
 ```js
-console.log(a);
-sayHi();
-
-var a = 10;
-
-function sayHi() {
-  console.log("Hi");
-}
-```
-
-### Output
-
-```txt
-undefined
-Hi
-```
-
-### Simple real-world example
-
-```js
-console.log(total); // exists as undefined at this moment
-var total = 500;
+const prices = [100, 200, 300, 400];
+const total = prices.reduce((sum, p) => sum + p, 0);
 console.log(total);
 ```
 
 ### Output
 
 ```txt
-undefined
-500
+1000
 ```
 
-### Edge case (real-world scenario)
+### Edge cases
 
-In a billing app, if you print tax before assignment, you may get `undefined` and send wrong invoice data. Always initialize before use, even if engine hoists declarations.
+- Default `sort()` sorts as strings
+- Mutating original arrays can break shared state
 
 ### Common mistakes
 
-- Confusing declaration and initialization
-- Relying on hoisting for business logic
+- Forgetting to return inside `map`
+- Using `map` when no transformed array is needed
 
 ### Best practices
 
-- Declare near top of scope for readability
-- Initialize before first use
+- Use immutable patterns when possible
+- Use descriptive callback names
 
 ### Summary
 
-Memory creation explains why some names are usable before assignment and some are not.
+Array methods make data processing concise and readable.
 
 ---
 
-## 5. Function Execution Context
-
-
-### What is it?
-
-When a function is called, JavaScript creates a new execution context for that function.
-
-This context has its own:
-
-- Parameters
-- Local variables
-- Inner function declarations
-
-### Why do we need it?
-
-Different function calls must not overwrite each other.
-
-### Real-world analogy
-
-Each customer support call opens a ticket. Ticket data is separate per customer. When call ends, ticket closes.
-
-### Flow diagram
-
-```mermaid
-flowchart TD
-A[Function called] --> B[Create function context]
-B --> C[Memory creation]
-C --> D[Execute lines]
-D --> E[Return]
-E --> F[Function context removed]
-```
-
-### Code example
-
-```js
-function add(x, y) {
-  var result = x + y;
-  return result;
-}
-
-console.log(add(2, 3));
-console.log(add(10, 5));
-```
-
-### Output
-
-```txt
-5
-15
-```
-
-### Edge case (real-world scenario)
-
-If a user double-clicks "Pay Now", `processPayment()` might run twice. Each call gets its own context. You still need app-level protection (disable button, idempotency key) to avoid duplicate charge.
-
-### Common mistakes
-
-- Expecting local variable outside function
-- Assuming one function call shares same local memory with next call
-
-### Best practices
-
-- Use parameters for input
-- Return explicit output
-
-### Summary
-
-Every function call gets a fresh runtime context.
-
----
-
-## 6. Function Memory Creation and Function Execution Phase
-
+## 8. Objects and Object Patterns
 
 ### What is it?
 
-Function context also runs in two phases:
+Object stores key-value pairs.
 
-1. Function Memory Creation
-2. Function Execution
+Common operations:
 
-### Why do we need it?
+- Create and update properties
+- Optional chaining `?.`
+- Destructuring for clean extraction
+- Object methods for behavior
 
-So JS can prepare parameter and declaration information before running statements.
+### Real-world scenario
 
-### Real-world analogy
-
-Before class:
-
-- Attendance list ready
-- Board cleaned
-- Markers placed
-
-Then teaching starts.
+User profile object stores name, email, role, preferences, address, and methods like `getDisplayName()`.
 
 ### Flow diagram
 
 ```mermaid
 flowchart LR
-A[Function call] --> B[Function memory creation]
-B --> C[Parameters initialized]
-B --> D[var declarations set undefined]
-B --> E[Function declarations stored]
-C --> F[Function execution phase]
-D --> F
-E --> F
+A[Raw User Object] --> B[Read Properties]
+B --> C[Validate Required Fields]
+C --> D[Render Profile]
 ```
 
 ### Code example
-
-```js
-function demo(p) {
-  console.log(p);
-  console.log(localVar);
-  var localVar = "ready";
-  console.log(localVar);
-}
-
-demo("start");
-```
-
-### Output
-
-```txt
-start
-undefined
-ready
-```
-
-### Edge case (real-world scenario)
-
-In a discount function, reading `var discount` before assignment gives `undefined`, and final bill can become `NaN` if used in math. This can silently break orders.
-
-### Common mistakes
-
-- Thinking function `var` is created only at assignment line
-
-### Best practices
-
-- Prefer `let`/`const` to reduce accidental `undefined`
-- Keep variable declarations close to first valid use
-
-### Summary
-
-Function context follows exactly the same two-phase pattern as global context.
-
----
-
-## 7. Variable Hoisting and Function Hoisting
-
-> Technical term: Hoisting is JavaScript behavior where declarations are processed before execution.
-
-
-### What is it?
-
-During memory creation:
-
-- Variable hoisting (`var`): name exists with `undefined`
-- Function hoisting (declaration): full function available
-- `let` and `const`: hoisted but uninitialized (TDZ)
-
-### Why do we need it?
-
-Because JS engine scans declarations before statement execution.
-
-### Real-world analogy
-
-Event organizer makes a list of all participants before event starts:
-
-- Some are fully ready (function declarations)
-- Some names exist but details missing (`var`)
-- Some entries locked until official start (`let`/`const`)
-
-### Flow diagram
-
-```mermaid
-flowchart TD
-A[Memory creation begins] --> B[var -> undefined]
-A --> C[function declaration -> complete function]
-A --> D[let/const -> TDZ]
-B --> E[Execution phase]
-C --> E
-D --> E
-```
-
-### Code example
-
-```js
-console.log(product);
-show();
-
-var product = "Laptop";
-
-function show() {
-  console.log("Product page loaded");
-}
-```
-
-### Output
-
-```txt
-undefined
-Product page loaded
-```
-
-### Edge case (real-world scenario)
-
-A production bug appears because code checks `if (isAdmin)` before assignment. If `isAdmin` is `var`, condition is false due to `undefined` and admin menu hides for valid admin users.
-
-### Common mistakes
-
-- Believing hoisting physically moves code lines
-- Using variables before assignment and expecting actual value
-
-### Best practices
-
-- Never depend on hoisting for correctness
-- Declare before use in readable order
-
-### Summary
-
-Hoisting is creation-phase setup behavior, not code movement.
-
----
-
-## 8. TDZ (Temporal Dead Zone)
-
-> Technical term: TDZ is the time window where `let`/`const` exist but cannot be accessed before declaration line.
-
-
-### What is it?
-
-`let` and `const` are hoisted but uninitialized. Access before declaration throws `ReferenceError`.
-
-### Why do we need it?
-
-TDZ prevents accidental early usage and catches bugs early.
-
-### Real-world analogy
-
-A reserved parking spot has your name, but gate opens only after start time.
-
-### Flow diagram
-
-```mermaid
-flowchart LR
-A[Block starts] --> B[let/const in TDZ]
-B --> C{Access now?}
-C -- Yes --> D[ReferenceError]
-C -- No --> E[Declaration executes]
-E --> F[Variable usable]
-```
-
-### Code example
-
-```js
-// console.log(score); // ReferenceError if uncommented
-let score = 100;
-console.log(score);
-```
-
-### Output
-
-```txt
-100
-```
-
-### Simple real-world example
-
-```js
-function checkout() {
-  // console.log(total); // ReferenceError
-  const total = 799;
-  console.log("Pay:", total);
-}
-
-checkout();
-```
-
-### Output
-
-```txt
-Pay: 799
-```
-
-### Edge case (real-world scenario)
-
-Inside a long function, reading `let token` before line of declaration can break authentication flow during peak traffic. TDZ makes this bug visible immediately instead of failing silently.
-
-### Common mistakes
-
-- Treating `let` like `var`
-- Accessing `const` before initialization
-
-### Best practices
-
-- Declare variables at start of block when possible
-- Keep blocks short and clear
-
-### Summary
-
-TDZ is a safety mechanism for predictable variable usage.
-
----
-
-## 9. let vs const vs var
-
-
-### What is it?
-
-These are three keywords to create variables.
-
-> Technical term: Scope means where a variable is accessible.
-
-| Feature | var | let | const |
-|---|---|---|---|
-| Scope | Function scope | Block scope | Block scope |
-| Re-declare in same scope | Yes | No | No |
-| Re-assign | Yes | Yes | No |
-| Hoisting behavior | `undefined` | TDZ | TDZ |
-| Modern recommendation | Avoid | Use when needed | Default choice |
-
-### Why do we need it?
-
-Different variable behaviors support different coding needs.
-
-### Real-world analogy
-
-- var: old shared cupboard key (easy access, less safe)
-- let: personal editable notebook
-- const: sealed agreement (reference cannot change)
-
-### Flow diagram
-
-```mermaid
-flowchart TD
-A[Need a variable] --> B{Will value change later?}
-B -- No --> C[Use const]
-B -- Yes --> D[Use let]
-D --> E[Need legacy compatibility?]
-E -- Rarely --> F[var in old code]
-```
-
-### Code example
-
-```js
-var city = "Delhi";
-let age = 20;
-const country = "India";
-
-city = "Mumbai";
-age = 21;
-
-console.log(city, age, country);
-```
-
-### Output
-
-```txt
-Mumbai 21 India
-```
-
-### Edge case (real-world scenario)
-
-`const` object can still have internal property updates:
-
-```js
-const cart = { items: 1 };
-cart.items = 2; // allowed
-console.log(cart.items);
-
-// cart = { items: 3 }; // not allowed
-```
-
-### Output
-
-```txt
-2
-```
-
-### Common mistakes
-
-- Using `var` in modern codebases
-- Thinking `const` means deeply immutable object
-
-### Best practices
-
-- Use `const` by default
-- Use `let` only when reassignment is required
-- Avoid `var` unless maintaining old code
-
-### Summary
-
-`let` and `const` are safer and clearer than `var`.
-
----
-
-## 10. Function Declaration
-
-
-### What is it?
-
-A function declaration is a named function defined as a standalone statement.
-
-### Why do we need it?
-
-- Reusable logic
-- Clear naming
-- Fully hoisted in memory creation phase
-
-### Real-world analogy
-
-It is like a registered service desk in office directory. Anyone can call it by name.
-
-### Flow diagram
-
-```mermaid
-flowchart LR
-A[Memory creation] --> B[Function declaration stored fully]
-B --> C[Execution phase]
-C --> D[Can call before or after definition line]
-```
-
-### Code example
-
-```js
-sayName();
-
-function sayName() {
-  console.log("Riya");
-}
-```
-
-### Output
-
-```txt
-Riya
-```
-
-### Edge case (real-world scenario)
-
-In large files, same function name can be redeclared later and silently replace earlier behavior. This can change tax or shipping logic unexpectedly.
-
-### Common mistakes
-
-- Assuming all functions behave like declarations
-- Reusing same function name accidentally
-
-### Best practices
-
-- Use meaningful names: `calculateTotal`, `validateEmail`
-- Keep one responsibility per function
-
-### Summary
-
-Function declarations are hoisted and easy to reuse.
-
----
-
-## 11. Function Expression
-
-
-### What is it?
-
-A function expression is a function assigned to a variable.
-
-### Why do we need it?
-
-- Functions can be passed as values
-- Great for callbacks and dynamic behavior
-
-### Real-world analogy
-
-A freelancer assigned to a desk variable. Work starts after assignment.
-
-### Flow diagram
-
-```mermaid
-flowchart TD
-A[Variable declared] --> B[Function value assigned during execution]
-B --> C[Callable after assignment line]
-```
-
-### Code example
-
-```js
-const greet = function () {
-  console.log("Hello from expression");
-};
-
-greet();
-```
-
-### Output
-
-```txt
-Hello from expression
-```
-
-### Edge case (real-world scenario)
-
-If you call a function expression before assignment in a startup file, app initialization can fail and blank page may appear.
-
-```js
-// greet(); // ReferenceError with const/let, TypeError with var in many patterns
-
-var greet = function () {
-  console.log("Hello");
-};
-```
-
-### Common mistakes
-
-- Calling expression before assignment
-- Using `var` unnecessarily with function expressions
-
-### Best practices
-
-- Prefer `const` for function expressions
-- Define before first use for readability
-
-### Summary
-
-Function expressions are runtime assignments, unlike hoisted declarations.
-
----
-
-## 12. Arrow Functions
-
-
-### What is it?
-
-Arrow function is a shorter syntax for writing functions.
-
-### Why do we need it?
-
-- Concise code
-- Clean callback syntax
-- Lexical `this` from surrounding scope
-
-> Technical term: Lexical means "from surrounding code location".
-
-### Real-world analogy
-
-Normal function chooses identity by caller. Arrow function keeps identity from where it was created.
-
-### Flow diagram
-
-```mermaid
-flowchart LR
-A[Create arrow function] --> B[Store in variable]
-B --> C[Call function]
-C --> D[Uses outer this]
-```
-
-### Code example
-
-```js
-const square = (n) => n * n;
-console.log(square(4));
-```
-
-### Output
-
-```txt
-16
-```
-
-### Edge case (real-world scenario)
-
-In an object method, arrow function may break expected `this`:
 
 ```js
 const user = {
-  name: "Anu",
-  normal() {
-    return this.name;
-  },
-  arrow: () => {
-    return this.name;
-  }
+  name: "Riya",
+  role: "admin",
+  isActive: true
 };
 
-console.log(user.normal());
-console.log(user.arrow());
+console.log(user.name, user.role);
 ```
 
-### Possible output
+### Output
 
 ```txt
-Anu
-undefined
+Riya admin
 ```
+
+### Edge cases
+
+- Accessing missing nested property throws error without optional chaining
+- Shallow copy can still share nested object references
 
 ### Common mistakes
 
-- Using arrow methods where dynamic `this` is needed
+- Mutating shared objects directly
+- Assuming spread makes deep copy
 
 ### Best practices
 
-- Use arrow functions for short callbacks
-- Use normal methods inside objects/classes when needed
+- Use optional chaining for safe reads
+- Use object spread for safe shallow updates
 
 ### Summary
 
-Arrow functions are concise but `this` behavior must be understood.
+Objects represent real-world entities and structured application data.
 
 ---
 
-## 13. Closures
-
-> Technical term: Closure means inner function keeps access to outer function variables even after outer function finishes.
-
+## 9. this, call, apply, bind
 
 ### What is it?
 
-A closure happens when a returned or stored inner function uses variables from outer scope.
+`this` points to the object context for function execution.
 
-### Why do we need it?
+`call`, `apply`, and `bind` control what `this` should be.
 
-- Private data
-- State retention between calls
-- Function factories
+- `call(thisArg, a, b)`
+- `apply(thisArg, [a, b])`
+- `bind(thisArg)` returns new function
 
-### Real-world analogy
+### Real-world scenario
 
-A delivery person carries a bag from warehouse. Even after leaving warehouse, bag items stay available.
+A shared invoice function should run for different customer objects by switching context.
 
 ### Flow diagram
 
 ```mermaid
 flowchart TD
-A[Outer function starts] --> B[Creates local variable]
-B --> C[Returns inner function]
-C --> D[Outer execution ends]
-D --> E[Inner function still reads outer variable]
+A[Shared Function] --> B[call/apply/bind]
+B --> C[Attach this to target object]
+C --> D[Execute with correct context]
 ```
 
 ### Code example
 
 ```js
-function counter() {
-  let count = 0;
-  return function () {
-    count++;
-    console.log(count);
-  };
+const person = { name: "Asha" };
+
+function say(city) {
+  console.log(`${this.name} from ${city}`);
 }
 
-const inc = counter();
-inc();
-inc();
-inc();
+say.call(person, "Pune");
 ```
 
 ### Output
 
 ```txt
-1
-2
-3
+Asha from Pune
 ```
 
-### Simple real-world example
+### Edge cases
 
-```js
-function makeDiscountCalculator(discountPercent) {
-  return function (price) {
-    return price - price * (discountPercent / 100);
-  };
-}
-
-const tenOff = makeDiscountCalculator(10);
-console.log(tenOff(500));
-```
-
-### Output
-
-```txt
-450
-```
-
-### Edge case (real-world scenario)
-
-If closures capture large data (big arrays, DOM references) and are never released, memory usage can grow. In long-running dashboards this can slow down app.
+- Arrow functions ignore `call/apply/bind` for `this`
+- Losing method context when passing method as callback
 
 ### Common mistakes
 
-- Using closure without understanding retained memory
-- Loop closure bugs with incorrect variable declarations
+- Using arrow function for object method expecting dynamic `this`
 
 ### Best practices
 
-- Use closures for intentional state
-- Remove references when no longer needed
-- Prefer `let` in loops to avoid classic closure bugs
+- Use normal function for methods needing dynamic `this`
+- Use `bind` for event handler context stability
 
 ### Summary
 
-Closures are powerful for private state and reusable logic.
+Understanding `this` and binding methods prevents many advanced bugs.
 
 ---
 
-## 14. Currying
-
-> Technical term: Currying converts a multi-argument function into a chain of one-argument functions.
-
+## 10. Prototype and Classes
 
 ### What is it?
 
-Currying converts:
+JavaScript uses prototype-based inheritance.
 
-`f(a, b, c)` into `f(a)(b)(c)`
+A prototype is an object that other objects can inherit from.
 
-### Why do we need it?
+Class syntax is cleaner wrapper over prototypes.
 
-- Partial reuse of logic
-- Better composition patterns
-- Cleaner function pipelines in some codebases
+Class features:
 
-### Real-world analogy
+- constructor
+- instance methods
+- static methods
+- inheritance using `extends`
 
-Pizza order flow:
+### Real-world scenario
 
-1. Choose base
-2. Choose topping
-3. Choose size
+`Vehicle` base class defines common behavior; `Car` and `Bike` inherit and add specific behavior.
 
-Each step returns next step.
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Base Class / Prototype] --> B[Child Class]
+B --> C[Inherited Methods]
+C --> D[Override if needed]
+```
+
+### Code example
+
+```js
+class User {
+  constructor(name) {
+    this.name = name;
+  }
+
+  greet() {
+    return `Hello ${this.name}`;
+  }
+}
+
+const u = new User("Karan");
+console.log(u.greet());
+```
+
+### Output
+
+```txt
+Hello Karan
+```
+
+### Edge cases
+
+- Forgetting `new` with constructor functions
+- Confusing static methods with instance methods
+
+### Common mistakes
+
+- Creating duplicate methods inside constructor unnecessarily
+
+### Best practices
+
+- Put shared behavior on prototype or class methods
+- Use classes for clear domain models
+
+### Summary
+
+Prototypes and classes are essential for reusable object-oriented design.
+
+---
+
+## 11. DOM and Events
+
+### What is it?
+
+DOM (Document Object Model) is browser representation of HTML as a tree of nodes.
+
+You can:
+
+- Select elements
+- Modify content/styles/attributes
+- Handle events like click, input, submit
+
+Event propagation phases:
+
+- Capturing
+- Target
+- Bubbling
+
+Event delegation handles many child events using one parent listener.
+
+### Real-world scenario
+
+In a todo list:
+
+- One click handler on list parent manages all delete buttons
+- New items added later still work without new listeners
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[User Click] --> B[Capture Phase]
+B --> C[Target Element]
+C --> D[Bubble Phase]
+D --> E[Parent Handler Runs]
+```
+
+### Code example
+
+```js
+const btn = document.querySelector("#saveBtn");
+btn.addEventListener("click", () => {
+  console.log("Saved");
+});
+```
+
+### Output
+
+```txt
+Saved
+```
+
+### Edge cases
+
+- Event bubbling triggers parent unexpectedly
+- Query selector returns null if element not loaded yet
+
+### Common mistakes
+
+- Adding too many individual listeners for list items
+- Forgetting `event.preventDefault()` on form submit when needed
+
+### Best practices
+
+- Prefer event delegation in dynamic lists
+- Register handlers after DOM is ready
+
+### Summary
+
+DOM and events connect user actions to JavaScript behavior.
+
+---
+
+## 12. Async JavaScript
+
+### What is it?
+
+Async JavaScript handles tasks that take time without freezing the UI.
+
+Important parts:
+
+- Callbacks
+- `setTimeout` / `setInterval`
+- Promises
+- `async` / `await`
+- Event loop and task queues
+
+### Real-world scenario
+
+When user opens dashboard:
+
+- UI appears quickly
+- API requests run in background
+- Data cards update when response arrives
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Call async task] --> B[Browser/Web API handles timer or network]
+B --> C[Task callback queued]
+C --> D[Call stack empty?]
+D -- Yes --> E[Event loop pushes callback]
+E --> F[Callback executes]
+```
+
+### Code example
+
+```js
+console.log("Start");
+setTimeout(() => console.log("Timer done"), 0);
+console.log("End");
+```
+
+### Output
+
+```txt
+Start
+End
+Timer done
+```
+
+### Promise + async/await example
+
+```js
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function run() {
+  console.log("A");
+  await wait(100);
+  console.log("B");
+}
+
+run();
+```
+
+### Output
+
+```txt
+A
+B
+```
+
+### Edge cases
+
+- Callback hell with deeply nested callbacks
+- Unhandled promise rejection crashes flow
+
+### Common mistakes
+
+- Forgetting `await` before promise result
+- Mixing callbacks and promises without clear pattern
+
+### Best practices
+
+- Prefer async/await for readability
+- Use `try...catch` around awaited calls
+
+### Summary
+
+Async JavaScript keeps apps responsive and is mandatory for API-driven apps.
+
+---
+
+## 13. APIs, Fetch, Axios, and REST Basics
+
+### What is it?
+
+API is a contract to exchange data between client and server.
+
+REST basics:
+
+- GET: read data
+- POST: create data
+- PUT/PATCH: update data
+- DELETE: remove data
+
+`fetch` is browser-native HTTP client.
+Axios is a popular external HTTP library.
+
+### Real-world scenario
+
+Product page calls GET `/products`; checkout calls POST `/orders`.
 
 ### Flow diagram
 
 ```mermaid
 flowchart LR
-A[f(a,b,c)] --> B[f(a)]
-B --> C[f(a)(b)]
-C --> D[f(a)(b)(c)]
-D --> E[Result]
+A[Frontend Request] --> B[API Endpoint]
+B --> C[Server Logic]
+C --> D[JSON Response]
+D --> E[Render UI]
+```
+
+### Code example (fetch)
+
+```js
+async function getUsers() {
+  const res = await fetch("https://jsonplaceholder.typicode.com/users");
+  const data = await res.json();
+  console.log(data.length);
+}
+
+getUsers();
+```
+
+### Output (example)
+
+```txt
+10
+```
+
+### Edge cases
+
+- Network failure or timeout
+- API returns non-200 status
+
+### Common mistakes
+
+- Not checking `res.ok` before parsing JSON
+- Assuming API always returns expected shape
+
+### Best practices
+
+- Validate response status and schema
+- Show user-friendly loading and error states
+
+### Summary
+
+API handling is a core real-world JavaScript skill.
+
+---
+
+## 14. Error Handling and Debugging
+
+### What is it?
+
+Error handling catches and manages failures safely.
+
+Core tools:
+
+- `try...catch...finally`
+- `throw new Error(...)`
+- browser DevTools
+- stack trace analysis
+
+### Real-world scenario
+
+In payment flow, if gateway call fails, app should show retry message instead of blank screen.
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Run risky code] --> B{Error occurs?}
+B -- No --> C[Continue normally]
+B -- Yes --> D[Catch and handle]
+D --> E[Log + user friendly message]
 ```
 
 ### Code example
 
 ```js
-function multiply(a) {
-  return function (b) {
-    return a * b;
-  };
+try {
+  const data = JSON.parse("{ bad json }");
+  console.log(data);
+} catch (error) {
+  console.log("Invalid JSON:", error.message);
 }
-
-const double = multiply(2);
-console.log(double(5));
-console.log(multiply(3)(4));
 ```
 
 ### Output
 
 ```txt
-10
-12
+Invalid JSON: Unexpected token b in JSON at position 2
 ```
 
-### Edge case (real-world scenario)
+### Edge cases
 
-Over-currying simple utility functions can make team code harder to read, especially for beginners. In payment or healthcare apps, readability is more important than style tricks.
+- Catching error but silently ignoring it
+- Throwing string instead of Error object
 
 ### Common mistakes
 
-- Using currying where simple two-argument function is enough
-- Confusing currying and immediate invocation
+- No error handling for async API calls
 
 ### Best practices
 
-- Use currying only when it improves reuse or composition
-- Keep naming clear for each step function
+- Throw `Error` objects with meaningful messages
+- Keep central logging for production issues
 
 ### Summary
 
-Currying is useful, but should improve readability and reuse.
+Good error handling improves reliability and user trust.
 
 ---
 
-## 15. Final Revision Tables
+## 15. Useful Built-ins: Date, Math, Map, Set
 
-### A. Execution context quick revision
+### What is it?
 
-| Concept | Short meaning | Diagram connection |
-|---|---|---|
-| Global Execution Context | First context for script | Main context block |
-| Memory Creation Phase | Declarations prepared | Left-side preparation |
-| Execution Phase | Statements run | Right-side running lines |
-| Function Execution Context | Context per function call | Additional context box |
-| Function Memory Creation | Parameter/local setup | Function prep phase |
-| Function Execution Phase | Function statements run | Function run phase |
-| Variable Hoisting | `var` gets `undefined` | Creation phase |
-| Function Hoisting | Declaration fully available | Creation phase |
-| TDZ | `let`/`const` blocked before declaration | Between block start and declaration |
+JavaScript provides built-in objects for common tasks.
 
-### B. Variable declaration revision
+- `Math`: calculations
+- `Date`: time handling
+- `Map`: key-value with any key type
+- `Set`: unique values collection
 
-| Keyword | Scope | Re-assign | Re-declare | Hoisting behavior |
-|---|---|---|---|---|
-| var | Function | Yes | Yes | `undefined` |
-| let | Block | Yes | No | TDZ |
-| const | Block | No | No | TDZ |
+### Real-world scenario
 
-### C. Function type revision
+- Use Date for order timestamps
+- Use Set to remove duplicate tags
+- Use Map for fast lookup by object keys
 
-| Function type | Can call before definition line? | `this` behavior |
-|---|---|---|
-| Function Declaration | Yes | Dynamic (depends on call style) |
-| Function Expression | No (until assigned) | Dynamic for normal function |
-| Arrow Function | No (until assigned) | Lexical from outer scope |
+### Flow diagram
 
----
+```mermaid
+flowchart LR
+A[Input Data] --> B{Need uniqueness?}
+B -- Yes --> C[Use Set]
+B -- No --> D{Need key-value with custom keys?}
+D -- Yes --> E[Use Map]
+D -- No --> F[Use Object/Array]
+```
 
-## 16. Interview Question Bank (All at One Place)
+### Code example
 
-### A. JavaScript basics
+```js
+const tags = ["js", "api", "js"];
+const uniqueTags = [...new Set(tags)];
+console.log(uniqueTags);
+```
 
-1. What is JavaScript and where is it used?
-2. What is ECMAScript?
-3. Is JavaScript same as Java?
+### Output
 
-### B. Execution context
+```txt
+[ 'js', 'api' ]
+```
 
-1. What is execution context in JavaScript?
-2. Difference between global and function execution context?
-3. What are the two phases of execution context?
+### Edge cases
 
-### C. Phases and hoisting
+- Date parsing varies by input format
+- Floating point math precision issues
 
-1. What happens in memory creation phase?
-2. What happens in execution phase?
-3. Is hoisting actual code movement?
-4. Difference between variable hoisting and function hoisting?
+### Common mistakes
 
-### D. TDZ and variable declarations
+- Using object where Map is better for frequent dynamic keys
 
-1. What is TDZ and why was it introduced?
-2. Compare var, let, and const.
-3. Does var have TDZ?
-4. Is const object immutable?
+### Best practices
 
-### E. Function styles
+- Use ISO date formats
+- Use Set for uniqueness and Map for lookup-heavy logic
 
-1. Function declaration vs function expression?
-2. Arrow function vs normal function?
-3. Why is arrow function `this` different?
+### Summary
 
-### F. Closures and currying
-
-1. What is closure with a practical example?
-2. Can closures cause memory issues?
-3. What is currying and where is it useful?
-4. Currying vs partial application?
+Built-ins reduce code and improve clarity.
 
 ---
 
-## Final Notes
+## 16. Modern JS Features (ES6+)
+
+### What is it?
+
+Modern JavaScript adds cleaner syntax and safer patterns.
+
+Key features:
+
+- Template literals
+- Destructuring
+- Rest parameter
+- Spread operator
+- Default parameters
+- Optional chaining
+- Nullish coalescing
+
+### Real-world scenario
+
+API response object can be safely read with optional chaining and defaults to avoid runtime crashes.
+
+### Flow diagram
+
+```mermaid
+flowchart TD
+A[Complex Object] --> B[Destructure needed fields]
+B --> C[Use defaults for missing values]
+C --> D[Render safe UI]
+```
+
+### Code example
+
+```js
+const user = { name: "Aman", address: { city: "Delhi" } };
+const city = user.address?.city ?? "Unknown";
+const { name } = user;
+console.log(`${name} - ${city}`);
+```
+
+### Output
+
+```txt
+Aman - Delhi
+```
+
+### Edge cases
+
+- Spread is shallow copy, not deep copy
+- Destructuring undefined object throws error
+
+### Common mistakes
+
+- Overusing nested destructuring reducing readability
+
+### Best practices
+
+- Use features where they improve clarity
+- Prefer readable over clever one-liners
+
+### Summary
+
+ES6+ features make code shorter, safer, and easier to maintain.
+
+---
+
+## 17. Interview Question Bank
+
+### JavaScript Core
+
+1. What is JavaScript and where can it run?
+2. Explain execution context and call stack.
+3. Difference between `var`, `let`, and `const`.
+4. What is TDZ?
+5. Difference between `==` and `===`.
+
+### Functions
+
+1. Function declaration vs function expression.
+2. Arrow function vs normal function.
+3. What is callback function?
+4. What is higher-order function?
+5. Explain closure with practical example.
+6. Explain currying with practical example.
+
+### Objects and OOP
+
+1. What is prototype chain?
+2. Difference between constructor function and class.
+3. Explain `this` keyword in different contexts.
+4. Explain `call`, `apply`, and `bind`.
+
+### DOM and Events
+
+1. What is event bubbling and capturing?
+2. What is event delegation and why use it?
+3. Difference between `innerText` and `textContent`.
+
+### Async and API
+
+1. Explain event loop.
+2. Callback vs Promise vs async/await.
+3. What is promise chaining?
+4. How do you handle API errors in fetch?
+5. Difference between fetch and axios.
+
+---
+
+## 18. Final Learning Roadmap
+
+### Concept coverage aligned with your notes collection
+
+This guide now includes concepts reflected in your JS notes set, including:
+
+- Variables, datatypes, arrays, objects, operators, loops
+- Hoisting, scope, functions, callbacks, IIFE, recursion
+- Closures, currying, higher-order functions
+- `this`, `call`, `apply`, `bind`
+- Prototype, classes, inheritance, static behavior
+- DOM manipulation, event propagation, event delegation
+- Async basics, timers, promises, async/await
+- REST API, fetch, axios, and error handling
+- Date, Math, Map, Set, and modern ES6 features
+
+### Recommended learning order
+
+1. Runtime model and variables
+2. Functions and arrays
+3. Objects and `this`
+4. Prototype and classes
+5. DOM and events
+6. Async JavaScript and APIs
+7. Error handling and real project patterns
 
 > [!TIP]
-> Learn in this order:
-> 1) Execution context and phases
-> 2) Hoisting, TDZ, var/let/const
-> 3) Function types and `this`
-> 4) Closures and currying
+> For interview preparation, do not only read definitions. Practice by writing and dry-running each concept with small code snippets.
 
 > [!WARNING]
-> Do not rely on hoisting to write business logic. Always initialize values before use.
+> Real-world bugs usually happen because of scope confusion, async timing issues, or context (`this`) mistakes. Practice these deeply.
 
 > [!INFO]
-> Revisit the diagram shown in Section 2 whenever you are confused.
+> Use Mermaid diagrams in this file as visual memory anchors when revising concepts quickly.
