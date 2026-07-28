@@ -1,4 +1,4 @@
-# JavaScript Beginner Guide
+﻿# JavaScript Beginner Guide
 
 > Complete JavaScript documentation in simple English for beginners, interview preparation, and developers moving from other languages.
 
@@ -457,7 +457,7 @@ Quick type meaning:
 | boolean | true/false value | `true` |
 | undefined | declared but no value yet | `let x;` |
 | null | intentionally empty value | `let user = null` |
-| object | grouped key-value data | `{ name: "Asha" }` |
+| object | grouped key-value data | `{ name: "Nisha" }` |
 | array | ordered list | `[10, 20, 30]` |
 
 ### Real-world scenario
@@ -665,11 +665,11 @@ ReferenceError
 ### Code example 3: `const` object mutation edge
 
 ```js
-const profile = { name: "Asha", city: "Pune" };
+const profile = { name: "Nisha", city: "Pune" };
 profile.city = "Mumbai"; // allowed
 console.log(profile.city);
 
-// profile = { name: "Asha" }; // not allowed
+// profile = { name: "Nisha" }; // not allowed
 ```
 
 ### Output
@@ -939,6 +939,112 @@ true
 false
 false
 ```
+
+### Why comparisons return true or false
+
+JavaScript returns `true` when comparison rule is satisfied, otherwise `false`.
+The result depends on:
+
+- Value itself
+- Data type
+- Operator used (`==`, `===`, `<`, `>`, etc.)
+- Whether JavaScript is allowed to coerce type
+
+### Internal flow of `===` (strict equality)
+
+```mermaid
+flowchart TD
+A[Start a === b] --> B{Type of a and b same?}
+B -- No --> C[Return false]
+B -- Yes --> D{Type is number?}
+D -- No --> E[Compare values directly]
+E --> F[Return true or false]
+D -- Yes --> G{Either value is NaN?}
+G -- Yes --> H[Return false]
+G -- No --> I[Compare numeric values]
+I --> F
+```
+
+### Internal flow of `==` (loose equality)
+
+```mermaid
+flowchart TD
+A[Start a == b] --> B{Type of a and b same?}
+B -- Yes --> C[Same-type comparison rules]
+C --> D[Return true or false]
+B -- No --> E{null and undefined pair?}
+E -- Yes --> F[Return true]
+E -- No --> G{boolean involved?}
+G -- Yes --> H[Convert boolean to number  true->1, false->0]
+H --> A
+G -- No --> I{string and number pair?}
+I -- Yes --> J[Convert string to number]
+J --> A
+I -- No --> K{object with primitive?}
+K -- Yes --> L[Convert object to primitive]
+L --> A
+K -- No --> M[Return false]
+```
+
+### True/false reasoning table
+
+| Comparison | Result | Why it returns this |
+|---|---|---|
+| `5 == "5"` | `true` | `==` allows coercion, string `"5"` becomes number `5` |
+| `5 === "5"` | `false` | `===` checks both type and value; number and string differ |
+| `0 == false` | `true` | `false` coerces to `0` in loose equality |
+| `0 === false` | `false` | types are different (`number` vs `boolean`) |
+| `null == undefined` | `true` | special loose-equality rule in JavaScript |
+| `null === undefined` | `false` | strict equality requires same type |
+| `NaN === NaN` | `false` | `NaN` is never equal to anything, including itself |
+| `"2" > "12"` | `true` | both are strings, so lexical (dictionary) comparison |
+| `"2" > 12` | `false` | number comparison after coercion (`2 > 12` is false) |
+
+### Code example 5: More comparison cases
+
+```js
+console.log(0 == false);
+console.log(0 === false);
+console.log("2" > "12");
+console.log("2" > 12);
+console.log(10 > "5");
+console.log("apple" > "banana");
+```
+
+### Output
+
+```txt
+true
+false
+true
+false
+true
+false
+```
+
+### Code example 6: Object and array comparison
+
+```js
+console.log([1, 2] == [1, 2]);
+console.log([1, 2] === [1, 2]);
+
+const arr = [1, 2];
+const sameRef = arr;
+console.log(arr === sameRef);
+```
+
+### Output
+
+```txt
+false
+false
+true
+```
+
+Why this happens:
+
+- Arrays and objects compare by reference (memory address), not by content
+- Two separate arrays with same values are still different references
 
 ### Edge cases
 
@@ -1218,14 +1324,14 @@ function greet(name) {
   return `Hello ${name}`;
 }
 
-const result = greet("Asha");
+const result = greet("Nisha");
 console.log(result);
 ```
 
 ### Output
 
 ```txt
-Hello Asha
+Hello Nisha
 ```
 
 ### Simple examples for key patterns
@@ -1431,7 +1537,7 @@ C --> D[Execute with correct context]
 ### Code example
 
 ```js
-const person = { name: "Asha" };
+const person = { name: "Nisha" };
 
 function say(city) {
   console.log(`${this.name} from ${city}`);
@@ -1443,7 +1549,7 @@ say.call(person, "Pune");
 ### Output
 
 ```txt
-Asha from Pune
+Nisha from Pune
 ```
 
 ### Edge cases
@@ -2040,3 +2146,4 @@ This guide now includes concepts reflected in your JS notes set, including:
 
 > [!INFO]
 > Use Mermaid diagrams in this file as visual memory anchors when revising concepts quickly.
+
