@@ -1963,13 +1963,45 @@ Functions are the building blocks of JavaScript architecture. Understanding func
 
 Array is an ordered list of values.
 
-Important methods:
+Array methods help you:
 
-- Add/remove: `push`, `pop`, `shift`, `unshift`, `splice`
-- Search: `includes`, `indexOf`, `find`
-- Transform: `map`, `filter`, `reduce`
-- Iterate: `forEach`
-- Sort: `sort` (careful with numbers)
+- Add and remove data
+- Search items
+- Transform one array into another
+- Calculate totals
+- Validate conditions
+- Prepare API/UI data quickly
+
+### Array method families
+
+| Family | Methods | Typical use |
+|---|---|---|
+| Add/remove (mutating) | `push`, `pop`, `shift`, `unshift`, `splice` | cart updates, queue processing |
+| Copy/extract (non-mutating) | `slice` | pagination, preview lists |
+| Search | `includes`, `indexOf`, `find`, `findIndex` | lookup by id/name/status |
+| Transform | `map`, `flatMap` | UI model creation |
+| Filter/validate | `filter`, `some`, `every` | in-stock checks, validation rules |
+| Aggregate | `reduce` | totals, grouped values |
+| Iterate | `forEach` | side effects like logging/rendering |
+| Sort/order | `sort` | price/order/date sorting |
+| Flatten | `flat` | nested category/tag arrays |
+
+### Method selection flow
+
+```mermaid
+flowchart TD
+A[Need array operation] --> B{Need single value output?}
+B -- Yes --> C{Need total/summary?}
+C -- Yes --> D[Use reduce]
+C -- No --> E[Use find/findIndex/includes/indexOf]
+B -- No --> F{Need transformed array?}
+F -- Yes --> G[Use map/flatMap]
+F -- No --> H{Need filtered array?}
+H -- Yes --> I[Use filter]
+H -- No --> J{Need validation?}
+J -- Yes --> K[Use some/every]
+J -- No --> L[Use forEach or mutating methods]
+```
 
 ### Real-world scenario
 
@@ -1978,6 +2010,13 @@ Product listing page:
 - Filter category
 - Map to UI card model
 - Reduce to total cart value
+
+Also in real apps:
+
+- Sort by price low-to-high
+- Find selected product by id
+- Check if any item is out of stock
+- Remove item from cart by index
 
 ### Flow diagram
 
@@ -1988,7 +2027,255 @@ B --> C[map: pick fields]
 C --> D[reduce: total price]
 ```
 
-### Code example
+### Code example: `push()`
+
+What it does: adds item at end of array and returns new length.
+
+Real-world scenario: add new product to cart.
+
+```js
+const cart = ["pen", "book"];
+const newLength = cart.push("bag");
+console.log(cart);
+console.log(newLength);
+```
+
+### Output
+
+```txt
+[ 'pen', 'book', 'bag' ]
+3
+```
+
+### Code example: `pop()`
+
+What it does: removes last item and returns removed value.
+
+Real-world scenario: remove most recently added cart item.
+
+```js
+const cart = ["pen", "book", "bag"];
+const removed = cart.pop();
+console.log(removed);
+console.log(cart);
+```
+
+### Output
+
+```txt
+bag
+[ 'pen', 'book' ]
+```
+
+### Code example: `shift()`
+
+What it does: removes first item.
+
+Real-world scenario: process first waiting token in a queue.
+
+```js
+const queue = ["T1", "T2", "T3"];
+const first = queue.shift();
+console.log(first);
+console.log(queue);
+```
+
+### Output
+
+```txt
+T1
+[ 'T2', 'T3' ]
+```
+
+### Code example: `unshift()`
+
+What it does: adds item at beginning.
+
+Real-world scenario: high-priority alert should be shown first.
+
+```js
+const alerts = ["normal-1", "normal-2"];
+alerts.unshift("critical");
+console.log(alerts);
+```
+
+### Output
+
+```txt
+[ 'critical', 'normal-1', 'normal-2' ]
+```
+
+### Code example: `splice()`
+
+What it does: add/remove/replace items at specific index (mutates array).
+
+Real-world scenario: remove canceled order from middle of list.
+
+```js
+const orders = [101, 102, 103, 104];
+const removed = orders.splice(1, 1); // remove one item at index 1
+console.log(removed);
+console.log(orders);
+```
+
+### Output
+
+```txt
+[ 102 ]
+[ 101, 103, 104 ]
+```
+
+### Code example: `slice()`
+
+What it does: copies a portion without changing original array.
+
+Real-world scenario: show first 5 products as featured list.
+
+```js
+const products = ["p1", "p2", "p3", "p4", "p5", "p6"];
+const featured = products.slice(0, 5);
+console.log(featured);
+console.log(products);
+```
+
+### Output
+
+```txt
+[ 'p1', 'p2', 'p3', 'p4', 'p5' ]
+[ 'p1', 'p2', 'p3', 'p4', 'p5', 'p6' ]
+```
+
+### Code example: `includes()`
+
+What it does: checks if value exists and returns boolean.
+
+Real-world scenario: check if user already has role permission.
+
+```js
+const roles = ["viewer", "editor", "admin"];
+console.log(roles.includes("admin"));
+console.log(roles.includes("owner"));
+```
+
+### Output
+
+```txt
+true
+false
+```
+
+### Code example: `indexOf()`
+
+What it does: returns first index of value, otherwise `-1`.
+
+Real-world scenario: find selected tab position.
+
+```js
+const tabs = ["home", "orders", "profile"];
+console.log(tabs.indexOf("orders"));
+console.log(tabs.indexOf("settings"));
+```
+
+### Output
+
+```txt
+1
+-1
+```
+
+### Code example: `find()`
+
+What it does: returns first item matching condition.
+
+Real-world scenario: get product by id.
+
+```js
+const products = [
+  { id: 1, name: "Pen" },
+  { id: 2, name: "Book" }
+];
+
+const product = products.find((p) => p.id === 2);
+console.log(product);
+```
+
+### Output
+
+```txt
+{ id: 2, name: 'Book' }
+```
+
+### Code example: `findIndex()`
+
+What it does: returns index of first matching item.
+
+Real-world scenario: locate item index before update/remove.
+
+```js
+const products = [
+  { id: 1, name: "Pen" },
+  { id: 2, name: "Book" }
+];
+
+const idx = products.findIndex((p) => p.id === 2);
+console.log(idx);
+```
+
+### Output
+
+```txt
+1
+```
+
+### Code example: `map()`
+
+What it does: creates new array by transforming each item.
+
+Real-world scenario: backend product object to UI card model.
+
+```js
+const products = [
+  { name: "Pen", price: 10 },
+  { name: "Book", price: 50 }
+];
+
+const cards = products.map((p) => `${p.name} - Rs.${p.price}`);
+console.log(cards);
+```
+
+### Output
+
+```txt
+[ 'Pen - Rs.10', 'Book - Rs.50' ]
+```
+
+### Code example: `filter()`
+
+What it does: returns items that satisfy condition.
+
+Real-world scenario: show only in-stock products.
+
+```js
+const products = [
+  { name: "Pen", inStock: true },
+  { name: "Book", inStock: false }
+];
+
+const inStockItems = products.filter((p) => p.inStock);
+console.log(inStockItems);
+```
+
+### Output
+
+```txt
+[ { name: 'Pen', inStock: true } ]
+```
+
+### Code example: `reduce()`
+
+What it does: reduces array to one value.
+
+Real-world scenario: cart total amount.
 
 ```js
 const prices = [100, 200, 300, 400];
@@ -2002,24 +2289,183 @@ console.log(total);
 1000
 ```
 
+### Code example: `forEach()`
+
+What it does: runs callback for each item (no returned transformed array).
+
+Real-world scenario: render each log line.
+
+```js
+const logs = ["start", "processing", "done"];
+logs.forEach((item) => console.log(`log: ${item}`));
+```
+
+### Output
+
+```txt
+log: start
+log: processing
+log: done
+```
+
+### Code example: `some()`
+
+What it does: returns true if at least one item matches.
+
+Real-world scenario: detect if any cart item is out of stock.
+
+```js
+const items = [
+  { name: "Pen", inStock: true },
+  { name: "Book", inStock: false }
+];
+
+const hasOutOfStock = items.some((i) => !i.inStock);
+console.log(hasOutOfStock);
+```
+
+### Output
+
+```txt
+true
+```
+
+### Code example: `every()`
+
+What it does: returns true only if all items match.
+
+Real-world scenario: ensure all required documents are uploaded.
+
+```js
+const docs = [
+  { name: "ID", uploaded: true },
+  { name: "Address", uploaded: true }
+];
+
+const allUploaded = docs.every((d) => d.uploaded);
+console.log(allUploaded);
+```
+
+### Output
+
+```txt
+true
+```
+
+### Code example: `sort()`
+
+What it does: sorts array in place (mutates original).
+
+Real-world scenario: price low-to-high sorting.
+
+```js
+const prices = [100, 20, 3];
+const wrong = [...prices].sort();
+const correct = [...prices].sort((a, b) => a - b);
+
+console.log(wrong);
+console.log(correct);
+```
+
+### Output
+
+```txt
+[ 100, 20, 3 ]
+[ 3, 20, 100 ]
+```
+
+### Code example: `flat()`
+
+What it does: flattens nested arrays.
+
+Real-world scenario: merge nested category tags.
+
+```js
+const nested = [["js", "web"], ["api"], ["node", "db"]];
+const flatTags = nested.flat();
+console.log(flatTags);
+```
+
+### Output
+
+```txt
+[ 'js', 'web', 'api', 'node', 'db' ]
+```
+
+### Code example: `flatMap()`
+
+What it does: map + flatten in one step.
+
+Real-world scenario: user roles expanded into permission labels.
+
+```js
+const users = [
+  { name: "Nisha", roles: ["admin", "editor"] },
+  { name: "Riya", roles: ["viewer"] }
+];
+
+const roleLabels = users.flatMap((u) => u.roles.map((r) => `${u.name}:${r}`));
+console.log(roleLabels);
+```
+
+### Output
+
+```txt
+[ 'Nisha:admin', 'Nisha:editor', 'Riya:viewer' ]
+```
+
+### Real-world pipeline example
+
+```js
+const products = [
+  { name: "Pen", price: 10, inStock: true },
+  { name: "Book", price: 50, inStock: false },
+  { name: "Bag", price: 200, inStock: true }
+];
+
+const totalInStock = products
+  .filter((p) => p.inStock)
+  .map((p) => p.price)
+  .reduce((sum, p) => sum + p, 0);
+
+console.log(totalInStock);
+```
+
+### Output
+
+```txt
+210
+```
+
 ### Edge cases
 
 - Default `sort()` sorts as strings
 - Mutating original arrays can break shared state
+- `map()` without return gives `undefined` items
+- `reduce()` without initial value can fail on empty arrays
+- `forEach()` cannot be stopped using `break`
+- `splice()` mutates original array directly
 
 ### Common mistakes
 
 - Forgetting to return inside `map`
 - Using `map` when no transformed array is needed
+- Using `for...in` with arrays and expecting values
+- Sorting numbers without comparator function
+- Mutating shared array by mistake in reducers/services
 
 ### Best practices
 
 - Use immutable patterns when possible
 - Use descriptive callback names
+- Prefer `find()` when expecting one item, `filter()` for many
+- Always pass comparator in numeric/date sorting
+- Add initial accumulator value in `reduce()`
+- Use `some()`/`every()` for clear boolean intent
 
 ### Summary
 
-Array methods make data processing concise and readable.
+Array methods are the backbone of JavaScript data processing. Choosing the right method improves readability, correctness, and real-world maintainability.
 
 ---
 
