@@ -1463,6 +1463,16 @@ Operators, statements, and loops are the foundation of application logic. Clear 
 
 Function is a reusable block of code.
 
+In simple words, function is a named task.
+Instead of writing the same code again and again, you write it once and call it many times.
+
+Functions help you:
+
+- Reuse logic
+- Keep code modular
+- Test small pieces independently
+- Improve readability
+
 Main function styles:
 
 - Function Declaration
@@ -1478,6 +1488,57 @@ Advanced function patterns:
 - Closure
 - Currying
 
+### Function lifecycle in execution context
+
+When function runs, JavaScript does:
+
+1. Create function execution context
+2. Memory creation phase (params, vars, inner declarations)
+3. Execution phase (line-by-line run)
+4. Return value and remove function context from stack
+
+### Function execution flow diagram
+
+```mermaid
+flowchart TD
+A[Function called] --> B[Create Function Execution Context]
+B --> C[Memory Creation Phase]
+C --> D[Execution Phase]
+D --> E[Return value]
+E --> F[Pop from Call Stack]
+```
+
+### Hoisting in functions (important)
+
+Function-related hoisting behavior:
+
+- Function declaration is fully hoisted
+- `var` variable is hoisted as `undefined`
+- Function expression and arrow function are available only after assignment line executes
+
+### Hoisting impact table
+
+| Pattern | Can call before definition line? | Why |
+|---|---|---|
+| Function declaration | Yes | Full function body available in memory creation phase |
+| Function expression with `var` | No safe call | variable hoisted as `undefined`, call fails |
+| Function expression with `let/const` | No | TDZ before declaration line |
+| Arrow function (`const`) | No | behaves like expression assignment |
+
+### Hoisting flow diagram
+
+```mermaid
+flowchart LR
+A[Memory Creation Phase] --> B[Function declaration stored fully]
+A --> C[var functionExpr initialized undefined]
+A --> D[let/const arrow/expr in TDZ]
+B --> E[Execution Phase starts]
+C --> E
+D --> E
+E --> F[Assignments happen]
+F --> G[Expressions/arrows become callable]
+```
+
 ### Real-world scenario
 
 In a report app:
@@ -1486,6 +1547,12 @@ In a report app:
 - Another validates rows
 - Another formats output
 - Callback or higher-order function customizes behavior
+
+Production impact:
+
+- If `validateRows` fails, you stop pipeline early
+- If callback throws error, report may remain half-rendered
+- Clear function boundaries make bug tracing easier
 
 ### Flow diagram
 
@@ -1496,7 +1563,7 @@ B --> C[Function B: Transform]
 C --> D[Function C: Display]
 ```
 
-### Code example
+### Code example 1: Function declaration
 
 ```js
 function greet(name) {
@@ -1513,47 +1580,255 @@ console.log(result);
 Hello Nisha
 ```
 
-### Simple examples for key patterns
+### Code example 2: Function declaration hoisting
 
 ```js
-// Callback
-function processOrder(id, callback) {
-  callback(`Order ${id} processed`);
+sayHi();
+
+function sayHi() {
+  console.log("Hi from declaration");
+}
+```
+
+### Output
+
+```txt
+Hi from declaration
+```
+
+### Code example 3: Function expression hoisting behavior
+
+```js
+try {
+  greetExpr();
+} catch (error) {
+  console.log(error.name);
 }
 
-processOrder(101, (msg) => console.log(msg));
+var greetExpr = function () {
+  console.log("Hi from expression");
+};
 
-// IIFE
+greetExpr();
+```
+
+### Output
+
+```txt
+TypeError
+Hi from expression
+```
+
+Why first call fails:
+
+- `var greetExpr` exists as `undefined` during memory creation
+- `undefined()` is invalid, so TypeError
+
+### Code example 4: Arrow function
+
+```js
+const add = (a, b) => a + b;
+console.log(add(2, 3));
+```
+
+### Output
+
+```txt
+5
+```
+
+### Code example 5: IIFE
+
+```js
 (function () {
-  console.log("IIFE executed once");
+  console.log("IIFE executed immediately");
 })();
 ```
 
 ### Output
 
 ```txt
-Order 101 processed
-IIFE executed once
+IIFE executed immediately
 ```
+
+### Code example 6: Callback function
+
+```js
+function processOrder(id, callback) {
+  callback(`Order ${id} processed`);
+}
+
+processOrder(101, function (msg) {
+  console.log(msg);
+});
+```
+
+### Output
+
+```txt
+Order 101 processed
+```
+
+### Code example 7: Higher-order function
+
+```js
+function applyOperation(a, b, operation) {
+  return operation(a, b);
+}
+
+const sum = applyOperation(10, 20, (x, y) => x + y);
+console.log(sum);
+```
+
+### Output
+
+```txt
+30
+```
+
+### Code example 8: Recursion
+
+```js
+function factorial(n) {
+  if (n <= 1) return 1;
+  return n * factorial(n - 1);
+}
+
+console.log(factorial(5));
+```
+
+### Output
+
+```txt
+120
+```
+
+### Code example 9: Closure
+
+```js
+function makeCounter() {
+  let count = 0;
+  return function () {
+    count++;
+    console.log(count);
+  };
+}
+
+const counter = makeCounter();
+counter();
+counter();
+```
+
+### Output
+
+```txt
+1
+2
+```
+
+### Code example 10: Currying
+
+```js
+function multiply(a) {
+  return function (b) {
+    return a * b;
+  };
+}
+
+console.log(multiply(3)(4));
+```
+
+### Output
+
+```txt
+12
+```
+
+### Call stack and execution order
+
+Execution order is last-in-first-out (LIFO):
+
+- Last called function runs first
+- First called function finishes last
+
+### Call stack diagram
+
+```mermaid
+flowchart TD
+A[global] --> B[first called]
+B --> C[second called]
+C --> D[third called]
+D --> E[third returns]
+E --> F[second returns]
+F --> G[first returns]
+```
+
+### Code example 11: Call stack order
+
+```js
+function first() {
+  console.log("first start");
+  second();
+  console.log("first end");
+}
+
+function second() {
+  console.log("second start");
+  third();
+  console.log("second end");
+}
+
+function third() {
+  console.log("third run");
+}
+
+first();
+```
+
+### Output
+
+```txt
+first start
+second start
+third run
+second end
+first end
+```
+
+### Scenario checklist for functions
+
+- Is this function doing one clear job?
+- Are input and output types clear?
+- Could this function be reused?
+- Can this function fail? If yes, how is error handled?
+- Is there any recursion base condition?
+- Is this function declaration or expression, and does hoisting matter here?
 
 ### Edge cases
 
 - Calling function expression before assignment causes error
 - Recursive function without base condition causes stack overflow
+- Too many nested function calls can make debugging hard
+- Closure can retain data longer than expected, increasing memory usage
 
 ### Common mistakes
 
 - Huge functions with too many responsibilities
 - Not returning values when caller expects output
+- Assuming all function styles hoist the same way
+- Using arrow function where dynamic `this` is required
 
 ### Best practices
 
 - Keep single responsibility per function
 - Name functions with verb + purpose
+- Prefer function declarations for core reusable utilities
+- Use expression/arrow when passing behavior as value
+- Write small pure functions where possible
 
 ### Summary
 
-Functions are the building blocks of clean and reusable JavaScript logic.
+Functions are the building blocks of JavaScript architecture. Understanding function types, hoisting behavior, and call stack order helps you write correct, reusable, and debuggable code.
 
 ---
 
