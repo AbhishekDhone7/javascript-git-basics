@@ -900,6 +900,69 @@ false
 true
 ```
 
+### Boolean conversion reference (Truthy vs Falsy)
+
+When JavaScript checks a condition (`if`, `while`, logical operators), values are converted to boolean.
+
+Falsy values (convert to `false`):
+
+- `false`
+- `0`
+- `-0`
+- `0n`
+- `""` (empty string)
+- `null`
+- `undefined`
+- `NaN`
+
+Most other values are truthy (convert to `true`), like non-empty strings, arrays, objects, and non-zero numbers.
+
+### Boolean conversion table
+
+| Value | Boolean conversion | Reason |
+|---|---|---|
+| `false` | `false` | already false |
+| `0` | `false` | numeric zero is falsy |
+| `1` | `true` | non-zero number is truthy |
+| `""` | `false` | empty string is falsy |
+| `"0"` | `true` | non-empty string is truthy |
+| `"hello"` | `true` | non-empty string is truthy |
+| `null` | `false` | empty/nullish value |
+| `undefined` | `false` | missing value |
+| `NaN` | `false` | invalid number |
+| `[]` | `true` | object type is truthy |
+| `{}` | `true` | object type is truthy |
+
+### Code example 2.1: Boolean conversion in conditions
+
+```js
+const values = [false, 0, 1, "", "0", null, undefined, NaN, [], {}];
+
+for (const value of values) {
+  console.log(Boolean(value));
+}
+```
+
+### Output
+
+```txt
+false
+false
+true
+false
+true
+false
+false
+false
+true
+true
+```
+
+### Real-world caution
+
+Form values are usually strings. For example, `"0"` is truthy, but number `0` is falsy.
+So for validation, convert to number first when business logic expects numeric behavior.
+
 ### Code example 3: Safe input handling (real-world)
 
 ```js
