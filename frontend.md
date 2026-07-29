@@ -11616,40 +11616,1328 @@ A professional Webpack pipeline produces correct, traceable, cache-efficient ass
 
 [Previous: Webpack](#module-13-webpack) | [Next: Tree Shaking](#module-15-tree-shaking)
 
-Vite serves source through native browser ESM during development, transforms requested modules on demand, and pre-bundles dependencies for efficiency. Its HMR graph invalidates affected modules. Production builds use Rollup, so dev and build pipelines differ and both must be tested.
+## Introduction
+
+Vite is a frontend development server and production build tool designed around native browser ES modules, fast source transformation, and a plugin architecture shared with the Rollup ecosystem. During development, Vite serves requested source modules on demand. During production builds, it creates optimized deployable assets through its production bundling pipeline.
+
+The key architectural point is that **development and production use related but different execution paths**. Fast development startup does not prove that production chunking, asset URLs, browser targets, or deployment routing are correct.
 
 ```mermaid
-flowchart TB
- B[Browser requests module] --> D[Vite dev server]
- D --> X[Transform on demand]
- X --> B
- H[File change] --> G[HMR module graph]
- G --> B
- S[Production command] --> R[Rollup bundle]
- R --> A[Optimized assets]
+flowchart LR
+	SRC[Application source] --> DEV[Vite development server]
+	SRC --> BUILD[Vite production build]
+	DEV --> ESM[On-demand transformed browser ESM]
+	BUILD --> GRAPH[Bundled and optimized graph]
+	ESM --> BROWSER[Development browser]
+	GRAPH --> DIST[Deployable dist assets]
 ```
+
+## Why Vite Feels Fast
+
+Traditional development bundlers commonly construct a large bundle graph before the browser can load the application. Vite lets the browser request native ESM entry points, transforms only requested source, and pre-bundles selected dependencies for efficient delivery.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant V as Vite dev server
+	participant T as Transform pipeline
+	participant C as Module cache
+	B->>V: Request index.html
+	V-->>B: Transformed HTML
+	B->>V: Request /src/main.jsx
+	V->>C: Check transformed module cache
+	alt cache miss or invalidated
+		V->>T: Resolve, load, transform
+		T-->>V: Browser-compatible ESM
+	end
+	V-->>B: Transformed module
+	B->>V: Request imported modules as needed
+```
+
+Startup work scales more closely with modules the current page requests. Large applications still need disciplined dependencies, transforms, and route boundaries; Vite does not eliminate browser parsing or execution cost.
+
+## Core Mental Model
+
+| Concept | Responsibility |
+|---|---|
+| Root | Project directory containing `index.html` by default |
+| Development server | Resolves, transforms, and serves source modules |
+| Dependency optimizer | Pre-bundles dependencies for development |
+| Plugin container | Runs Vite and compatible Rollup hooks |
+| Module graph | Tracks URLs, imports, importers, and HMR relationships |
+| `index.html` | Source entry participating in transforms and asset processing |
+| Production build | Bundles and optimizes application output |
+| Preview server | Locally serves built output for inspection only |
+| Public directory | Files copied unchanged and served from the root path |
+| Base path | Public URL prefix used for built assets |
+
+Vite resolves browser-facing module URLs rather than merely mapping source files one-to-one. Query suffixes, virtual modules, CSS processing, and plugin transforms can produce multiple module identities from one resource.
+
+## Project Setup
+
+A minimal React project commonly contains:
+
+```text
+project/
+|-- index.html
+|-- package.json
+|-- vite.config.js
+|-- public/
+`-- src/
+    |-- main.jsx
+    `-- App.jsx
+```
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
+```
+
+Keep the installed Vite, framework plugin, Node.js version, and package manager versions compatible and pinned through the lockfile and project toolchain policy.
+
+## Configuration
+
+Use `defineConfig` for editor inference and export a function when behavior depends on command or mode.
+
+```js
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "node:path";
+
+export default defineConfig(({ command, mode, isSsrBuild }) => {
+	const environment = loadEnv(mode, process.cwd(), "VITE_");
+	const productionBuild = command === "build" && mode === "production";
+
+	if (productionBuild && !environment.VITE_API_URL) {
+		throw new Error("VITE_API_URL is required for production");
+	}
+
+	return {
+		plugins: [react()],
+		resolve: {
+			alias: {
+				"@": path.resolve(import.meta.dirname, "src"),
+			},
+		},
+		server: {
+			port: 3000,
+			strictPort: true,
+		},
+		build: {
+			sourcemap: productionBuild ? "hidden" : true,
+		},
+		define: {
+			__SSR_BUILD__: JSON.stringify(Boolean(isSsrBuild)),
+		},
+	};
+});
+```
+
+Configuration callback fields vary by Vite version. Treat the installed version's API as authoritative. Avoid reading every process variable into client definitions; expose only validated public values.
+
+## Commands, Modes, and Environments
+
+The command describes what Vite is doing; mode selects environment-file behavior and `import.meta.env.MODE`.
+
+```bash
+npm run dev
+npx vite --mode test
+npx vite build --mode staging
+npm run preview
+```
+
+| Value | Example meaning |
+|---|---|
+| Command | `serve` or `build` |
+| Mode | `development`, `staging`, or `production` |
+| Application environment | Local, test, staging, or production deployment |
+| Node environment | Ecosystem convention used by some dependencies |
+
+Do not assume a production-optimized build always targets the production deployment. Model deployment environment explicitly and validate it as covered in Module 12.
+
+## Development Request Pipeline
+
+Each browser request moves through resolution and transformation hooks.
+
+```mermaid
+flowchart TD
+	REQ[Browser module request] --> RESOLVE[Resolve URL or module ID]
+	RESOLVE --> LOAD[Load source or virtual content]
+	LOAD --> TRANSFORM[Apply plugin transforms]
+	TRANSFORM --> REWRITE[Rewrite imports and HMR metadata]
+	REWRITE --> MAP[Attach source map]
+	MAP --> CACHE[Cache transformed result]
+	CACHE --> RESPONSE[Return browser ESM]
+```
+
+Transforms can include JSX, TypeScript syntax stripping, CSS modules, imported assets, and framework refresh metadata. TypeScript transformation does not necessarily perform type checking; run `tsc --noEmit` or the framework's checker separately.
+
+## Dependency Optimization
+
+Dependencies frequently contain many internal modules or CommonJS formats that are inefficient for direct development serving. Vite's dependency optimizer pre-bundles appropriate dependencies, commonly using esbuild in the development pipeline.
+
+```mermaid
+flowchart LR
+	SCAN[Scan source entry/imports] --> DEPS[Discover bare dependencies]
+	DEPS --> PRE[Pre-bundle and convert where needed]
+	PRE --> CACHE[Store optimized dependency cache]
+	CACHE --> URL[Serve stable optimized URLs]
+	URL --> BROWSER[Browser requests fewer dependency modules]
+```
+
+Benefits include:
+
+- Converting many CommonJS dependencies to browser-consumable ESM behavior.
+- Combining dependencies with hundreds of internal files into fewer requests.
+- Producing stable dependency URLs suitable for aggressive browser caching during development.
+
+Use `optimizeDeps.include` only when automatic discovery misses dynamically referenced dependencies. Use `exclude` when a dependency must remain linked to source behavior. Clearing the optimization cache can diagnose stale pre-bundles, but repeated manual clearing indicates a configuration or package problem.
+
+```js
+export default defineConfig({
+	optimizeDeps: {
+		include: ["react", "react-dom/client"],
+		exclude: ["@workspace/live-package"],
+	},
+});
+```
+
+Avoid large speculative include lists. They increase optimization work and can conceal package design issues.
+
+## `index.html` as Source
+
+Unlike systems where HTML is only a static template, Vite treats `index.html` as part of the module graph.
+
+```html
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Operations Portal</title>
+	</head>
+	<body>
+		<div id="root"></div>
+		<script type="module" src="/src/main.jsx"></script>
+	</body>
+</html>
+```
+
+Vite resolves the module script, transforms referenced assets, and rewrites production URLs. HTML constants can use Vite's supported replacement syntax for public values, but never place secrets in HTML.
+
+For multi-page applications, configure multiple HTML inputs:
+
+```js
+import path from "node:path";
+
+export default defineConfig({
+	build: {
+		rollupOptions: {
+			input: {
+				main: path.resolve(import.meta.dirname, "index.html"),
+				admin: path.resolve(import.meta.dirname, "admin/index.html"),
+			},
+		},
+	},
+});
+```
+
+Use multiple pages for independently bootstrapped documents, not merely to force code splitting inside one SPA.
+
+## React Integration
+
+The official React plugin handles JSX transformation and React Fast Refresh integration.
 
 ```js
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig({
+	plugins: [
+		react({
+			babel: {
+				plugins: [],
+			},
+		}),
+	],
+});
+```
+
+Do not add Babel transformations without a concrete compatibility or compiler requirement. Every transform affects startup, updates, diagnostics, and source maps. Keep the framework plugin version compatible with Vite and React.
+
+## Hot Module Replacement
+
+Vite tracks importer relationships in its module graph. When a file changes, it invalidates affected modules and searches upward for an HMR acceptance boundary.
+
+```mermaid
+sequenceDiagram
+	participant E as Editor
+	participant W as File watcher
+	participant G as Vite module graph
+	participant WS as HMR WebSocket
+	participant B as Browser runtime
+	E->>W: Save source file
+	W->>G: Invalidate changed module
+	G->>G: Find accepted update boundary
+	G->>WS: Publish update payload
+	WS-->>B: Changed module URL and timestamp
+	B->>B: Import updated module
+	alt boundary accepts update
+		B->>B: Dispose and apply update
+	else no safe boundary
+		B->>B: Full-page reload
+	end
+```
+
+React Fast Refresh preserves component state only when boundaries remain compatible. Exporting non-component values from component modules or changing hook order can force reset behavior. HMR is a feedback mechanism, not evidence that clean startup works; reload and test production regularly.
+
+Custom modules can use the HMR API:
+
+```js
+export let formatter = createFormatter();
+
+if (import.meta.hot) {
+	import.meta.hot.accept((updatedModule) => {
+		if (updatedModule) formatter = updatedModule.formatter;
+	});
+
+	import.meta.hot.dispose(() => {
+		formatter.close?.();
+	});
+}
+```
+
+Dispose subscriptions, timers, sockets, and external resources to prevent duplicate behavior after updates.
+
+## Plugins
+
+Vite plugins extend resolution, loading, transformation, HTML processing, development-server behavior, and production output. Many Rollup hooks are supported alongside Vite-specific hooks.
+
+```mermaid
+flowchart TB
+	CONFIG[config and configResolved] --> START[buildStart]
+	START --> RESOLVE[resolveId]
+	RESOLVE --> LOAD[load]
+	LOAD --> TRANSFORM[transform]
+	TRANSFORM --> HTML[transformIndexHtml when applicable]
+	HTML --> BUNDLE[generateBundle and writeBundle]
+	SERVER[configureServer] --> DEV[Development-only middleware and hooks]
+```
+
+A small virtual-module plugin illustrates the pattern:
+
+```js
+function releaseMetadataPlugin(release) {
+	const publicId = "virtual:release-metadata";
+	const resolvedId = `\0${publicId}`;
+
+	return {
+		name: "release-metadata",
+		resolveId(id) {
+			if (id === publicId) return resolvedId;
+		},
+		load(id) {
+			if (id === resolvedId) {
+				return `export default ${JSON.stringify({ release })}`;
+			}
+		},
+	};
+}
+```
+
+The `\0` prefix marks an internal virtual ID and prevents normal resolution. Custom plugins should have deterministic output, narrow scope, tests for serve and build modes, and no untrusted code interpolation.
+
+### Plugin Ordering
+
+Plugins can use `enforce: "pre"` or `enforce: "post"`, and hooks can define ordering. Add ordering only when transformation dependencies require it. Fragile plugin order often indicates overlapping responsibilities.
+
+### Conditional Application
+
+```js
+function developmentInspector() {
+	return {
+		name: "development-inspector",
+		apply: "serve",
+		configureServer(server) {
+			server.middlewares.use("/__health", (_, response) => {
+				response.setHeader("Content-Type", "application/json");
+				response.end(JSON.stringify({ status: "ok" }));
+			});
+		},
+	};
+}
+```
+
+Never expose development middleware as a production security boundary.
+
+## Aliases and Resolution
+
+```js
+import path from "node:path";
+
+export default defineConfig({
+	resolve: {
+		alias: {
+			"@app": path.resolve(import.meta.dirname, "src/app"),
+			"@shared": path.resolve(import.meta.dirname, "src/shared"),
+		},
+		dedupe: ["react", "react-dom"],
+	},
+});
+```
+
+Mirror aliases in TypeScript `paths`, test configuration, ESLint import resolution, and editor tooling. `resolve.dedupe` can prevent linked workspace packages from loading duplicate React copies, but the package graph should also declare peer dependencies correctly.
+
+## CSS and CSS Modules
+
+Vite supports CSS imports, CSS modules, preprocessors, and PostCSS integration.
+
+```jsx
+import styles from "./Toolbar.module.css";
+
+export function Toolbar() {
+	return <nav className={styles.root}>...</nav>;
+}
+```
+
+```js
+export default defineConfig({
+	css: {
+		modules: {
+		localsConvention: "camelCaseOnly",
+		generateScopedName: "[name]__[local]___[hash:base64:5]",
+		},
+		devSourcemap: true,
+	},
+});
+```
+
+Production builds extract and optimize CSS according to the build graph. CSS associated with asynchronous JavaScript can be split and loaded with its chunk. Test route transitions under throttled networks for flashes, layout shifts, and missing styles.
+
+Install Sass or another preprocessor only when the project uses it. Vite delegates preprocessing to the installed implementation.
+
+## Static Assets
+
+Imported assets participate in the graph:
+
+```jsx
+import logoUrl from "./assets/logo.svg";
+
+export function Brand() {
+	return <img src={logoUrl} alt="Brainworks" />;
+}
+```
+
+Vite can inline small assets and emit larger files with hashed URLs. Referenced assets benefit from missing-file errors, graph tracking, and production rewriting.
+
+The `public` directory is different:
+
+- Files are served at the root path during development.
+- Files are copied unchanged to the output.
+- References use `/filename.ext`, not `/public/filename.ext`.
+- Names are not content-hashed automatically.
+
+Use `public` only for files that must retain exact names or are not naturally imported. Prefer graph imports for application-owned assets.
+
+```mermaid
+flowchart TD
+	ASSET[Asset requirement] --> EXACT{Must preserve exact filename or external reference?}
+	EXACT -->|yes| PUBLIC[Place in public and reference root URL]
+	EXACT -->|no| IMPORT[Import from source graph]
+	IMPORT --> INLINE{Below inline threshold?}
+	INLINE -->|yes| DATA[Inline optimized representation]
+	INLINE -->|no| HASH[Emit hashed asset URL]
+```
+
+### URL Construction
+
+```js
+const workerUrl = new URL("./report-worker.js", import.meta.url);
+```
+
+Static `new URL(..., import.meta.url)` patterns can be analyzed and rewritten. Arbitrary runtime strings cannot always be discovered during build.
+
+## Web Workers
+
+Vite supports worker construction patterns that participate in the build graph:
+
+```js
+const worker = new Worker(
+	new URL("./search.worker.js", import.meta.url),
+	{ type: "module" },
+);
+
+worker.postMessage({ type: "index", records });
+```
+
+Workers have separate globals, dependency graphs, and security constraints. Terminate workers when their owner unmounts and define typed message contracts. Do not send secrets or unnecessary personal data across worker boundaries.
+
+## Glob Imports
+
+`import.meta.glob` creates a build-time mapping from files matching literal patterns.
+
+```js
+const routeModules = import.meta.glob("./routes/**/*.route.jsx");
+
+export async function loadRoute(path) {
+	const importer = routeModules[`./routes/${path}.route.jsx`];
+	if (!importer) throw new Error(`Unknown route: ${path}`);
+	return importer();
+}
+```
+
+By default, matched modules are lazy import functions and therefore potential split points. Eager loading is explicit:
+
+```js
+const metadata = import.meta.glob("./articles/*.json", {
+	eager: true,
+	import: "default",
+});
+```
+
+```mermaid
+flowchart LR
+	PATTERN[Literal glob pattern] --> DISCOVER[Build-time file discovery]
+	DISCOVER --> MAP[Generated path-to-import map]
+	MAP --> LAZY[Lazy importer per module]
+	MAP --> EAGER[Eager imports when requested]
+	LAZY --> CHUNKS[Potential asynchronous chunks]
+```
+
+Glob imports are controlled discovery, not arbitrary file-system access in the browser. Keep patterns narrow to avoid bloated graphs and accidental inclusion of drafts, tests, or private server modules.
+
+## Environment Variables
+
+Client variables use `import.meta.env`; only allowed prefixes such as `VITE_` are exposed by default.
+
+```js
+const config = Object.freeze({
+	apiUrl: import.meta.env.VITE_API_URL,
+	environment: import.meta.env.VITE_APP_ENV,
+	development: import.meta.env.DEV,
+	production: import.meta.env.PROD,
+	mode: import.meta.env.MODE,
+});
+```
+
+Custom values are strings. Prefixes prevent accidental exposure but do not make values secret. Use `loadEnv` inside configuration when the config itself needs values; it does not automatically populate `process.env` for every purpose. Validate and allowlist values as described in Module 12.
+
+```mermaid
+flowchart LR
+	FILES[Mode .env files] --> LOAD[Vite environment loading]
+	SHELL[Existing process environment] --> LOAD
+	LOAD --> PREFIX{Allowed client prefix?}
+	PREFIX -->|yes| REPLACE[Embed public value in client output]
+	PREFIX -->|no| CONFIG[Available only where explicitly loaded server-side]
+	REPLACE --> PUBLIC[Inspectable browser asset]
+```
+
+## Development Server
+
+```js
+export default defineConfig({
+	server: {
+		host: "127.0.0.1",
+		port: 3000,
+		strictPort: true,
+		open: false,
+		cors: false,
+		headers: {
+			"X-Content-Type-Options": "nosniff",
+		},
+	},
+});
+```
+
+`strictPort` prevents silent movement to another port, which helps OAuth callback and test stability. Binding to `0.0.0.0` exposes the server to the network and should be intentional. Configure allowed hosts rather than accepting arbitrary hostnames, especially around DNS rebinding risks.
+
+The development server is optimized for local feedback. It is not hardened, tuned, or supported as a production server.
+
+## API Proxy
+
+```js
+export default defineConfig({
+	server: {
+		proxy: {
+			"/api": {
+				target: "http://localhost:8080",
+				changeOrigin: true,
+				secure: false,
+			},
+			"/socket": {
+				target: "ws://localhost:8080",
+				ws: true,
+			},
+		},
+	},
+});
+```
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant V as Vite dev server
+	participant A as Local API
+	B->>V: GET /api/products
+	V->>A: Proxy request to target
+	A-->>V: API response
+	V-->>B: Same-origin development response
+```
+
+The proxy does not exist in production output. Configure the production reverse proxy, API base URL, CORS, cookies, CSRF, and WebSockets in the actual hosting architecture.
+
+## HTTPS Development
+
+Local HTTPS may be needed for secure cookies, service workers, device APIs, or OAuth parity. Use a locally trusted certificate process approved by the team rather than committing private keys. Test hostname and certificate behavior matching the callback URLs actually used.
+
+HTTPS in Vite development does not configure production TLS termination.
+
+## Production Build Pipeline
+
+A production build resolves the complete graph, performs chunking and tree shaking, transforms assets, minifies output, and writes the `dist` directory by default.
+
+```mermaid
+flowchart LR
+	HTML[index.html inputs] --> GRAPH[Resolve complete module graph]
+	GRAPH --> TRANSFORM[Plugin transforms]
+	TRANSFORM --> SHAKE[Tree shake and optimize]
+	SHAKE --> CHUNK[Create entry and async chunks]
+	CHUNK --> MIN[Minify JS and CSS]
+	MIN --> HASH[Emit hashed assets and rewritten HTML]
+	HASH --> DIST[dist artifact]
+```
+
+```js
+export default defineConfig({
+	build: {
+		outDir: "dist",
+		assetsDir: "assets",
+		emptyOutDir: true,
+		sourcemap: "hidden",
+		manifest: true,
+		cssCodeSplit: true,
+		chunkSizeWarningLimit: 600,
+		rollupOptions: {
+			output: {
+				entryFileNames: "assets/[name].[hash].js",
+				chunkFileNames: "assets/[name].[hash].js",
+				assetFileNames: "assets/[name].[hash][extname]",
+			},
+		},
+	},
+});
+```
+
+Hashed filenames support immutable caching. Do not remove old hashed assets immediately during rolling deployment because open tabs and cached HTML may still request them.
+
+## Browser Targets
+
+Build targets define syntax and platform capabilities Vite may assume or transform. Choose targets from the product's supported browser matrix, not from convenience.
+
+```js
+export default defineConfig({
+	build: {
+		target: ["es2020", "chrome90", "firefox88", "safari14"],
+	},
+});
+```
+
+Syntax transformation does not polyfill every missing runtime API. Use feature detection, narrowly selected polyfills, or compatibility plugins when older browsers are genuinely supported. Test on representative real engines.
+
+## Code Splitting
+
+Dynamic imports form asynchronous boundaries:
+
+```jsx
+import { lazy, Suspense } from "react";
+
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage.jsx"));
+
+export function AnalyticsRoute() {
+	return (
+		<Suspense fallback={<PageSpinner />}>
+			<AnalyticsPage />
+		</Suspense>
+	);
+}
+```
+
+```mermaid
+flowchart TD
+	ENTRY[Initial application graph] --> CORE[Initial chunks]
+	ENTRY --> DYNAMIC[Dynamic import boundary]
+	DYNAMIC --> ASYNC[Analytics async chunk]
+	NAV[User navigates] --> FETCH[Fetch async JS and related CSS]
+	ASYNC --> FETCH
+	FETCH --> RENDER[Render feature]
+```
+
+Split by route or expensive interaction rather than every component. Excessive tiny chunks add request scheduling and execution overhead; a single huge chunk delays initial interaction.
+
+## Manual Chunking
+
+Production output can define chunk groups through bundler options:
+
+```js
+export default defineConfig({
+	build: {
+		rollupOptions: {
+			output: {
+				manualChunks(id) {
+					if (id.includes("node_modules/react")) return "react-vendor";
+					if (id.includes("node_modules")) return "vendor";
+				},
+			},
+		},
+	},
+});
+```
+
+This example is intentionally simple, not universally optimal. A giant vendor chunk can contain route-specific code and invalidate for unrelated dependency changes. Start with default chunking, inspect output, then add rules for measured loading or caching problems.
+
+## Preload and Module Loading
+
+Vite rewrites built HTML and dynamic imports to coordinate module preload behavior where appropriate. This helps avoid dependency waterfalls for known chunk relationships.
+
+```mermaid
+sequenceDiagram
+	participant H as Built HTML
+	participant B as Browser
+	participant E as Entry chunk
+	participant D as Entry dependencies
+	H-->>B: Script and modulepreload links
+	par Parallel requests
+		B->>E: Fetch entry
+		B->>D: Preload dependencies
+	end
+	D-->>B: Dependency chunks
+	E-->>B: Entry chunk
+	B->>B: Execute when graph is ready
+```
+
+Avoid manually preloading every chunk. High-priority speculative requests can compete with styles, images, and data needed for the current view.
+
+## Base Paths
+
+`base` controls the public URL prefix used in built asset references.
+
+```js
+export default defineConfig({
+	base: "/portal/",
+});
+```
+
+For a root deployment use `/`. For repository pages or subdirectory hosting, set the exact base and align it with router basename, server rewrites, and asset hosting.
+
+```mermaid
+flowchart LR
+	DEPLOY[Deployment at /portal/] --> BASE[Vite base /portal/]
+	BASE --> HTML[Rewritten asset URLs]
+	DEPLOY --> ROUTER[Router basename /portal]
+	DEPLOY --> SERVER[Fallback rewrite under /portal/]
+	HTML --> OK[Assets load]
+	ROUTER --> OK
+	SERVER --> OK
+```
+
+`import.meta.env.BASE_URL` exposes the normalized base to application code. Do not concatenate URL strings casually; use supported URL construction and test trailing-slash behavior.
+
+## SPA Routing and Hosting
+
+The development server supports SPA fallback behavior, but static production hosting must be configured separately. A request to `/orders/42` must return the application HTML while requests for missing JavaScript or API resources should still return real 404 responses.
+
+Test:
+
+- Direct navigation to nested routes.
+- Browser refresh on nested routes.
+- Correct base path.
+- Real asset 404 behavior.
+- API paths excluded from fallback.
+- Authentication callback routes.
+
+## Source Maps
+
+```js
+export default defineConfig({
+	build: {
+		sourcemap: "hidden",
+	},
+});
+```
+
+Common policies include:
+
+| Setting | Use |
+|---|---|
+| `false` | No production maps |
+| `true` | Emit maps and references for browser discovery |
+| `"hidden"` | Emit maps without source-map comments for private upload workflows |
+| `"inline"` | Embed maps; generally unsuitable for production size/privacy |
+
+Upload maps to monitoring with the exact release before deployment. Decide whether `.map` files are published, blocked, or excluded from the deployed artifact. Source maps can expose authored code and paths but are not a substitute for keeping secrets out of source.
+
+## Manifest and Backend Integration
+
+`build.manifest` creates a mapping that backend templates can use to locate hashed entry assets and dependencies.
+
+```json
+{
+  "index.html": {
+    "file": "assets/index.Bd9x3K.js",
+    "name": "index",
+    "src": "index.html",
+    "isEntry": true,
+    "css": ["assets/index.C8f2aQ.css"]
+  }
+}
+```
+
+```mermaid
+flowchart LR
+	BUILD[Vite build] --> ASSETS[Hashed JS and CSS]
+	BUILD --> MANIFEST[Manifest mapping]
+	SERVER[Backend template renderer] --> MANIFEST
+	MANIFEST --> TAGS[Generate current script/style tags]
+	TAGS --> HTML[Response HTML]
+	HTML --> ASSETS
+```
+
+Treat the manifest and its assets as one release. Deploy in an order that never points HTML to unavailable hashes.
+
+## Library Mode
+
+Library mode builds reusable packages rather than deployable SPAs.
+
+```js
+import { defineConfig } from "vite";
+import path from "node:path";
+
+export default defineConfig({
+	build: {
+		lib: {
+			entry: path.resolve(import.meta.dirname, "src/index.ts"),
+			name: "BrainworksUI",
+			formats: ["es", "cjs"],
+			fileName: (format) => `brainworks-ui.${format}.js`,
+		},
+		rollupOptions: {
+			external: ["react", "react-dom"],
+			output: {
+				globals: {
+					react: "React",
+					"react-dom": "ReactDOM",
+				},
+			},
+		},
+	},
+});
+```
+
+Library responsibilities include:
+
+- Externalizing peer dependencies.
+- Publishing correct `exports`, `main`, `module`, and type declarations.
+- Declaring side effects accurately, especially CSS.
+- Avoiding application-specific environment assumptions.
+- Testing ESM and CommonJS consumers where both are published.
+- Preserving semantic versioning and public API contracts.
+
+Vite does not generate TypeScript declarations by default; use the TypeScript compiler or an appropriate maintained declaration plugin.
+
+## SSR
+
+Vite provides APIs and conventions for SSR development and builds, but it is not a complete framework-level rendering architecture by itself.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant S as Application server
+	participant V as Vite SSR pipeline
+	participant R as React renderer
+	B->>S: GET /products/42
+	S->>V: Load transformed server entry
+	V->>R: Render route for request
+	R-->>S: HTML and hydration state
+	S-->>B: HTML response
+	B->>S: Request client assets
+	B->>B: Hydrate application
+```
+
+Development can use Vite middleware and `ssrLoadModule`; production generally uses separate client and server builds. Create request-scoped stores and context, keep secrets in server-only modules, serialize state safely, and align asset manifests with rendered HTML.
+
+```js
+export default defineConfig({
+	ssr: {
+		noExternal: ["package-requiring-transformation"],
+	},
+});
+```
+
+Externalization choices affect package format compatibility and bundle behavior. Change them only for identified dependencies and test the actual server runtime.
+
+## Middleware Mode
+
+Vite can run inside a custom development server as middleware:
+
+```js
+import express from "express";
+import { createServer as createViteServer } from "vite";
+
+const application = express();
+const vite = await createViteServer({
+	server: { middlewareMode: true },
+	appType: "custom",
+});
+
+application.use(vite.middlewares);
+```
+
+This is useful for custom SSR development. Preserve Vite's middleware order and transform HTML through the Vite server so plugin and HMR injections occur. Production should use built output, not the development middleware server.
+
+## Testing with Vitest
+
+Vitest can reuse Vite's resolution, transforms, plugins, and aliases, reducing configuration drift.
+
+```js
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
 	plugins: [react()],
-	server: { proxy: { "/api": { target: "http://localhost:8080", changeOrigin: true } } },
-	build: { sourcemap: mode !== "production", chunkSizeWarningLimit: 600 },
+	test: {
+		environment: "jsdom",
+		setupFiles: ["./src/test/setup.js"],
+		coverage: {
+			provider: "v8",
+			reporter: ["text", "html"],
+		},
+	},
+});
+```
+
+Shared configuration is useful, but test execution is not browser execution. DOM emulation does not fully reproduce layout, navigation, workers, storage, security headers, or network behavior. Keep browser end-to-end coverage for critical flows.
+
+```mermaid
+flowchart TB
+	SOURCE[Application source and Vite aliases] --> UNIT[Vitest unit tests]
+	SOURCE --> INT[Component/integration tests]
+	SOURCE --> BUILD[Production Vite build]
+	BUILD --> PREVIEW[Static artifact server]
+	PREVIEW --> E2E[Real-browser smoke and E2E tests]
+```
+
+## `vite preview`
+
+`vite preview` serves the generated output locally so developers can inspect production assets. It does not perform a build automatically and is not designed as a hardened production host.
+
+```bash
+npm run build
+npm run preview -- --host 127.0.0.1 --port 4173 --strictPort
+```
+
+Use it for local smoke checks, but also test with production-equivalent rewrites, cache headers, compression, CSP, API routing, and CDN behavior.
+
+## Performance Analysis
+
+`chunkSizeWarningLimit` only reports large generated chunks. It does not enforce transfer budgets, route budgets, main-thread limits, or Core Web Vitals.
+
+Professional analysis should inspect:
+
+- Initial and route-level compressed bytes.
+- Duplicate dependency versions.
+- Parsed and executed JavaScript.
+- CSS and font loading behavior.
+- Dynamic-import waterfalls.
+- Source-map and inline-asset size.
+- Cache reuse between releases.
+- Performance on representative mobile hardware.
+
+Use a compatible visualizer plugin to inspect production bundle composition. Keep analysis plugins opt-in so normal builds remain deterministic and do not unexpectedly open servers or generate large reports.
+
+```js
+export default defineConfig(({ mode }) => ({
+	plugins: [
+		react(),
+		mode === "analyze" && visualizer({
+			filename: "dist/bundle-report.html",
+			gzipSize: true,
+			brotliSize: true,
+			open: false,
+		}),
+	].filter(Boolean),
 }));
 ```
 
-Vite treats `index.html` as an entry and rewrites imported assets. Plugins use Rollup-compatible hooks plus Vite extensions. Use `import.meta.env`, `import.meta.glob` for controlled file discovery, and `vite preview` only to inspect a build, not as a production server.
+## Performance Budgets
+
+Enforce budgets in CI using emitted assets or a dedicated budget tool.
+
+```mermaid
+flowchart LR
+	BUILD[Create production build] --> MEASURE[Measure raw and compressed assets]
+	MEASURE --> COMPARE[Compare route and entry budgets]
+	COMPARE -->|pass| SMOKE[Run artifact smoke tests]
+	COMPARE -->|regression| REPORT[Report changed chunks/modules]
+	REPORT --> REPAIR[Remove, replace, split, or defer]
+```
+
+Budgets should map to user outcomes and distinguish initial from asynchronous code. A large admin-only report chunk has different impact from the same bytes in a public landing entry.
+
+## Caching and Deployment
+
+Vite's hashed production assets support long immutable caching. The HTML document should revalidate or use a short cache because it references the current hashes.
+
+```mermaid
+flowchart TD
+	REQ[Browser requests application] --> HTML[Revalidate HTML]
+	HTML --> HASH[References current hashed assets]
+	HASH --> CACHE{Hash already cached?}
+	CACHE -->|yes| HIT[Reuse immutable asset]
+	CACHE -->|no| CDN[Fetch asset from CDN]
+	CDN --> HIT
+```
+
+Recommended shape:
+
+| Resource | Typical policy |
+|---|---|
+| Hashed JS/CSS/media | Long-lived `immutable` caching |
+| HTML | Revalidate or short-lived caching |
+| Runtime configuration | Explicit freshness/version policy |
+| Source maps | Private upload or controlled hosting |
+| Service worker | Framework-specific update policy |
+
+Keep previous release assets available long enough for open sessions and cached HTML. Compression is normally performed or served by the host/CDN, not inferred solely from the build output.
+
+## Security
+
+Vite executes plugins and dependencies during development/build, and all client output is public.
+
+```mermaid
+flowchart TD
+	LOCK[Reviewed lockfile] --> INSTALL[Controlled dependency install]
+	PLUGIN[Trusted Vite plugins] --> BUILD[Isolated build]
+	SRC[Source] --> BUILD
+	PUB[Allowlisted public config] --> BUILD
+	BUILD --> SCAN[Tests, audit, and artifact scan]
+	SCAN --> ART[Immutable deployable artifact]
+	SECRET[CI/server secrets] -. never enter client graph .-> ART
+```
+
+Controls include:
+
+- Pin and audit Vite, plugins, and transitive dependencies.
+- Do not expose the development server to untrusted networks.
+- Configure allowed hosts and proxy targets deliberately.
+- Never place secrets in `VITE_*`, `define`, HTML, or client virtual modules.
+- Avoid production `eval` patterns and apply host-level CSP.
+- Inspect generated assets and source maps before deployment.
+- Sanitize untrusted values used by HTML-transform plugins.
+- Prevent arbitrary proxying that could reach internal services.
+- Serve correct MIME types and `nosniff` headers.
+- Keep build workers and CI credentials least-privileged.
+
+Client-side route guards and feature flags are not authorization. APIs remain responsible for authentication, authorization, and validation.
+
+## Monorepos
+
+Vite works in workspaces, but linked packages require deliberate package and file-system boundaries.
+
+```mermaid
+flowchart TB
+	APP[apps/portal] --> VITE[Vite project root]
+	VITE --> UI[packages/ui]
+	VITE --> DOMAIN[packages/domain]
+	UI --> PEER[React peer dependency]
+	DOMAIN --> ESM[Consumable ESM exports]
+	PEER --> DEDUPE[Single React runtime]
+```
+
+Guidelines:
+
+- Publish or expose explicit package entry points.
+- Use React as a peer dependency in shared UI libraries.
+- Deduplicate framework runtimes.
+- Decide whether workspace source is transformed directly or prebuilt.
+- Keep aliases consistent with package exports.
+- Restrict dev-server file access to intended workspace paths.
+- Invalidate caches when package/config inputs change.
+- Test packages through consumers, not only in isolation.
+
+Avoid broad file-system access configuration merely to silence an error; it weakens project-root boundaries.
+
+## Migration from Create React App
+
+CRA-to-Vite migration requires more than changing scripts.
+
+```mermaid
+flowchart LR
+	BASE[Record current behavior and production build] --> HTML[Move/adapt HTML entry]
+	HTML --> ENTRY[Update client entry and JSX files]
+	ENTRY --> ENV[REACT_APP to VITE and process.env to import.meta.env]
+	ENV --> ASSET[Translate public/assets/SVG behavior]
+	ASSET --> TEST[Move Jest setup or adopt Vitest]
+	TEST --> PROXY[Recreate development proxy]
+	PROXY --> BUILD[Validate production build and deployment]
+```
+
+Migration checklist:
+
+1. Record routes, environment variables, proxy behavior, tests, asset imports, and browser support.
+2. Move `%PUBLIC_URL%` and HTML substitutions to supported Vite patterns.
+3. Add the module script entry to root `index.html`.
+4. Replace `process.env.REACT_APP_*` with validated `import.meta.env.VITE_*` access.
+5. Review SVG imports; CRA-specific component transforms need an explicit plugin or ordinary components.
+6. Recreate aliases and ensure TypeScript/test tooling agrees.
+7. Replace Node globals/polyfills used accidentally in browser code.
+8. Translate development proxy behavior.
+9. Migrate Jest APIs/mocks deliberately if adopting Vitest.
+10. Verify base path, SPA fallback, lazy chunks, and production source maps.
+11. Compare bundle sizes and critical user flows before rollout.
+
+Do not preserve every CRA workaround. Remove obsolete configuration after verifying why it existed.
+
+## Migration from Webpack
+
+Map behavior, not configuration keys:
+
+| Webpack concern | Vite direction |
+|---|---|
+| Entry + HTML plugin | Root `index.html` source entry |
+| Loader chain | Built-in transform, CSS behavior, or focused plugin |
+| `DefinePlugin` | `define` or validated `import.meta.env` |
+| `devServer.proxy` | `server.proxy` |
+| `publicPath` | `base` |
+| Dynamic imports | Native syntax retained; production chunking |
+| Alias | `resolve.alias` |
+| Asset modules | Imported assets, URL queries, or `public` |
+| Custom plugin | Vite/Rollup plugin hooks |
+| Stats/analyzer | Production bundler visualizer and emitted metadata |
+
+Webpack loaders are not automatically compatible plugins. Identify the underlying transformation and use a Vite-native or Rollup-compatible implementation.
+
+## Vite and Webpack Compared
 
 | Concern | Vite | Webpack |
 |---|---|---|
-| Development | native ESM/on-demand transforms | bundled graph/dev compilation |
-| Production | Rollup | Webpack optimizer |
-| Configuration | conventionally smaller | highly mature/customizable |
-| Best fit | modern app development | legacy/custom enterprise pipelines too |
+| Development graph | Browser ESM with on-demand transforms | Bundler-managed development graph |
+| Dependency development path | Pre-optimization plus served ESM | Modules integrated in development compilation |
+| Production | Vite production bundling pipeline | Webpack compiler/optimizer |
+| HTML | First-class source entry | Usually plugin-generated/managed |
+| Extensibility | Vite-specific and Rollup-compatible hooks | Tapable compiler/plugin ecosystem |
+| Configuration | Strong modern conventions | Highly configurable mature pipelines |
+| Legacy customization | May need migration/replacement | Often supports deeply custom estates |
+| Library builds | Supported through library mode | Supported through explicit output configuration |
 
-**Assignment:** migrate a CRA app, translating env variables, aliases, proxy, tests, SVG/assets, and deployment fallback; verify production rather than assuming dev parity.
+Choose based on application requirements, ecosystem compatibility, team operational knowledge, and migration cost. Build-tool popularity is not an architectural requirement.
+
+## CI/CD
+
+```mermaid
+flowchart LR
+	INSTALL[Install from lockfile] --> CHECK[Lint, types, and tests]
+	CHECK --> BUILD[Vite production build]
+	BUILD --> BUDGET[Analyze assets and enforce budgets]
+	BUDGET --> SCAN[Audit and inspect output]
+	SCAN --> MAP[Upload source maps with release]
+	MAP --> ART[Publish immutable dist artifact]
+	ART --> DEPLOY[Deploy without rebuilding]
+	DEPLOY --> SMOKE[Browser smoke test routes and chunks]
+```
+
+Build once under explicit public configuration, archive the artifact, and promote that artifact according to the chosen configuration strategy. Do not run `vite preview` as production hosting. Record Node, package manager, lockfile, commit, mode, and non-sensitive release metadata.
+
+## Testing the Build Contract
+
+Unit tests do not validate the production build pipeline. Add focused checks for:
+
+- Configuration branches and required environment values.
+- Production build completion without unexpected warnings.
+- Expected HTML entry and hashed assets.
+- Bundle manifest integrity.
+- Source-map policy.
+- Base path and nested-route navigation.
+- Lazy route chunks under a static server.
+- API URL/proxy distinction.
+- CSP and security headers at deployment.
+- Old/new release asset overlap where needed.
+
+Run a real browser against deployed or production-equivalent assets. Development-server tests alone cannot prove hosting correctness.
+
+## Diagnostics
+
+Use narrow diagnostics before changing configuration broadly:
+
+| Symptom | Investigate |
+|---|---|
+| Dependency optimization loops | Linked package exports, changing lockfile/config, optimizer include/exclude |
+| Module works in dev but fails build | Dynamic access, CommonJS interop, plugin serve/build differences |
+| HMR full reloads | Acceptance boundary, mixed component exports, plugin compatibility |
+| Alias resolves in editor only | Vite alias missing or TypeScript/test configs drifted |
+| Lazy route 404s | `base`, host path, stale HTML, deleted prior assets |
+| `process is not defined` | Browser dependency assumes Node globals |
+| CSS differs in production | Extraction/order, modules, preprocessors, side effects |
+| Duplicate React | Workspace package dependencies and resolution dedupe |
+| Environment value undefined | Prefix, mode file, static access, build-time injection |
+| Production API fails | Dev proxy incorrectly assumed in deployed output |
+| Browser unsupported syntax | Build target/plugin output/runtime API mismatch |
+| Large bundle warning | Route graph, broad imports, duplicated dependencies |
+
+For resolution issues, inspect the exact import and package exports. For build-only issues, reproduce `vite build` locally under CI inputs. For browser failures, inspect generated URLs and network responses rather than guessing from source paths.
+
+## Common Mistakes
+
+| Mistake | Consequence | Correction |
+|---|---|---|
+| Treating dev success as production proof | Build/deployment failures escape | Build and smoke-test `dist` |
+| Using `vite preview` in production | Unsupported hosting/security posture | Serve assets through production host/CDN |
+| Putting secrets in `VITE_*` | Secrets shipped to users | Move privileged operations server-side and rotate |
+| Assuming dev proxy ships in build | Production API requests fail | Configure real origin/reverse proxy |
+| Wrong `base` | Assets and lazy chunks 404 | Align base, router, and host path |
+| Using `/public/file` URLs | Incorrect path | Reference public files from `/file` |
+| Putting all assets in `public` | No graph validation or hashes | Import application-owned assets |
+| Broad `import.meta.glob` | Unintended modules/chunks included | Narrow patterns and inspect matches |
+| TypeScript transpilation treated as type checking | Type errors reach CI/release | Run `tsc --noEmit` |
+| Adding Node polyfills globally | Larger bundles and hidden browser incompatibility | Replace dependency or polyfill narrowly |
+| Over-customizing manual chunks | Waterfalls and cache regressions | Measure default output first |
+| Exposing dev server publicly | Security and data risk | Bind locally and configure hosts |
+| Publishing source maps unintentionally | Source disclosure | Enforce upload/hosting policy |
+| Misaligned aliases | Tool-specific resolution failures | Share and test path contracts |
+| Duplicate React in monorepo | Hook/runtime failures | Peer dependencies plus dedupe |
+| Clearing caches as permanent fix | Root invalidation problem remains | Diagnose package/config inputs |
+| Using client flags for authorization | Bypassable controls | Enforce permissions on server |
+| Immediate deletion of old assets | Open tabs fail to load chunks | Retain immutable release overlap |
+
+## Professional Configuration Example
+
+```js
+import path from "node:path";
+import { defineConfig, loadEnv } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig(({ command, mode }) => {
+	const environment = loadEnv(mode, process.cwd(), "VITE_");
+	const production = command === "build" && mode === "production";
+	const apiUrl = environment.VITE_API_URL?.trim();
+
+	if (production && !apiUrl) {
+		throw new Error("VITE_API_URL is required for production builds");
+	}
+
+	return {
+		base: environment.VITE_BASE_PATH || "/",
+		plugins: [react()],
+		resolve: {
+			alias: {
+				"@app": path.resolve(import.meta.dirname, "src/app"),
+				"@features": path.resolve(import.meta.dirname, "src/features"),
+				"@shared": path.resolve(import.meta.dirname, "src/shared"),
+			},
+			dedupe: ["react", "react-dom"],
+		},
+		server: {
+			host: "127.0.0.1",
+			port: 3000,
+			strictPort: true,
+			proxy: {
+				"/api": {
+					target: "http://localhost:8080",
+					changeOrigin: true,
+				},
+			},
+		},
+		preview: {
+			host: "127.0.0.1",
+			port: 4173,
+			strictPort: true,
+		},
+		build: {
+			outDir: "dist",
+			assetsDir: "assets",
+			emptyOutDir: true,
+			manifest: true,
+			sourcemap: production ? "hidden" : true,
+			cssCodeSplit: true,
+			chunkSizeWarningLimit: 600,
+			rollupOptions: {
+				output: {
+					entryFileNames: "assets/[name].[hash].js",
+					chunkFileNames: "assets/[name].[hash].js",
+					assetFileNames: "assets/[name].[hash][extname]",
+				},
+			},
+		},
+		define: {
+			__APP_RELEASE__: JSON.stringify(
+				process.env.APP_RELEASE ?? "local",
+			),
+		},
+	};
+});
+```
+
+This is a reference shape, not a universal template. Adapt browser targets, base path, source maps, proxy, chunking, and security policies to the actual application and installed Vite version.
+
+## Production Checklist
+
+1. Pin compatible Node, Vite, framework plugin, and package-manager versions.
+2. Keep command, mode, and deployment environment conceptually separate.
+3. Validate all exposed public configuration and ship no secrets.
+4. Run type checking separately when transforms only strip types.
+5. Keep aliases synchronized across development and test tools.
+6. Use official framework plugins and minimize custom transformations.
+7. Restrict glob imports and dev-server file-system access.
+8. Import graph-owned assets and reserve `public` for exact-name files.
+9. Configure API proxy only for development convenience.
+10. Set `base`, router basename, and deployment rewrites consistently.
+11. Test direct navigation and refresh on nested routes.
+12. Split code at meaningful routes or expensive interactions.
+13. Measure default production chunking before using `manualChunks`.
+14. Select browser targets from the supported product matrix.
+15. Define a controlled production source-map workflow.
+16. Enforce entry and route-level performance budgets in CI.
+17. Serve hashed assets immutably and HTML with revalidation.
+18. Retain previous hashed assets through release overlap.
+19. Build once and deploy the immutable `dist` artifact.
+20. Never use the development or preview server as production hosting.
+21. Audit plugins because they execute trusted build-time code.
+22. Verify production CSP, MIME types, compression, CORS, and API access.
+23. Test lazy chunks and CSS under realistic network conditions.
+24. Run real-browser smoke tests against production-equivalent hosting.
+25. Record release metadata and upload matching source maps before rollout.
+
+## Real-World Architectures
+
+### E-Commerce SPA
+
+Split product details, account, and checkout by route; preload only probable next interactions; preserve prior hashed assets during deployment; and verify product deep links through the CDN. Keep payment secrets and pricing authority server-side.
+
+### Banking Portal
+
+Use strict public configuration validation, controlled source-map upload, local-only development binding, CSP-compatible production hosting, conservative dependencies, and real-browser testing. Client routes and flags improve UX but never grant account permissions.
+
+### Enterprise CRM
+
+Use feature aliases, route-level splitting for editors and analytics, workspace package boundaries, explicit API proxy behavior, production performance budgets, and bundle analysis for large chart/export dependencies.
+
+### Static Multi-Tenant Application
+
+Keep one tenant-neutral artifact when required, load validated public runtime configuration before bootstrap, resolve tenant identity through trusted server context, and avoid embedding tenant-private data in generated assets.
+
+### Component Library
+
+Use library mode with React externalized as a peer dependency, publish explicit exports and declarations, mark CSS side effects accurately, and test consumption from both Vite and non-Vite applications.
+
+### SSR Application
+
+Maintain separate client/server builds, request-scoped state, safe serialization, server-only secrets, manifest-driven assets, hydration diagnostics, and production validation on the actual Node or edge runtime.
+
+A professional Vite pipeline keeps development feedback fast without confusing it with production correctness. It makes browser targets, public configuration, chunking, assets, security, and deployment behavior explicit and testable.
 
 ---
 
