@@ -5373,76 +5373,856 @@ A professional form preserves user effort, exposes a clear correction path, trea
 
 [Previous: Forms](#module-7-forms) | [Next: Context](#module-9-context-api)
 
-Axios is a promise-based HTTP client offering instances, transforms, interceptors, timeouts, cancellation, and progress APIs. HTTP work is external to React; keep transport policy in an API layer and UI status in a data layer/component.
+## Introduction
+
+Axios is a promise-based HTTP client for browsers and Node.js. It provides configured instances, request and response interceptors, automatic JSON handling, query serialization, cancellation through `AbortSignal`, timeouts, upload/download progress, and adapter-based transport.
+
+Axios is a transport tool, not a React state manager or server cache. A professional architecture separates four responsibilities:
+
+1. **Transport policy:** base URL, credentials, headers, timeout, error normalization, telemetry.
+2. **Endpoint services:** domain-oriented request functions and payload contracts.
+3. **Server-state layer:** caching, deduplication, invalidation, retries, and background refresh.
+4. **UI integration:** loading, empty, error, pending, and success presentation.
+
+```mermaid
+flowchart LR
+	UI[React UI] --> Q[Server-state hook or feature service]
+	Q --> S[Domain endpoint service]
+	S --> H[Configured Axios instance]
+	H --> I[Interceptors and transport policy]
+	I --> API[HTTP API]
+	API --> I
+	I --> N[Normalized response or AppError]
+	N --> Q
+	Q --> UI
+```
+
+```bash
+npm install axios
+```
+
+## Axios Request and Response Model
+
+An Axios request combines instance defaults with per-request configuration. It resolves with an Axios response when `validateStatus` accepts the HTTP status and rejects with an Axios error otherwise.
+
+```jsx
+const response = await axios.get("/api/products", {
+	params: { page: 2, category: "books" },
+	headers: { Accept: "application/json" },
+	timeout: 10_000,
+});
+
+console.log(response.data);
+console.log(response.status);
+console.log(response.headers);
+console.log(response.config);
+```
+
+| Request option | Responsibility |
+|---|---|
+| `url`, `method` | Target resource and HTTP operation |
+| `baseURL` | Prefix for relative request URLs |
+| `params` | URL query values |
+| `data` | Request body for supported methods |
+| `headers` | Representation, authorization, tracing, preconditions |
+| `signal` | Caller-controlled cancellation |
+| `timeout` | Maximum client wait configured by Axios |
+| `withCredentials` | Cross-origin cookie/credential participation |
+| `responseType` | Expected representation such as `json` or `blob` |
+| `validateStatus` | Status codes treated as resolved responses |
 
 ```mermaid
 sequenceDiagram
- participant C as Component
- participant S as Service
- participant I as Axios interceptors
- participant A as API
- C->>S: getProducts(params, signal)
- S->>I: configured request
- I->>A: headers + query
- A-->>I: response/error
- I-->>S: normalized result
- S-->>C: data or AppError
+	participant C as Caller
+	participant D as Instance defaults
+	participant RI as Request interceptors
+	participant A as Adapter and network
+	participant SI as Response interceptors
+	C->>D: Request configuration
+	D->>RI: Merge defaults and request options
+	RI->>A: Transformed request
+	A-->>SI: HTTP response or transport failure
+	SI-->>C: Response data or normalized rejection
 ```
 
+## Creating Configured Instances
+
+Use `axios.create` instead of mutating global Axios defaults. Separate instances when APIs have genuinely different origins, credentials, media types, or reliability policies.
+
 ```jsx
+// src/api/http.js
 import axios from "axios";
 
-export const http = axios.create({
-	baseURL: import.meta.env.VITE_API_URL,
-	timeout: 10_000,
-	withCredentials: true,
-	headers: { Accept: "application/json" },
-});
+const apiBaseUrl = import.meta.env.VITE_API_URL;
 
-http.interceptors.response.use(
-	(response) => response,
-	(error) => Promise.reject({
-		kind: error.response ? "http" : error.request ? "network" : "client",
-		status: error.response?.status,
-		message: error.response?.data?.message ?? error.message,
-		cause: error,
-	}),
-);
+if (!apiBaseUrl) {
+	throw new Error("VITE_API_URL is required");
+}
+
+export const http = axios.create({
+	baseURL: apiBaseUrl,
+	timeout: 15_000,
+	withCredentials: true,
+	headers: {
+		Accept: "application/json",
+	},
+});
+```
+
+Only variables intentionally exposed by the build tool belong in frontend configuration. Any value shipped to a browser is observable by users; never place private API keys or server secrets in frontend environment variables.
+
+### Configuration Precedence
+
+```mermaid
+flowchart LR
+	L[Library defaults] --> M[Merge]
+	I[Instance defaults] --> M
+	R[Per-request config] --> M
+	M --> F[Final Axios request config]
+	R -->|highest precedence| F
+```
+
+Per-request values override instance defaults, which override library defaults. Avoid changing `http.defaults` after startup because global mutable policy makes requests dependent on timing and complicates tests.
+
+## Domain Endpoint Services
+
+Components should not repeatedly construct URLs, parse response envelopes, or know transport details. Feature services expose domain operations and return the smallest useful contract.
+
+```jsx
+// src/features/products/productsApi.js
+import { http } from "../../api/http.js";
 
 export const productsApi = {
-	list: ({ page, query, signal }) => http.get("/products", { params: { page, query }, signal }),
-	create: (data) => http.post("/products", data),
-	replace: (id, data) => http.put(`/products/${id}`, data),
-	update: (id, data) => http.patch(`/products/${id}`, data),
-	remove: (id) => http.delete(`/products/${id}`),
+	async list({ cursor, query, category, signal }) {
+		const response = await http.get("/products", {
+			params: { cursor, q: query || undefined, category: category || undefined },
+			signal,
+		});
+		return response.data;
+	},
+
+	async getById(productId, { signal } = {}) {
+		const response = await http.get(`/products/${encodeURIComponent(productId)}`, {
+			signal,
+		});
+		return response.data;
+	},
+
+	async create(input, { idempotencyKey } = {}) {
+		const response = await http.post("/products", input, {
+			headers: idempotencyKey
+				? { "Idempotency-Key": idempotencyKey }
+				: undefined,
+		});
+		return response.data;
+	},
+
+	async update(productId, patch, { version } = {}) {
+		const response = await http.patch(
+			`/products/${encodeURIComponent(productId)}`,
+			patch,
+			{ headers: version ? { "If-Match": version } : undefined },
+		);
+		return response.data;
+	},
+
+	async remove(productId) {
+		await http.delete(`/products/${encodeURIComponent(productId)}`);
+	},
 };
 ```
 
-Use `AbortController`; timeout and cancellation solve different problems. Retry only idempotent/transient operations with capped exponential backoff and jitter. Never blindly retry validation/auth failures. `Promise.all` is fail-fast for independent concurrent calls; `allSettled` preserves partial outcomes. Cursor pagination is robust under insertions; infinite scroll needs duplicate prevention, termination, accessibility, and scroll restoration.
+`encodeURIComponent` protects path segment structure, not authorization or validation. The API must validate identifiers and permissions.
+
+## HTTP Method Semantics
+
+| Method | Typical meaning | Idempotent by specification? | Axios call |
+|---|---|---:|---|
+| `GET` | Read representation | Yes | `http.get(url, config)` |
+| `HEAD` | Read response metadata | Yes | `http.head(url, config)` |
+| `POST` | Create or execute command | Usually no | `http.post(url, data, config)` |
+| `PUT` | Replace resource at target | Yes | `http.put(url, data, config)` |
+| `PATCH` | Apply partial modification | Depends on operation | `http.patch(url, data, config)` |
+| `DELETE` | Remove target | Idempotent semantics | `http.delete(url, config)` |
+
+Idempotent semantics do not mean every implementation is safe or side-effect-free. Retrying a request requires API-specific knowledge, especially for payments, messages, orders, and file operations.
+
+## Request Interceptors
+
+Request interceptors can add cross-cutting metadata such as a correlation ID, locale, or current access token. Keep them deterministic and fast.
+
+```jsx
+const requestInterceptorId = http.interceptors.request.use((config) => {
+	const accessToken = sessionStore.getAccessToken();
+
+	config.headers.set("X-Request-ID", crypto.randomUUID());
+	config.headers.set("Accept-Language", localeStore.getLocale());
+
+	if (accessToken) {
+		config.headers.set("Authorization", `Bearer ${accessToken}`);
+	}
+
+	return config;
+});
+```
+
+Do not log authorization headers, cookies, request bodies containing personal data, or full URLs containing sensitive query values. Avoid using interceptors to hide domain behavior that belongs in an endpoint service.
+
+If an interceptor is installed dynamically, eject it during cleanup:
+
+```jsx
+http.interceptors.request.eject(requestInterceptorId);
+```
+
+## Response Interceptors and Error Normalization
+
+Axios distinguishes three broad failure locations:
+
+- `error.response`: the server responded, but status validation rejected it.
+- `error.request`: a request was sent but no usable response arrived.
+- neither: setup, serialization, interceptor, or caller code failed.
+
+Normalize this shape once so UI code does not depend on Axios internals.
+
+```jsx
+// src/api/errors.js
+import axios from "axios";
+
+export class AppError extends Error {
+	constructor(message, details = {}) {
+		super(message);
+		this.name = "AppError";
+		Object.assign(this, details);
+	}
+}
+
+export function normalizeHttpError(error) {
+	if (axios.isCancel(error)) {
+		return new AppError("Request canceled", {
+			kind: "canceled",
+			retryable: false,
+			cause: error,
+		});
+	}
+
+	if (error.response) {
+		const status = error.response.status;
+		return new AppError(
+			error.response.data?.message ?? `Request failed with status ${status}`,
+			{
+				kind: "http",
+				status,
+				code: error.response.data?.code,
+				fields: error.response.data?.fields,
+				requestId: error.response.headers["x-request-id"],
+				retryable: status === 408 || status === 429 || status >= 500,
+				cause: error,
+			},
+		);
+	}
+
+	if (error.request) {
+		return new AppError("No response received", {
+			kind: "network",
+			retryable: true,
+			cause: error,
+		});
+	}
+
+	return new AppError(error.message || "Request setup failed", {
+		kind: "client",
+		retryable: false,
+		cause: error,
+	});
+}
+```
+
+```jsx
+http.interceptors.response.use(
+	(response) => response,
+	(error) => Promise.reject(normalizeHttpError(error)),
+);
+```
+
+```mermaid
+flowchart TD
+	E[Axios rejection] --> C{Canceled?}
+	C -->|yes| CA[Canceled AppError]
+	C -->|no| R{Has response?}
+	R -->|yes| HTTP[HTTP AppError with status and fields]
+	R -->|no| Q{Has request?}
+	Q -->|yes| NET[Network AppError]
+	Q -->|no| SET[Client/setup AppError]
+	HTTP --> UI[Stable UI error contract]
+	NET --> UI
+	SET --> UI
+	CA --> UI
+```
+
+User-facing messages should be safe and actionable. Preserve the original error as `cause` for controlled diagnostics, but redact it before telemetry if it contains sensitive request information.
+
+## Cancellation with `AbortController`
+
+Cancel requests when their result is no longer relevant: component unmount, changed search criteria, superseding navigation, or explicit user cancellation.
+
+```jsx
+function ProductSearch({ query }) {
+	const [state, setState] = useState({ status: "loading", products: [] });
+
+	useEffect(() => {
+		const controller = new AbortController();
+		setState((current) => ({ ...current, status: "loading" }));
+
+		productsApi.list({ query, signal: controller.signal })
+			.then((result) => {
+				setState({ status: "success", products: result.items });
+			})
+			.catch((error) => {
+				if (error.kind !== "canceled") {
+					setState({ status: "error", products: [], error });
+				}
+			});
+
+		return () => controller.abort();
+	}, [query]);
+
+	return <ProductResults state={state} />;
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant C as Component
+	participant A as Axios
+	participant API as API
+	U->>C: Search for react
+	C->>A: Request A with signal
+	A->>API: GET q=react
+	U->>C: Search for router
+	C--xA: Abort request A
+	C->>A: Request B with new signal
+	A->>API: GET q=router
+	API-->>A: Response B
+	A-->>C: Commit only current result
+```
+
+Cancellation prevents stale client work but does not guarantee that the server stopped processing a request. Mutations need idempotency and server-side transaction semantics.
+
+## Timeout Versus Cancellation
+
+Timeout and cancellation answer different questions:
+
+| Mechanism | Owner | Meaning |
+|---|---|---|
+| Axios `timeout` | Transport policy | Client waited beyond configured duration |
+| `AbortController` | Caller/lifecycle | Result is no longer wanted |
+| Server timeout | API/infrastructure | Server stopped processing by policy |
+| Proxy/load-balancer timeout | Infrastructure | Connection exceeded intermediary policy |
+
+A client timeout does not prove that a mutation failed. The response may have been lost after the server committed. Use idempotency keys and status lookup for consequential operations.
+
+## Authentication and Credential Strategy
+
+Prefer secure, `HttpOnly`, `Secure`, appropriately `SameSite` cookies when the architecture supports them. JavaScript cannot read an HttpOnly cookie, reducing token theft through XSS, though cookie authentication requires deliberate CSRF defenses.
+
+When using access tokens in memory:
+
+- Keep token reading centralized.
+- Never persist tokens casually in local storage.
+- Redact authorization data from logs and monitoring.
+- Refresh through one coordinated flow.
+- Clear session state when refresh is definitively rejected.
+- Avoid adding credentials to untrusted origins.
+
+`withCredentials: true` does not bypass CORS. The server must return an explicit allowed origin and credential policy; wildcard origin is incompatible with credentialed browser requests.
+
+## Single-Flight Token Refresh
+
+If several requests receive `401` simultaneously, they must share one refresh operation. Each original request should retry at most once.
+
+```jsx
+let refreshPromise = null;
+
+async function refreshSession() {
+	if (!refreshPromise) {
+		refreshPromise = authHttp.post("/session/refresh")
+			.then((response) => {
+				sessionStore.setAccessToken(response.data.accessToken);
+				return response.data.accessToken;
+			})
+			.finally(() => {
+				refreshPromise = null;
+			});
+	}
+
+	return refreshPromise;
+}
+
+http.interceptors.response.use(undefined, async (error) => {
+	const original = error.config;
+	const unauthorized = error.response?.status === 401;
+	const refreshRequest = original?.url === "/session/refresh";
+
+	if (!unauthorized || original._retry || refreshRequest) {
+		throw normalizeHttpError(error);
+	}
+
+	original._retry = true;
+
+	try {
+		const token = await refreshSession();
+		original.headers.set("Authorization", `Bearer ${token}`);
+		return http(original);
+	} catch (refreshError) {
+		sessionStore.clear();
+		throw normalizeHttpError(refreshError);
+	}
+});
+```
+
+```mermaid
+sequenceDiagram
+	participant A as Request A
+	participant B as Request B
+	participant I as Response interceptor
+	participant R as Shared refresh promise
+	participant API as Auth API
+	A->>I: 401
+	B->>I: 401
+	I->>R: Create refresh
+	R->>API: One refresh request
+	I->>R: Join existing refresh
+	API-->>R: New access token
+	R-->>I: Resolve all waiters
+	I->>A: Retry once
+	I->>B: Retry once
+```
+
+The exact implementation depends on the authentication contract. Refresh rotation, cookie use, cross-tab coordination, logout races, and replay detection require server participation and dedicated tests.
+
+## Retry Strategy
+
+Retries can improve resilience for temporary failures, but unsafe retry policy can duplicate mutations and amplify outages.
+
+```mermaid
+flowchart TD
+	F[Request failed] --> M{Method/operation safe to retry?}
+	M -->|no| STOP[Return failure]
+	M -->|yes| S{Transient status or network failure?}
+	S -->|no| STOP
+	S -->|yes| C{Attempts remaining?}
+	C -->|no| STOP
+	C -->|yes| RA{Retry-After supplied?}
+	RA -->|yes| WAIT[Wait server-directed duration]
+	RA -->|no| BACK[Exponential backoff plus jitter]
+	WAIT --> RE[Retry with cancellation support]
+	BACK --> RE
+	RE --> F
+```
+
+A common delay model is:
+
+$$
+d_n = \min(d_{max}, d_0 \cdot 2^n) + J
+$$
+
+where $d_0$ is the base delay, $d_{max}$ is a cap, $n$ is the attempt number, and $J$ is randomized jitter. Honor a valid `Retry-After` header for `429` or applicable service responses.
+
+Never blindly retry `400`, validation failures, authentication failures, authorization failures, or non-idempotent operations. Bound attempts, support cancellation, and ensure retry load does not worsen an incident. A mature server-state library may already provide tested retry policy.
+
+## Concurrent Requests
+
+Use `Promise.all` when all independent results are required and one failure should reject the combined operation.
 
 ```jsx
 const controller = new AbortController();
+
 const [products, categories] = await Promise.all([
-	http.get("/products", { signal: controller.signal }),
-	http.get("/categories", { signal: controller.signal }),
+	productsApi.list({ signal: controller.signal }),
+	categoriesApi.list({ signal: controller.signal }),
+]);
+```
+
+Use `Promise.allSettled` when partial results are useful and each outcome will be handled.
+
+```jsx
+const results = await Promise.allSettled([
+	reportsApi.loadSales(),
+	reportsApi.loadInventory(),
+	reportsApi.loadReturns(),
 ]);
 
-// Upload; let the browser create the multipart boundary.
-await http.post("/files", formData, { onUploadProgress: ({ loaded, total }) => setProgress(loaded / total) });
-// Download
-const { data } = await http.get("/report", { responseType: "blob" });
+const panels = results.map((result) =>
+	result.status === "fulfilled"
+		? { status: "success", data: result.value }
+		: { status: "error", error: result.reason },
+);
 ```
 
-For JWT refresh, prefer secure HttpOnly cookies when architecture permits. A single-flight refresh prevents many 401s from starting many refresh requests; `_retry` guards loops; failure clears session. Interceptors must be ejected when dynamically installed.
+```mermaid
+flowchart LR
+	S[Start independent requests] --> A[Request A]
+	S --> B[Request B]
+	S --> C[Request C]
+	A --> ALL{Aggregation policy}
+	B --> ALL
+	C --> ALL
+	ALL -->|Promise.all| FF[Fail fast; all values required]
+	ALL -->|allSettled| PO[Preserve every outcome]
+```
+
+Avoid unconstrained fan-out over large collections. Use server batch endpoints, pagination, or a concurrency limiter.
+
+## Pagination
+
+### Offset Pagination
+
+```jsx
+const response = await http.get("/products", {
+	params: { page: 3, pageSize: 25, sort: "name" },
+});
+```
+
+Offset pagination is simple and supports direct page navigation, but concurrent insertions/deletions can shift records.
+
+### Cursor Pagination
+
+```jsx
+const response = await http.get("/activity", {
+	params: { cursor, limit: 50 },
+	 signal,
+});
+
+const { items, nextCursor } = response.data;
+```
+
+Cursor pagination provides stable continuation for ordered feeds when the server constructs opaque cursors correctly. Clients should not parse or invent cursor values.
+
+```mermaid
+sequenceDiagram
+	participant C as Client
+	participant A as API
+	C->>A: GET activity limit 50
+	A-->>C: items plus nextCursor abc
+	C->>A: GET activity cursor abc
+	A-->>C: next items plus cursor def
+	C->>A: GET activity cursor def
+	A-->>C: final items plus null cursor
+```
+
+Infinite scrolling additionally needs duplicate prevention, stable keys, termination, loading/error recovery, focus/accessibility alternatives, and scroll restoration. A visible Load more control is often a useful accessible fallback.
+
+## File Uploads
+
+Use `FormData` for multipart requests and let Axios/browser set the multipart boundary.
+
+```jsx
+export async function uploadDocument(file, metadata, { signal, onProgress }) {
+	const formData = new FormData();
+	formData.append("document", file);
+	formData.append("title", metadata.title);
+	formData.append("category", metadata.category);
+
+	const response = await http.post("/documents", formData, {
+		signal,
+		onUploadProgress: ({ loaded, total }) => {
+			onProgress(total ? { kind: "determinate", value: loaded / total } : {
+				kind: "indeterminate",
+			});
+		},
+	});
+
+	return response.data;
+}
+```
+
+```mermaid
+flowchart LR
+	F[Selected File] --> FD[FormData]
+	FD --> AX[Axios multipart request]
+	AX --> P[Progress events]
+	AX --> API[Upload API]
+	API --> V[Server size, signature, malware checks]
+	V --> ST[Controlled storage]
+	ST --> ID[Return safe resource ID]
+```
+
+Client file type and size checks are guidance only. The server must enforce limits, inspect content, sanitize storage names, scan when appropriate, authorize access, and serve risky content with safe headers/origins.
+
+For large files, consider chunked/resumable upload protocols rather than one enormous multipart request. Define abandoned-upload cleanup and integrity verification.
+
+## File Downloads
+
+Request binary data as a blob and derive the filename from a trusted contract.
+
+```jsx
+export async function downloadInvoice(invoiceId, { signal } = {}) {
+	const response = await http.get(`/invoices/${encodeURIComponent(invoiceId)}/pdf`, {
+		responseType: "blob",
+		signal,
+	});
+
+	const url = URL.createObjectURL(response.data);
+	const anchor = document.createElement("a");
+	anchor.href = url;
+	anchor.download = `invoice-${invoiceId}.pdf`;
+	anchor.click();
+	URL.revokeObjectURL(url);
+}
+```
+
+For very large files, normal browser navigation or a short-lived signed download URL may avoid buffering the entire file in application memory. Signed URLs must be short-lived, scoped, and protected from logging leakage.
+
+## Caching and Axios
+
+Axios does not provide an application server-state cache by itself. Repeating `axios.get` repeats the request unless HTTP/browser infrastructure satisfies it.
+
+```mermaid
+flowchart TD
+	R[Remote data requirement] --> Q{Shared, cached, invalidated, or refetched?}
+	Q -->|yes| SQ[RTK Query or server-state library]
+	Q -->|no, one-off command/read| AS[Axios feature service]
+	SQ --> BF[Axios or fetch base transport]
+	AS --> AX[Configured Axios instance]
+	D[Do not copy one response into multiple caches] --> Q
+```
+
+Choose one owner for server cache behavior. If RTK Query owns products, do not also maintain an independent Axios-plus-Redux product cache. Axios can still serve one-off exports, specialized uploads, or as a custom base query when there is a clear reason.
+
+HTTP caching headers such as `Cache-Control`, `ETag`, and `Last-Modified` are server contracts. Conditional requests can use `If-None-Match` or `If-Modified-Since`, but application caching and HTTP caching solve related, not identical, concerns.
+
+## React Integration Without a Cache
+
+For a genuinely local one-off request, model all visible states and cancel obsolete work.
+
+```jsx
+function ExportButton({ reportId }) {
+	const [status, setStatus] = useState("idle");
+	const controllerRef = useRef(null);
+
+	async function exportReport() {
+		controllerRef.current?.abort();
+		const controller = new AbortController();
+		controllerRef.current = controller;
+		setStatus("loading");
+
+		try {
+			await reportsApi.download(reportId, { signal: controller.signal });
+			setStatus("success");
+		} catch (error) {
+			if (error.kind !== "canceled") setStatus("error");
+		}
+	}
+
+	useEffect(() => () => controllerRef.current?.abort(), []);
+
+	return (
+		<button onClick={exportReport} disabled={status === "loading"}>
+			{status === "loading" ? "Preparing export..." : "Download report"}
+		</button>
+	);
+}
+```
+
+Do not create a generic `useFetch` hook that silently reinvents cache keys, races, invalidation, retries, hydration, and deduplication. Use an established server-state library once those requirements appear.
+
+## Request and Response Transformation
+
+Axios supports `transformRequest` and `transformResponse`, but transformations should remain transport-oriented and predictable. Domain mapping often belongs in endpoint services.
+
+```jsx
+async function getCustomer(customerId, options) {
+	const response = await http.get(`/customers/${encodeURIComponent(customerId)}`, options);
+	const dto = response.data;
+
+	return {
+		id: dto.id,
+		name: dto.display_name,
+		createdAt: new Date(dto.created_at),
+		version: response.headers.etag,
+	};
+}
+```
+
+Validate runtime response shape at trust boundaries for critical contracts. TypeScript types describe expectations but do not validate network data.
+
+## Observability
+
+Record enough metadata to diagnose reliability without collecting sensitive content.
+
+Useful fields include:
+
+- Request/correlation ID.
+- Endpoint template rather than raw sensitive URL.
+- HTTP method and status category.
+- Duration and timeout/cancellation reason.
+- Retry count.
+- Response size category.
+- Application error code.
+- Release/version and network state where appropriate.
+
+```mermaid
+sequenceDiagram
+	participant C as Client
+	participant API as API
+	participant O as Observability
+	C->>C: Generate request ID
+	C->>API: Request with X-Request-ID
+	API-->>C: Response echoes request ID
+	C->>O: Method, route template, status, duration
+	Note over C,O: Redact tokens, cookies, bodies, and sensitive query data
+```
+
+Measure at one layer to avoid duplicate events from components, services, and interceptors. Sampling and retention must follow privacy and compliance policy.
+
+## Testing Axios Code
+
+Test at the boundary appropriate to the behavior:
+
+| Test scope | What to verify |
+|---|---|
+| Pure unit | Error normalization, parameter mapping, retry decision |
+| Axios adapter/mock | Interceptor headers, refresh queue, response mapping |
+| Mock Service Worker | Browser-visible request/response integration |
+| API contract | Payloads, statuses, error envelopes, headers |
+| End-to-end | Authentication expiry, upload/download, cancellation, user recovery |
+
+```jsx
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
+
+const server = setupServer(
+	http.get("https://api.example.test/products", ({ request }) => {
+		const url = new URL(request.url);
+		return HttpResponse.json({
+			items: [{ id: "p1", name: "Notebook" }],
+			query: url.searchParams.get("q"),
+		});
+	}),
+);
+
+test("maps product search parameters and response", async () => {
+	const result = await productsApi.list({ query: "note" });
+	expect(result.items[0].name).toBe("Notebook");
+	expect(result.query).toBe("note");
+});
+```
+
+Reset handlers and interceptor state between tests. Explicitly cover concurrent `401` responses, failed refresh, retry limits, cancellation, network failure, malformed payloads, `429 Retry-After`, and cleanup.
+
+## Security
+
+| Risk | Mitigation |
+|---|---|
+| Token theft | Prefer HttpOnly cookies where suitable; harden against XSS |
+| CSRF with cookie auth | SameSite plus token/origin controls according to architecture |
+| Credential leakage | Restrict origins; redact headers/logs; never put secrets in URLs |
+| Open proxy/SSRF-like client misuse | Allowlist API origins and do not concatenate arbitrary target URLs |
+| Overposting | Server allowlists accepted fields |
+| Insecure object access | Server authorizes every resource operation |
+| Duplicate mutation | Idempotency key and transactional server handling |
+| Malicious response content | Render as text; sanitize intentional HTML |
+| Upload abuse | Server limits, content inspection, scanning, safe storage |
+| Dependency vulnerability | Maintain Axios and audit dependencies |
+
+Axios does not make an API secure. TLS, browser policies, server validation, authorization, rate limiting, audit controls, and secure deployment remain necessary.
+
+## Performance and Reliability
+
+- Reuse configured instances; do not recreate clients per render.
+- Cancel obsolete reads and bound request concurrency.
+- Let a server-state cache deduplicate shared reads.
+- Compress suitable responses server-side and paginate large collections.
+- Avoid returning fields the current view never needs.
+- Use cursor pagination for changing feeds where appropriate.
+- Bound retries and honor backpressure.
+- Avoid large blob buffering when browser-native download can stream.
+- Track request duration and payload size before optimizing.
+- Treat offline detection as a hint, not proof that a request will succeed or fail.
+
+Connection pooling and low-level transport behavior differ between browser and Node adapters. Optimize based on the actual runtime.
+
+## Recommended Project Structure
 
 ```text
-src/api/http.js             # transport policy
-src/api/errors.js           # normalized error model
-src/features/products/api.js# endpoint service
-src/features/products/hooks/# React integration
+src/
+  api/
+    http.js               # configured instance and transport policy
+    errors.js             # stable AppError model
+    authInterceptors.js   # refresh coordination when required
+  features/
+    products/
+      productsApi.js      # domain endpoint functions
+      productsSchemas.js  # runtime payload validation if used
+      productsQueries.js  # RTK Query/query integration
+      components/         # UI state and presentation
 ```
 
-**Mistakes:** token in every component, global mutable defaults, no cancellation, treating every error alike, infinite retries, manually setting multipart boundaries, and duplicating RTK Query caching. **Interview:** Axios rejects non-2xx by default; inspect `response`, `request`, or setup error. **Project:** paginated catalog with cancellation, retry, upload/download, normalized errors, and interceptor tests.
+Keep transport code independent from React so it can be tested, reused by loaders or server-state libraries, and reasoned about without component lifecycle concerns.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Axios called throughout components | Duplicated policy and inconsistent errors | Central instance plus domain services |
+| Global defaults mutated at runtime | Timing-dependent behavior | Configure stable instances |
+| Every response returns Axios shape to UI | Transport leaks across application | Return domain data/contracts |
+| No cancellation | Stale results and wasted work | Pass `AbortSignal` from caller lifecycle |
+| Cancellation shown as failure | Misleading error UI | Classify cancellation separately |
+| Timeout treated as server rollback | Duplicate mutation on retry | Use idempotency and status reconciliation |
+| Every failure retried | Duplicate work and outage amplification | Retry only bounded transient safe operations |
+| Multiple simultaneous refreshes | Refresh storm and race conditions | Use one shared refresh promise |
+| Retried request loops forever | Infinite network cycle | Add retry marker and exclude refresh endpoint |
+| Dynamic interceptor never ejected | Duplicate handlers and memory retention | Store ID and eject during cleanup |
+| Multipart header set manually | Missing boundary breaks upload | Let Axios/browser set it |
+| Tokens logged or put in query | Credential exposure | Redact and use secure credential transport |
+| `withCredentials` expected to fix CORS | Browser still blocks response | Configure server CORS correctly |
+| Axios and RTK Query both cache same data | Divergent sources of truth | Choose one cache owner |
+| Response TypeScript type trusted at runtime | Malformed API data reaches UI | Validate critical external contracts |
+| Error messages parsed as logic | Contract breaks when text changes | Use stable status and error codes |
+
+## Production Checklist
+
+1. Create stable Axios instances per real transport policy.
+2. Validate public base URLs at startup and keep secrets off the client.
+3. Expose domain endpoint functions rather than raw Axios calls to UI.
+4. Normalize cancellation, network, HTTP, and client failures.
+5. Pass caller-owned `AbortSignal` through every relevant layer.
+6. Define timeout, retry, backoff, and idempotency policies explicitly.
+7. Coordinate authentication refresh as a single flight with a retry guard.
+8. Enforce CORS, CSRF, authentication, and authorization server-side.
+9. Choose one server-cache owner and avoid duplicate caches.
+10. Handle pagination, partial failure, and concurrency intentionally.
+11. Validate upload content and manage large transfers safely.
+12. Redact credentials and personal data from observability.
+13. Test interceptors, races, refresh failure, retries, and cancellation.
+14. Monitor latency, status rates, timeouts, retry volume, and payload size.
+15. Keep Axios and related dependencies maintained.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Use a server-state cache for catalog reads, Axios services for specialized upload/export operations, cursor or page contracts for browsing, idempotency keys for order creation, and server-authoritative pricing and inventory.
+
+### Banking
+
+Use short timeouts appropriate to each operation, request correlation IDs, strict redaction, idempotent transfer commands, transaction-status reconciliation after ambiguous failures, server authorization, and no blind mutation retries.
+
+### CRM
+
+Use query caching for customer records, conditional updates with ETags or versions, cancelable search, bounded parallel dashboard requests, structured validation errors, and audit-safe request IDs.
+
+### File Management
+
+Use multipart upload for ordinary files, resumable protocols for large files, explicit progress/cancellation, server content inspection, short-lived authorized downloads, and cleanup for abandoned uploads and object URLs.
+
+### Analytics Dashboard
+
+Use bounded concurrent requests or batch endpoints, `allSettled` for independent panels, cancellation on filter changes, cache-aware queries, route-template telemetry, and partial-failure UI that preserves successful panels.
+
+A professional Axios layer makes transport policy consistent, keeps authentication and retries bounded, preserves cancellation through every abstraction, and leaves caching and rendering to the systems designed to own them.
 
 ---
 
