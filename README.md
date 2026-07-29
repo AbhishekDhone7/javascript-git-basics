@@ -86,6 +86,7 @@ Covered in [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md):
 
 Covered in [scholer-desk/README.md](scholer-desk/README.md):
 
+- Figma reference: [ScholarDesk UI Design](https://www.figma.com/design/3TURApKflpiN8QD8qIZILP/scholer-desk?node-id=0-1&t=Scn7SEa1AeQ4HbNX-1)
 - Responsive React and Redux Toolkit application
 - Separate student and administrator login flows
 - Student posts, profiles, notifications, and settings

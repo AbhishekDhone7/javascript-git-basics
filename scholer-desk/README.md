@@ -6,6 +6,11 @@ Scalable React frontend for managing student posts, profiles, notifications, and
 
 This project uses React, React Router, Redux Toolkit, Axios, and plain CSS. It provides separate student and administrator experiences with responsive desktop/mobile navigation. User actions run against local mock data, so the frontend can be reviewed without a backend service.
 
+## Design Reference
+
+- Figma design: [ScholarDesk UI Design](https://www.figma.com/design/3TURApKflpiN8QD8qIZILP/scholer-desk?node-id=0-1&t=Scn7SEa1AeQ4HbNX-1)
+- The application screens, reusable components, layouts, and responsive behavior were implemented using this design as the primary visual reference.
+
 ## Current Features
 
 ### Student Experience
