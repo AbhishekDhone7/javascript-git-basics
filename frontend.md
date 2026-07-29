@@ -18504,6 +18504,7 @@ Fiber represents schedulable work; reconciliation preserves identity through typ
 
 **A render sends duplicate network requests. What is the likely defect?** Network work is occurring during impure render logic. Move it to an event, an effect with cancellation and cleanup, or a dedicated data layer such as RTK Query.
 
+
 ## Comprehensive Module Question Bank
 
 The following questions cover all 19 modules. Strong answers should define the concept, trace its runtime behavior, identify failure modes, and defend an implementation choice with evidence.
