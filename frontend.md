@@ -2671,32 +2671,683 @@ Production hook design starts with ownership and lifecycle, not with choosing a 
 
 [Previous: Hooks](#module-4-react-hooks) | [Next: Router](#module-6-react-router)
 
-Data flows parent-to-child through props; intent flows child-to-parent through callbacks. Siblings share state in their closest common owner. Context distributes cross-cutting values. Composition passes components/elements into slots. Render props and HOCs remain important legacy/library patterns; compound components coordinate a cohesive API through shared context.
+## Communication as Data Ownership
+
+React component communication begins with one architectural question: **which component or system owns the source of truth?** Once ownership is clear, values move down to readers and user intent moves back to the owner. React does not automatically synchronize duplicated state in different components.
+
+The default model is one-way data flow:
+
+- A parent passes data and configuration through props.
+- A child reports intent through callback props.
+- Siblings coordinate through their nearest common owner.
+- Composition passes elements or components into structural slots.
+- Context distributes a dependency through a subtree.
+- External stores coordinate client state outside one component branch.
+- Server-state libraries own remote data, caching, invalidation, and request status.
 
 ```mermaid
 flowchart TB
- P[Parent owns state] -->|props| A[Child A]
- P -->|props| B[Child B]
- A -->|callback event| P
- B -->|callback event| P
- X[Provider] --> A
- X --> B
+	O[Canonical owner] -->|state snapshot as props| A[Child A]
+	O -->|state snapshot as props| B[Child B]
+	A -->|intent callback| O
+	B -->|intent callback| O
+	O --> R[Render next consistent snapshot]
+	R --> A
+	R --> B
 ```
 
+This loop is declarative. Children do not directly mutate a parent's state. They request a transition, the owner decides whether and how to apply it, and React renders the resulting snapshot.
+
+## Communication Pattern Reference
+
+| Pattern | Direction | Best use | Main risk |
+|---|---|---|---|
+| Props | Parent to child | Local explicit data/configuration | Long forwarding chains |
+| Callback props | Child to parent | Report user intent | Passing implementation-oriented setters |
+| Lifted state | Shared owner to siblings | Keep sibling views consistent | Owner becomes too broad |
+| Controlled API | Owner manages value | Coordinated, resettable components | Excessive boilerplate |
+| Uncontrolled API | Component manages value | Local reusable defaults | Harder external coordination |
+| Composition/slots | Parent supplies UI structure | Flexible layouts and wrappers | Unclear slot contracts |
+| Context | Provider to descendants | Subtree-wide stable dependencies | Broad updates and hidden coupling |
+| Compound components | Related descendants coordinate | Expressive cohesive component APIs | Accessibility/state complexity |
+| Render prop | Component calls function child/prop | Dynamic behavior sharing | Nested markup and unstable functions |
+| Higher-order component | Wrapper enhances component | Legacy/library cross-cutting behavior | Prop collisions and wrapper depth |
+| Imperative ref | Parent invokes narrow child command | Focus, selection, media control | Tight coupling |
+| External store | Store to subscribers | Cross-feature client workflow state | Global state overuse |
+| Server cache | Cache to query consumers | Remote entities and request lifecycle | Duplicating cache into local/global state |
+
+## Parent-to-Child Communication with Props
+
+Props are immutable inputs for one render. A parent creates an element with values; React later invokes the child with that props snapshot. The child may derive output from props but must not mutate objects received through them.
+
 ```jsx
-function Tabs({ children, value, onChange }) {
-	return <TabsContext.Provider value={{ value, onChange }}>{children}</TabsContext.Provider>;
+function ProductCard({ product, currency, featured = false }) {
+	const formattedPrice = new Intl.NumberFormat("en-IN", {
+		style: "currency",
+		currency,
+	}).format(product.price);
+
+	return (
+		<article data-featured={featured || undefined}>
+			<h3>{product.name}</h3>
+			<p>{formattedPrice}</p>
+		</article>
+	);
 }
-Tabs.List = function List({ children }) { return <div role="tablist">{children}</div>; };
-Tabs.Tab = function Tab({ id, children }) {
-	const { value, onChange } = useContext(TabsContext);
-	return <button role="tab" aria-selected={value === id} onClick={() => onChange(id)}>{children}</button>;
+
+function ProductGrid({ products }) {
+	return products.map((product) => (
+		<ProductCard
+			key={product.id}
+			product={product}
+			currency="INR"
+			featured={product.rating >= 4.5}
+		/>
+	));
+}
+```
+
+### Designing Professional Prop APIs
+
+- Name props by domain meaning: `onInvoiceApprove`, not `handleClickFromParent`.
+- Prefer positive booleans such as `disabled` or `readOnly` over confusing double negatives.
+- Avoid passing an entire model when the child needs only two stable fields.
+- Keep required data distinct from optional presentation settings.
+- Use default parameter values rather than deprecated `defaultProps` patterns for function components.
+- Preserve native HTML props when building reusable controls.
+- Document mutually exclusive combinations or model them as explicit variants.
+
+```jsx
+function StatusBadge({ status }) {
+	const labels = {
+		pending: "Pending review",
+		approved: "Approved",
+		rejected: "Rejected",
+	};
+
+	if (!(status in labels)) {
+		throw new Error(`Unsupported status: ${status}`);
+	}
+
+	return <span data-status={status}>{labels[status]}</span>;
+}
+```
+
+Prop validation can be implemented with TypeScript, PropTypes in applicable JavaScript projects, schema validation at external boundaries, and focused tests. Runtime data from APIs must still be validated because static types disappear at runtime.
+
+## Child-to-Parent Communication with Callbacks
+
+Function props let children report semantic events. The child supplies relevant data; the parent owns the transition and side effects.
+
+```jsx
+function QuantityEditor({ value, min = 1, max = 20, onChange }) {
+	function requestChange(nextValue) {
+		const boundedValue = Math.min(max, Math.max(min, nextValue));
+		onChange(boundedValue);
+	}
+
+	return (
+		<div aria-label="Quantity">
+			<button disabled={value <= min} onClick={() => requestChange(value - 1)}>
+				Decrease
+			</button>
+			<output aria-live="polite">{value}</output>
+			<button disabled={value >= max} onClick={() => requestChange(value + 1)}>
+				Increase
+			</button>
+		</div>
+	);
+}
+
+function CartLine({ item }) {
+	const [quantity, setQuantity] = useState(item.quantity);
+	return <QuantityEditor value={quantity} onChange={setQuantity} />;
+}
+```
+
+Passing `setQuantity` is acceptable for a small generic input whose event precisely means replacing the value. Domain components should usually expose intent such as `onMemberInvite`, allowing the owner to validate, authorize, log, or reject the action without exposing state mechanics.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant C as Child component
+	participant P as Parent owner
+	participant R as React
+	U->>C: Select quantity 3
+	C->>P: onChange(3)
+	P->>P: Validate and update state
+	P->>R: Queue render
+	R->>C: New value prop equals 3
+	C-->>U: Display committed value
+```
+
+Callbacks execute in the render snapshot where they were created. If an asynchronous callback calculates from previous state, use a functional updater or reducer to avoid stale captured values.
+
+## Lifting State for Sibling Communication
+
+When siblings need the same evolving value, move one canonical value to their nearest common owner. Pass the value to each reader and callbacks to components that can request changes.
+
+```jsx
+function ProductWorkspace({ products }) {
+	const [filters, setFilters] = useState({ query: "", inStockOnly: false });
+
+	const visibleProducts = products.filter((product) => {
+		const matchesQuery = product.name
+			.toLowerCase()
+			.includes(filters.query.toLowerCase());
+		return matchesQuery && (!filters.inStockOnly || product.stock > 0);
+	});
+
+	return (
+		<>
+			<ProductFilters
+				value={filters}
+				onChange={setFilters}
+			/>
+			<ProductCount count={visibleProducts.length} />
+			<ProductList products={visibleProducts} />
+		</>
+	);
+}
+```
+
+```mermaid
+flowchart TB
+	W[ProductWorkspace owns filters] -->|filters| F[ProductFilters]
+	W -->|derived count| C[ProductCount]
+	W -->|derived visible products| L[ProductList]
+	F -->|onChange next filters| W
+	D[Duplicate filter state in siblings] -. creates disagreement .-> X[Inconsistent UI]
+```
+
+Lift state only as high as necessary. Moving every local interaction to the application root increases render reach, API surface, and maintenance cost. If the state belongs in navigation, such as a shareable search or page number, the URL can be the common owner.
+
+## Controlled and Uncontrolled Components
+
+A controlled component receives its current value and reports changes. An uncontrolled component initializes internal state from a default and manages later transitions itself.
+
+```jsx
+function Disclosure({ open, defaultOpen = false, onOpenChange, children }) {
+	const controlled = open !== undefined;
+	const [internalOpen, setInternalOpen] = useState(defaultOpen);
+	const currentOpen = controlled ? open : internalOpen;
+
+	function setOpen(nextOpen) {
+		if (!controlled) setInternalOpen(nextOpen);
+		onOpenChange?.(nextOpen);
+	}
+
+	return (
+		<section>
+			<button
+				aria-expanded={currentOpen}
+				onClick={() => setOpen(!currentOpen)}
+			>
+				Details
+			</button>
+			{currentOpen && children}
+		</section>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	Q{Is open prop supplied?} -->|Yes| CP[Read controlled prop]
+	Q -->|No| IS[Read internal state]
+	CP --> E[User requests change]
+	IS --> E
+	E --> CB[Call onOpenChange]
+	E -->|uncontrolled only| US[Update internal state]
+	CB --> PO[Parent may provide next prop]
+```
+
+Do not switch between controlled and uncontrolled behavior during one mounted lifetime. A controlled parent must update the prop after receiving the callback; otherwise the component correctly continues displaying the parent's unchanged value.
+
+### Resetting State Deliberately
+
+State is tied to tree position and component identity. A changed `key` intentionally replaces an instance and resets its local state.
+
+```jsx
+function CustomerEditor({ customer }) {
+	return <ProfileForm key={customer.id} initialProfile={customer} />;
+}
+```
+
+Do not mirror every prop into state with an effect. Use a controlled value, derive output directly, or use an intentional identity reset based on the required user experience.
+
+## Composition and `children`
+
+Composition communicates structure instead of only data. A wrapper receives elements and decides where they render without knowing their internal implementation.
+
+```jsx
+function Dialog({ title, actions, children, onClose }) {
+	return (
+		<div role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+			<header>
+				<h2 id="dialog-title">{title}</h2>
+				<button aria-label="Close" onClick={onClose}>Close</button>
+			</header>
+			<div>{children}</div>
+			<footer>{actions}</footer>
+		</div>
+	);
+}
+
+function DeleteCustomerDialog({ customer, onCancel, onConfirm }) {
+	return (
+		<Dialog
+			title="Delete customer"
+			onClose={onCancel}
+			actions={(
+				<>
+					<button onClick={onCancel}>Cancel</button>
+					<button onClick={() => onConfirm(customer.id)}>Delete</button>
+				</>
+			)}
+		>
+			<p>This permanently deletes {customer.name}.</p>
+		</Dialog>
+	);
+}
+```
+
+Named slots such as `actions`, `toolbar`, `sidebar`, or `emptyState` make complex composition explicit. Elements passed as children retain the context of where they were created; the wrapper controls placement, not ownership of their closures.
+
+```mermaid
+flowchart TB
+	P[Consumer creates element tree] --> D[Dialog composition boundary]
+	D --> H[Header slot]
+	D --> B[children body slot]
+	D --> A[Actions slot]
+	B --> U[Consumer-owned content and callbacks]
+	A --> U
+```
+
+Avoid `cloneElement` as a default communication mechanism because it creates implicit prop injection and fragile assumptions about child shape. Prefer explicit props, context, or render functions when descendants require coordination.
+
+## Context Communication
+
+Context lets descendants read a value without forwarding it through every intermediate component. It is appropriate for subtree-scoped dependencies such as theme, locale, authenticated principal, feature configuration, or a compound component's internal contract.
+
+```jsx
+const WorkspaceContext = createContext(null);
+
+function WorkspaceProvider({ workspaceId, children }) {
+	const [density, setDensity] = useState("comfortable");
+
+	const value = useMemo(() => ({
+		workspaceId,
+		density,
+		setDensity,
+	}), [workspaceId, density]);
+
+	return (
+		<WorkspaceContext.Provider value={value}>
+			{children}
+		</WorkspaceContext.Provider>
+	);
+}
+
+function useWorkspace() {
+	const context = useContext(WorkspaceContext);
+	if (!context) {
+		throw new Error("useWorkspace must be used within WorkspaceProvider");
+	}
+	return context;
+}
+```
+
+```mermaid
+flowchart TB
+	PR[WorkspaceProvider] --> L[Layout does not consume]
+	L --> T[Toolbar consumes density]
+	L --> G[Grid consumes workspaceId and density]
+	PR -->|provider value changes| T
+	PR -->|provider value changes| G
+	N[Unrelated subtree outside provider] -. no subscription .-> PR
+```
+
+Memoizing a provider object prevents changes caused only by a newly allocated wrapper, but consumers still render when a genuine dependency changes. Split contexts when values have different ownership or update frequencies. Context selectors or an external store may be more suitable for high-frequency large state.
+
+### Prop Drilling Is Not Automatically a Problem
+
+Passing a value through one or two meaningful layers is explicit, traceable, and reusable. Context is justified when many distant descendants need a stable dependency or intermediary components should not conceptually know about it. Replacing every forwarded prop with context hides dependencies and makes isolated reuse/testing harder.
+
+## Compound Components
+
+Compound components expose related parts that coordinate through a private context. They provide flexible composition while one root owns the shared behavior.
+
+```jsx
+const TabsContext = createContext(null);
+
+function Tabs({ value, onValueChange, children }) {
+	const context = useMemo(
+		() => ({ value, onValueChange }),
+		[value, onValueChange],
+	);
+
+	return <TabsContext.Provider value={context}>{children}</TabsContext.Provider>;
+}
+
+function useTabs() {
+	const context = useContext(TabsContext);
+	if (!context) throw new Error("Tab components must be inside Tabs");
+	return context;
+}
+
+Tabs.List = function TabList({ label, children }) {
+	return <div role="tablist" aria-label={label}>{children}</div>;
+};
+
+Tabs.Tab = function Tab({ value, panelId, children }) {
+	const tabs = useTabs();
+	const selected = tabs.value === value;
+
+	return (
+		<button
+			role="tab"
+			id={`${panelId}-tab`}
+			aria-controls={panelId}
+			aria-selected={selected}
+			tabIndex={selected ? 0 : -1}
+			onClick={() => tabs.onValueChange(value)}
+		>
+			{children}
+		</button>
+	);
+};
+
+Tabs.Panel = function TabPanel({ value, id, children }) {
+	const tabs = useTabs();
+	if (tabs.value !== value) return null;
+
+	return (
+		<div role="tabpanel" id={id} aria-labelledby={`${id}-tab`}>
+			{children}
+		</div>
+	);
 };
 ```
 
-Prefer explicit props for local data, composition for visual flexibility, context for subtree-wide dependencies, and a store/server cache for complex cross-feature state. Avoid prop drilling only when it is genuinely harmful; context creates coupling and broad update reach.
+```jsx
+function AccountTabs() {
+	const [tab, setTab] = useState("profile");
 
-**Common mistakes:** duplicate sibling state, callback loops, context as a dumping ground, HOCs that hide prop collisions, and compound children without accessibility semantics. **Mini project:** accessible tabs and modal components supporting controlled/uncontrolled modes. **Interview scenario:** two sibling filters disagree; lift one canonical filter model to the nearest common owner or URL.
+	return (
+		<Tabs value={tab} onValueChange={setTab}>
+			<Tabs.List label="Account settings">
+				<Tabs.Tab value="profile" panelId="profile-panel">Profile</Tabs.Tab>
+				<Tabs.Tab value="security" panelId="security-panel">Security</Tabs.Tab>
+			</Tabs.List>
+			<Tabs.Panel value="profile" id="profile-panel"><Profile /></Tabs.Panel>
+			<Tabs.Panel value="security" id="security-panel"><Security /></Tabs.Panel>
+		</Tabs>
+	);
+}
+```
+
+```mermaid
+flowchart TB
+	RT[Tabs root owns selected value] --> CT[Private TabsContext]
+	CT --> TL[Tabs.List provides structure]
+	CT --> T1[Tabs.Tab reads selection and sends intent]
+	CT --> T2[Tabs.Tab reads selection and sends intent]
+	CT --> PN[Tabs.Panel renders matching content]
+	T1 -->|onValueChange| RT
+	T2 -->|onValueChange| RT
+```
+
+A production tabs implementation must also support arrow-key navigation, Home/End keys, focus movement, orientation, disabled tabs, stable IDs, and server rendering. Compound syntax does not provide accessibility automatically.
+
+## Render Props
+
+A render prop is a function prop that receives behavior or state and returns UI. It remains useful when the consumer must control rendering at a particular point.
+
+```jsx
+function PointerTracker({ children }) {
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+
+	return (
+		<div onPointerMove={(event) => {
+			setPosition({ x: event.clientX, y: event.clientY });
+		}}>
+			{children(position)}
+		</div>
+	);
+}
+
+function Canvas() {
+	return (
+		<PointerTracker>
+			{({ x, y }) => <Cursor x={x} y={y} />}
+		</PointerTracker>
+	);
+}
+```
+
+Custom hooks replace many behavior-only render props with flatter code, but render props can still be appropriate for headless components, dynamic item rendering, and library APIs. A newly created render function can defeat shallow memoization; optimize only when profiling identifies an actual cost.
+
+## Higher-Order Components
+
+A higher-order component (HOC) is a function that receives a component and returns an enhanced component. HOCs remain common in older React applications and some libraries.
+
+```jsx
+function withPermission(requiredPermission) {
+	return function enhance(WrappedComponent) {
+		function PermissionBoundary(props) {
+			const permissions = usePermissions();
+			if (!permissions.includes(requiredPermission)) {
+				return <Forbidden />;
+			}
+			return <WrappedComponent {...props} />;
+		}
+
+		PermissionBoundary.displayName =
+			`withPermission(${WrappedComponent.displayName ?? WrappedComponent.name ?? "Component"})`;
+
+		return PermissionBoundary;
+	};
+}
+
+const ProtectedPayroll = withPermission("payroll:read")(PayrollPage);
+```
+
+HOCs should pass unrelated props through, avoid mutating the wrapped component, use collision-resistant injected prop names, preserve a useful display name, and consider ref forwarding where required. Hooks are usually clearer for application behavior because they avoid wrapper depth and implicit injected props.
+
+```mermaid
+flowchart LR
+	C[Original component] --> H1[withPermission wrapper]
+	H1 --> H2[withTelemetry wrapper]
+	H2 --> E[Rendered enhanced component]
+	W[Wrapper depth and injected props] -. maintenance cost .-> E
+```
+
+## Imperative Communication with Refs
+
+Declarative props should be the default. A parent ref is justified when it must invoke a narrow command that naturally belongs to an imperative platform API.
+
+```jsx
+const PaymentField = forwardRef(function PaymentField(props, ref) {
+	const inputRef = useRef(null);
+
+	useImperativeHandle(ref, () => ({
+		focusInvalid() {
+			inputRef.current?.focus();
+		},
+	}), []);
+
+	return <input ref={inputRef} inputMode="decimal" {...props} />;
+});
+
+function PaymentForm() {
+	const amountRef = useRef(null);
+
+	function submit(event) {
+		event.preventDefault();
+		if (!isValidAmount(event.currentTarget.amount.value)) {
+			amountRef.current?.focusInvalid();
+		}
+	}
+
+	return (
+		<form onSubmit={submit}>
+			<PaymentField ref={amountRef} name="amount" />
+			<button>Pay</button>
+		</form>
+	);
+}
+```
+
+Do not expose the complete child DOM tree or methods that mutate business state behind React's data flow. Commands such as `focus`, `scrollTo`, `play`, `pause`, and `selectText` are narrow and understandable.
+
+## External Stores and Server State
+
+Communication scope determines whether local React ownership is still appropriate.
+
+```mermaid
+flowchart TD
+	S[State requirement] --> Q1{Only one component?}
+	Q1 -->|Yes| LS[Local state]
+	Q1 -->|No| Q2{Nearby siblings?}
+	Q2 -->|Yes| LU[Lift to common owner]
+	Q2 -->|No| Q3{Subtree-wide stable dependency?}
+	Q3 -->|Yes| CX[Context]
+	Q3 -->|No| Q4{Remote server data?}
+	Q4 -->|Yes| SC[RTK Query or server cache]
+	Q4 -->|No| Q5{Cross-feature client workflow?}
+	Q5 -->|Yes| ES[Redux Toolkit or external store]
+	Q5 -->|No| URL[Consider URL or component composition]
+```
+
+Redux Toolkit can coordinate authenticated workflow state, drafts shared across routes, notifications, or normalized client entities. RTK Query, TanStack Query, or an equivalent data layer should own fetched server data when caching and invalidation are required. Do not copy query results into component state or Redux slices without a specific editing/snapshot requirement.
+
+External stores should expose focused selectors so components subscribe only to data they render. Commands or action creators preserve domain intent better than direct object mutation.
+
+## Events and Communication Boundaries
+
+React events bubble through the React tree, which often matches the DOM tree but can differ with portals. Event propagation is useful for generic interaction boundaries, not as a replacement for explicit domain callbacks.
+
+```jsx
+function SelectableRow({ customer, onSelect }) {
+	return (
+		<tr onClick={() => onSelect(customer.id)}>
+			<td>{customer.name}</td>
+			<td>
+				<button onClick={(event) => {
+					event.stopPropagation();
+					archiveCustomer(customer.id);
+				}}>
+					Archive
+				</button>
+			</td>
+		</tr>
+	);
+}
+```
+
+Use propagation deliberately. A nested interactive element inside another interactive element may be invalid HTML or inaccessible even if `stopPropagation` appears to fix behavior. Prefer structurally valid controls with explicit callbacks.
+
+## Communication Across Portals
+
+Portals change physical DOM placement but preserve the React ownership tree. Context still reaches portal content, and React events bubble to ancestors in the React tree.
+
+```mermaid
+flowchart LR
+	subgraph ReactTree[React ownership tree]
+		A[App] --> M[Modal component]
+		M --> P[Portal content]
+	end
+	subgraph DOMTree[DOM placement]
+		R[app root]
+		B[modal root] --> PD[Portal DOM]
+	end
+	A -->|context and event ancestry| P
+	P -. rendered into .-> PD
+```
+
+Modals still require focus trapping, initial focus, focus restoration, Escape handling, accessible labeling, background inertness, and scroll management. A portal solves stacking and placement, not modal behavior.
+
+## Performance and Render Reach
+
+Communication choices affect how broadly updates propagate:
+
+- State updates render the owning component and reconcile its descendants.
+- Changed context values notify every consumer of that context beneath the provider.
+- External-store selectors can limit updates to subscribers whose selected values changed.
+- Stable keys preserve child identity; incorrect keys can reset or move state unexpectedly.
+- `memo` can skip child rendering only when observable inputs remain equal.
+- `useCallback` and `useMemo` are useful only when stable identity participates in a measured optimization.
+- Composition can move stateful children outside an updating wrapper's render work.
+
+```jsx
+// The slow child element is supplied by the parent and can retain its identity
+// while Panel updates only its local expanded state.
+function Panel({ children }) {
+	const [expanded, setExpanded] = useState(false);
+	return (
+		<section>
+			<button onClick={() => setExpanded((value) => !value)}>Toggle</button>
+			{expanded && children}
+		</section>
+	);
+}
+```
+
+Measure with React DevTools Profiler before adding identity management. A clear ownership boundary usually produces larger gains than scattered memoization.
+
+## Common Failure Modes
+
+| Failure | Why it happens | Correction |
+|---|---|---|
+| Siblings keep duplicate state | No canonical owner | Lift one source of truth |
+| Child mutates a prop object | Parent and child share reference | Request immutable owner update |
+| Callback is invoked during render | JSX receives result, not function | Pass a function such as `() => save(id)` |
+| Child receives raw domain setter | Parent policy leaks outward | Expose semantic event callback |
+| Props copied to state by effect | Two sources drift and add renders | Derive, control, or intentionally reset |
+| Context stores everything | Every change has broad reach | Split ownership and update frequency |
+| Provider creates value every render | Consumers see changed identity | Stabilize value where beneficial |
+| Index used as key in mutable list | State follows position | Use persistent data identity |
+| HOC overwrites a prop | Injected contract is implicit | Use explicit names and pass-through rules |
+| Compound control lacks keyboard behavior | Visual API mistaken for accessibility | Implement the complete ARIA pattern |
+| Ref exposes internal DOM/state | Parent couples to implementation | Expose narrow imperative commands |
+| Server data copied into local state | Cache and copy diverge | Read from cache; separate edit draft only |
+| Event propagation is used as state bus | Dependencies become implicit | Use callbacks, context, or store |
+
+## Production Design Checklist
+
+1. Identify the canonical owner before writing communication code.
+2. Keep local state local and lift only genuinely shared values.
+3. Pass immutable snapshots downward and semantic intent upward.
+4. Choose URL state for shareable navigation and filter state.
+5. Prefer composition when a parent needs layout flexibility rather than child data.
+6. Use context for coherent subtree dependencies, not as a universal store.
+7. Separate client workflow state from cached server state.
+8. Preserve child identity with domain keys.
+9. Include loading, empty, error, pending, disabled, and permission states in contracts.
+10. Verify keyboard operation, focus behavior, labels, and announcements for compound UI.
+11. Test communication at the observable behavior boundary.
+12. Profile render reach before introducing memoization.
+
+## Real-World Architectures
+
+### E-Commerce Product Filters
+
+Place shareable filters in search parameters, let the router own their serialized form, derive query arguments from the URL, and let a server cache own products. Filter controls report semantic changes rather than maintaining disconnected copies.
+
+### Banking Transfer Workflow
+
+Use a reducer in the workflow owner for draft, review, authorization, submission, and result transitions. Child fields report edits; the server remains authoritative for account permissions, balances, limits, and idempotency.
+
+### CRM Workspace
+
+Use route parameters for the selected customer, query caching for customer records, local state for an unsaved edit draft, context for workspace-level permissions/configuration, and an external store only for cross-feature client workflows.
+
+### Dashboard Widgets
+
+Use composition for widget shells and toolbars, explicit props for display configuration, server caches for metrics, and scoped contexts for shared date range or dashboard editing mode. Subscribe each widget to the smallest useful snapshot.
+
+Professional component communication minimizes the number of owners, makes dependencies visible, and selects the narrowest mechanism that matches the required lifetime and scope.
 
 ---
 
