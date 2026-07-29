@@ -4305,48 +4305,1066 @@ A professional routing architecture makes navigation durable, predictable, secur
 
 [Previous: Router](#module-6-react-router) | [Next: Axios](#module-8-axios)
 
-Controlled forms provide immediate React-driven validation and dependent UI. Uncontrolled forms keep values in DOM controls and can reduce per-keystroke rendering. Validate on both client (experience) and server (authority). Preserve server field errors and submission state.
+## Introduction
+
+A form is a stateful interaction protocol between a user, the browser, React, and a server. Professional form design must handle more than collecting strings: ownership, validation timing, accessibility, pending mutations, server errors, retries, files, data loss, security, and successful completion all belong to the workflow.
+
+HTML already provides robust form semantics. React should coordinate those semantics rather than replace them unnecessarily.
 
 ```mermaid
 flowchart LR
- U[User edits fields] --> M{Control model}
- M -->|Controlled| S[React state update and render]
- M -->|Uncontrolled| D[DOM retains value]
- S --> V[Client validation]
- D --> F[FormData on submit]
- F --> V
- V -->|valid| A[API submission]
- V -->|invalid| E[Accessible error summary]
- A -->|server errors| E
- A -->|success| C[Confirmation/navigation]
+	U[User intent] --> C[HTML form controls]
+	C --> O[Value owner: React, DOM, or form library]
+	O --> V[Client validation for guidance]
+	V -->|invalid| F[Accessible correction feedback]
+	V -->|valid| M[Server mutation]
+	M -->|field or form error| F
+	M -->|success| S[Reset, confirmation, or navigation]
 ```
 
-The first branch distinguishes where current values live. Both models converge at validation and submission; server validation remains authoritative; failure returns focusable/announced feedback while success advances the workflow.
+## Form Architecture Principles
+
+1. Use semantic HTML controls and labels before adding abstractions.
+2. Choose one clear owner for each current field value.
+3. Treat client validation as user assistance and server validation as authority.
+4. Preserve user input when submission fails.
+5. Model idle, editing, validating, submitting, success, and failure explicitly.
+6. Prevent accidental duplicate mutations without trapping legitimate retries.
+7. Put errors next to fields and provide a form-level summary when useful.
+8. Design keyboard, focus, autofill, password-manager, and assistive-technology behavior.
+9. Keep sensitive data out of logs, URLs, analytics, and long-lived client storage.
+10. Test the form as a user workflow rather than only testing validation functions.
+
+## Native HTML Foundation
+
+Native controls provide keyboard interaction, focus behavior, mobile keyboard hints, autofill integration, browser validation primitives, and form submission semantics.
 
 ```jsx
-function ProfileForm() {
-	const [errors, setErrors] = useState({});
-	async function submit(event) {
-		event.preventDefault();
-		const data = new FormData(event.currentTarget);
-		const file = data.get("avatar");
-		if (file.size > 2_000_000) return setErrors({ avatar: "Maximum 2 MB" });
-		await api.post("/profile", data);
-	}
+function ContactForm({ onSubmit }) {
 	return (
-		<form onSubmit={submit} noValidate>
-			<input name="name" required />
-			<input name="avatar" type="file" accept="image/*" />
-			{errors.avatar && <p role="alert">{errors.avatar}</p>}
-			<button>Save</button>
+		<form onSubmit={onSubmit}>
+			<div>
+				<label htmlFor="contact-name">Name</label>
+				<input
+					id="contact-name"
+					name="name"
+					type="text"
+					autoComplete="name"
+					required
+					maxLength={100}
+				/>
+			</div>
+
+			<div>
+				<label htmlFor="contact-email">Email</label>
+				<input
+					id="contact-email"
+					name="email"
+					type="email"
+					inputMode="email"
+					autoComplete="email"
+					required
+				/>
+			</div>
+
+			<button type="submit">Send message</button>
 		</form>
 	);
 }
 ```
 
-React Hook Form uses uncontrolled registration/subscriptions to limit renders and supports dynamic arrays and schema resolvers. Do not manually set multipart `Content-Type`; the browser adds its boundary. Revoke object URLs, validate type/size server-side, prevent duplicate submit, focus the first invalid field, and announce errors.
+### Important Native Attributes
 
-**Mini project:** dynamic HRMS employee form with field arrays, async uniqueness validation, upload progress, dirty-state navigation guard, and accessible error summary.
+| Attribute | Purpose | Production note |
+|---|---|---|
+| `name` | Submission key and `FormData` identity | Required for native serialization |
+| `type` | Control behavior and value rules | Use the most specific correct type |
+| `autoComplete` | Browser/password-manager assistance | Use standardized tokens |
+| `inputMode` | Mobile keyboard hint | Does not validate input |
+| `required` | Empty-value constraint | Server must repeat the rule |
+| `min` / `max` | Numeric/date bounds | Parse and validate server-side |
+| `minLength` / `maxLength` | Text length constraints | Define whether length means code units or domain characters |
+| `pattern` | Regular-expression constraint | Keep messages understandable |
+| `multiple` | Multiple files/emails/selections | Changes submitted value shape |
+| `accept` | File-picker hint | Not a security validation mechanism |
+| `disabled` | Excludes control from interaction and submission | Prefer `readOnly` when value must still submit |
+| `aria-describedby` | Connects help/error text | IDs must be stable and unique |
+
+Buttons inside forms default to `type="submit"`. Give utility buttons such as Add row, Show password, and Cancel an explicit `type="button"`.
+
+## Controlled and Uncontrolled Ownership
+
+React supports two primary field ownership models.
+
+```mermaid
+flowchart TD
+	Q{Who owns the current value?}
+	Q -->|React state| C[Controlled field]
+	Q -->|DOM control| U[Uncontrolled field]
+	C --> CR[Every edit queues React state and render]
+	U --> UR[Read with FormData or ref when needed]
+	CR --> X[Immediate dependent UI and validation]
+	UR --> Y[Lower per-keystroke React work]
+	X --> SUB[Submit normalized payload]
+	Y --> SUB
+```
+
+| Concern | Controlled | Uncontrolled |
+|---|---|---|
+| Current value | React state | DOM element |
+| Initial value | State initializer | `defaultValue` / `defaultChecked` |
+| Update observation | `onChange` on every edit | Submit, ref, or library subscription |
+| Dependent UI | Straightforward | Requires reading/subscription |
+| Programmatic reset | Set state | `form.reset()` or ref |
+| Large-form rendering | May require architecture work | Naturally avoids parent render per edit |
+| Typical library | Hand-rolled React state | React Hook Form registration |
+
+Neither model is universally superior. Choose based on required coordination and rendering behavior, and avoid switching a mounted field between models.
+
+## Controlled Forms
+
+A controlled field receives `value` or `checked` from React and reports edits through `onChange`. The rendered state is authoritative.
+
+```jsx
+const initialProfile = {
+	name: "",
+	email: "",
+	role: "student",
+	newsletter: false,
+};
+
+function ProfileForm() {
+	const [fields, setFields] = useState(initialProfile);
+
+	function updateField(event) {
+		const { name, type, checked, value } = event.target;
+		setFields((current) => ({
+			...current,
+			[name]: type === "checkbox" ? checked : value,
+		}));
+	}
+
+	return (
+		<form>
+			<label>
+				Name
+				<input name="name" value={fields.name} onChange={updateField} />
+			</label>
+			<label>
+				Email
+				<input name="email" type="email" value={fields.email} onChange={updateField} />
+			</label>
+			<label>
+				Role
+				<select name="role" value={fields.role} onChange={updateField}>
+					<option value="student">Student</option>
+					<option value="mentor">Mentor</option>
+				</select>
+			</label>
+			<label>
+				<input
+					name="newsletter"
+					type="checkbox"
+					checked={fields.newsletter}
+					onChange={updateField}
+				/>
+				Receive updates
+			</label>
+		</form>
+	);
+}
+```
+
+Input values are usually strings, including `type="number"`. Parse at a deliberate boundary and preserve an empty string while the user edits, rather than converting an incomplete field to `0` or `NaN`.
+
+### Controlled Update Lifecycle
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant I as Input
+	participant H as onChange handler
+	participant S as React state
+	participant R as Render
+	U->>I: Type character
+	I->>H: Change event with next DOM value
+	H->>S: Queue immutable state update
+	S->>R: Render next snapshot
+	R->>I: Commit value prop
+	I-->>U: Display controlled value
+```
+
+Keep controlled text updates urgent. Do not wrap the input's own state update in a transition; defer only expensive consumers of the value.
+
+## Uncontrolled Forms and `FormData`
+
+An uncontrolled form lets the browser retain field values. At submission, `FormData` serializes successful named controls.
+
+```jsx
+function NewsletterForm() {
+	const formRef = useRef(null);
+	const [status, setStatus] = useState("idle");
+
+	async function submit(event) {
+		event.preventDefault();
+		setStatus("submitting");
+
+		const formData = new FormData(event.currentTarget);
+		const payload = {
+			email: String(formData.get("email") ?? "").trim(),
+			topics: formData.getAll("topics").map(String),
+		};
+
+		try {
+			await newsletterApi.subscribe(payload);
+			formRef.current?.reset();
+			setStatus("success");
+		} catch {
+			setStatus("error");
+		}
+	}
+
+	return (
+		<form ref={formRef} onSubmit={submit}>
+			<label>
+				Email
+				<input name="email" type="email" required />
+			</label>
+			<fieldset>
+				<legend>Topics</legend>
+				<label><input name="topics" type="checkbox" value="react" /> React</label>
+				<label><input name="topics" type="checkbox" value="testing" /> Testing</label>
+			</fieldset>
+			<button disabled={status === "submitting"}>Subscribe</button>
+		</form>
+	);
+}
+```
+
+Unchecked checkboxes are omitted from `FormData`; repeated names require `getAll`; files appear as `File` objects. Disabled controls are omitted entirely. Convert browser values into a validated domain payload instead of relying on `Object.fromEntries(formData)` for every shape.
+
+## Form State Modeling
+
+Field values are only one part of form state.
+
+| State category | Examples | Typical owner |
+|---|---|---|
+| Values | Name, date, selected role | React, DOM, or form library |
+| Metadata | Touched, dirty, visited | Form component/library |
+| Validation | Field and form errors | Derived validator plus server response |
+| Submission | Idle, submitting, success, failure | Mutation owner/data router |
+| Server version | Record revision or ETag | Data layer |
+| UI state | Expanded section, password visibility | Local component state |
+
+For complex workflows, a reducer can make transitions explicit.
+
+```jsx
+const initialFormState = {
+	values: { amount: "", recipientId: "" },
+	touched: {},
+	errors: {},
+	status: "editing",
+	serverError: null,
+};
+
+function formReducer(state, action) {
+	switch (action.type) {
+		case "fieldChanged":
+			return {
+				...state,
+				values: { ...state.values, [action.name]: action.value },
+				serverError: null,
+			};
+		case "fieldBlurred":
+			return {
+				...state,
+				touched: { ...state.touched, [action.name]: true },
+			};
+		case "validationFailed":
+			return { ...state, errors: action.errors, status: "editing" };
+		case "submissionStarted":
+			return { ...state, status: "submitting", serverError: null };
+		case "submissionFailed":
+			return { ...state, status: "editing", serverError: action.error };
+		case "submissionSucceeded":
+			return { ...state, status: "success" };
+		default:
+			throw new Error(`Unknown form action: ${action.type}`);
+	}
+}
+```
+
+```mermaid
+stateDiagram-v2
+	[*] --> Pristine
+	Pristine --> Editing: first change
+	Editing --> Validating: blur or submit
+	Validating --> Editing: validation fails
+	Validating --> Submitting: client validation passes
+	Submitting --> Editing: server rejects or network fails
+	Submitting --> Success: server commits
+	Success --> Editing: edit again
+	Success --> [*]: navigate or reset
+```
+
+Do not model submission as one ambiguous boolean if the UI must distinguish validation, mutation, success, and failure.
+
+## Validation Architecture
+
+Validation should occur at multiple boundaries because each layer solves a different problem.
+
+```mermaid
+flowchart TB
+	I[User input] --> H[HTML constraints]
+	H --> C[Client domain validation]
+	C -->|guidance| UI[Inline accessible feedback]
+	C -->|valid candidate| S[Server validation]
+	S --> A[Authorization and business rules]
+	A --> D[Database constraints and transaction]
+	D -->|accepted| OK[Committed result]
+	H -. never trusted alone .-> S
+	C -. never trusted alone .-> S
+```
+
+| Layer | Appropriate checks | Authority |
+|---|---|---|
+| HTML | Required, type, simple length/range | User guidance |
+| Client schema/domain | Cross-field shape, normalization, immediate feedback | User guidance |
+| Server | All shape, business, permission, uniqueness rules | Authoritative |
+| Database | Unique, foreign-key, transaction invariants | Final persistence authority |
+
+### Pure Validation Function
+
+```jsx
+function validateRegistration(values) {
+	const errors = {};
+
+	if (!values.name.trim()) {
+		errors.name = "Enter your name.";
+	}
+	if (!/^\S+@\S+\.\S+$/.test(values.email)) {
+		errors.email = "Enter a valid email address.";
+	}
+	if (values.password.length < 12) {
+		errors.password = "Use at least 12 characters.";
+	}
+	if (values.password !== values.confirmPassword) {
+		errors.confirmPassword = "Passwords do not match.";
+	}
+
+	return errors;
+}
+```
+
+Keep pure validation separate from rendering and transport so it can be tested directly. Avoid overly restrictive email, name, address, and phone regular expressions; domain rules must reflect real users and locales.
+
+### Validation Timing
+
+Common strategies include:
+
+- On submit: least interruption, but feedback arrives later.
+- On blur: useful after the user finishes a field.
+- On change after first error: helps users see when a known error is corrected.
+- On change immediately: appropriate for constrained live feedback, but can feel punitive.
+
+Do not show a wall of errors before the user interacts. Preserve server errors until the associated field changes or the user resubmits.
+
+## Accessible Errors
+
+An invalid field needs a visible message, programmatic association, and clear correction path. Color alone is insufficient.
+
+```jsx
+function EmailField({ value, error, onChange, onBlur }) {
+	const inputId = useId();
+	const helpId = `${inputId}-help`;
+	const errorId = `${inputId}-error`;
+	const describedBy = [helpId, error && errorId].filter(Boolean).join(" ");
+
+	return (
+		<div>
+			<label htmlFor={inputId}>Work email</label>
+			<input
+				id={inputId}
+				name="email"
+				type="email"
+				value={value}
+				onChange={onChange}
+				onBlur={onBlur}
+				aria-invalid={Boolean(error)}
+				aria-describedby={describedBy}
+			/>
+			<p id={helpId}>Use the address associated with your organization.</p>
+			{error && <p id={errorId}>{error}</p>}
+		</div>
+	);
+}
+```
+
+### Error Summary and Focus
+
+For long forms, render a summary after failed submission, focus its heading or container, and link each error to its field.
+
+```jsx
+function ErrorSummary({ errors, fieldLabels }) {
+	const summaryRef = useRef(null);
+	const entries = Object.entries(errors);
+
+	useEffect(() => {
+		if (entries.length) summaryRef.current?.focus();
+	}, [entries.length]);
+
+	if (!entries.length) return null;
+
+	return (
+		<section ref={summaryRef} tabIndex={-1} aria-labelledby="error-title">
+			<h2 id="error-title">Correct the following fields</h2>
+			<ul>
+				{entries.map(([name, message]) => (
+					<li key={name}>
+						<a href={`#${name}`}>{fieldLabels[name]}: {message}</a>
+					</li>
+				))}
+			</ul>
+		</section>
+	);
+}
+```
+
+Avoid assigning `role="alert"` to every error during typing; repeated live announcements can overwhelm users. Reserve assertive announcements for important dynamic changes and test with representative assistive technology.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant F as Form
+	participant S as Error summary
+	participant I as Invalid field
+	U->>F: Submit incomplete form
+	F->>F: Validate all fields
+	F->>S: Render linked errors
+	S-->>U: Receive focus and error count
+	U->>S: Activate error link
+	S->>I: Move to associated field
+	I-->>U: Read label, value, and error description
+```
+
+## Submission Workflow
+
+Submission should be one coherent mutation with explicit client and server outcomes.
+
+```jsx
+function RegistrationForm() {
+	const [values, setValues] = useState({ name: "", email: "", password: "" });
+	const [errors, setErrors] = useState({});
+	const [status, setStatus] = useState("idle");
+	const abortRef = useRef(null);
+
+	async function submit(event) {
+		event.preventDefault();
+		if (status === "submitting") return;
+
+		const nextErrors = validateRegistration(values);
+		if (Object.keys(nextErrors).length) {
+			setErrors(nextErrors);
+			setStatus("invalid");
+			return;
+		}
+
+		abortRef.current?.abort();
+		const controller = new AbortController();
+		abortRef.current = controller;
+		setErrors({});
+		setStatus("submitting");
+
+		try {
+			await accountsApi.register(values, { signal: controller.signal });
+			setStatus("success");
+		} catch (error) {
+			if (error.name === "AbortError") return;
+			if (error.kind === "validation") setErrors(error.fields);
+			else setErrors({ form: "Registration failed. Try again." });
+			setStatus("error");
+		}
+	}
+
+	useEffect(() => () => abortRef.current?.abort(), []);
+
+	return <form onSubmit={submit}>{/* fields and status UI */}</form>;
+}
+```
+
+```mermaid
+flowchart TD
+	SUB[Submit event] --> DUP{Already submitting?}
+	DUP -->|yes| IGN[Ignore duplicate intent]
+	DUP -->|no| CV[Run client validation]
+	CV -->|invalid| ERR[Display and focus errors]
+	CV -->|valid| MUT[Start cancellable mutation]
+	MUT -->|field errors| ERR
+	MUT -->|network/server error| RET[Preserve input and offer retry]
+	MUT -->|success| DONE[Confirm, reset, or navigate]
+```
+
+Disabling Submit prevents accidental repeats in one client, but critical operations such as payments and orders also require server-side idempotency keys. A timeout does not prove that a mutation failed; the server may have committed after the client stopped waiting.
+
+## Server Error Mapping
+
+Define a stable API error contract instead of parsing arbitrary message strings.
+
+```json
+{
+  "type": "validation_error",
+  "message": "Correct the highlighted fields.",
+  "fields": {
+    "email": "An account already uses this email.",
+    "startDate": "Start date must be before end date."
+  }
+}
+```
+
+Unknown field keys should become a form-level message and be logged safely for contract investigation. Never render raw server stack traces. Preserve values after rejection, except secrets that should be cleared for security policy.
+
+## React Hook Form
+
+React Hook Form registers native controls and uses subscriptions to reduce broad renders. It is particularly useful for large forms, dynamic arrays, nested values, and standardized validation integration.
+
+```bash
+npm install react-hook-form
+```
+
+```jsx
+import { useForm } from "react-hook-form";
+
+function EmployeeForm({ onCreate }) {
+	const {
+		register,
+		handleSubmit,
+		setError,
+		formState: { errors, isDirty, isSubmitting },
+	} = useForm({
+		defaultValues: {
+			name: "",
+			email: "",
+			department: "engineering",
+		},
+		mode: "onBlur",
+	});
+
+	async function submit(values) {
+		try {
+			await onCreate(values);
+		} catch (error) {
+			if (error.fields) {
+				for (const [name, message] of Object.entries(error.fields)) {
+					setError(name, { type: "server", message });
+				}
+				return;
+			}
+			setError("root.server", { message: "Unable to create employee." });
+		}
+	}
+
+	return (
+		<form onSubmit={handleSubmit(submit)} noValidate>
+			<label htmlFor="employee-name">Name</label>
+			<input
+				id="employee-name"
+				aria-invalid={Boolean(errors.name)}
+				{...register("name", {
+					required: "Enter the employee name.",
+					maxLength: { value: 100, message: "Use 100 characters or fewer." },
+				})}
+			/>
+			{errors.name && <p>{errors.name.message}</p>}
+
+			<label htmlFor="employee-email">Email</label>
+			<input
+				id="employee-email"
+				type="email"
+				aria-invalid={Boolean(errors.email)}
+				{...register("email", { required: "Enter an email address." })}
+			/>
+			{errors.email && <p>{errors.email.message}</p>}
+
+			{errors.root?.server && <p role="alert">{errors.root.server.message}</p>}
+			<button disabled={isSubmitting}>
+				{isSubmitting ? "Creating..." : "Create employee"}
+			</button>
+			{isDirty && <span>Unsaved changes</span>}
+		</form>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	DOM[Registered native controls] --> SUB[Field subscriptions]
+	SUB --> FS[React Hook Form state]
+	FS --> FV[Subscribed field/error views]
+	DOM --> HS[handleSubmit]
+	HS --> VAL[Rules or schema resolver]
+	VAL -->|valid| APP[Application submit function]
+	VAL -->|invalid| FV
+```
+
+Registration does not remove the need for labels, error associations, server validation, mutation architecture, or accessible focus behavior.
+
+### Controlled Third-Party Inputs
+
+Use React Hook Form's `Controller` when a custom component does not expose a native ref/value contract compatible with `register`.
+
+```jsx
+<Controller
+	name="department"
+	control={control}
+	rules={{ required: "Choose a department." }}
+	render={({ field, fieldState }) => (
+		<DepartmentSelect
+			value={field.value}
+			onChange={field.onChange}
+			onBlur={field.onBlur}
+			inputRef={field.ref}
+			error={fieldState.error?.message}
+		/>
+	)}
+/>
+```
+
+Do not wrap ordinary native inputs in `Controller` without need; registration is simpler and typically cheaper.
+
+## Schema Validation
+
+Schema libraries such as Zod, Yup, or Valibot can centralize parsing and validation. Use the resolver package matching the chosen library and keep transport/domain transformations explicit.
+
+```jsx
+import { z } from "zod";
+
+const employeeSchema = z.object({
+	name: z.string().trim().min(1, "Enter a name.").max(100),
+	email: z.string().trim().email("Enter a valid email address."),
+	startDate: z.coerce.date(),
+	salary: z.coerce.number().nonnegative(),
+});
+```
+
+Client and server may share schema concepts, but server validation must run independently. Avoid assuming JavaScript date/number coercion matches locale-specific user expectations. Parse display formats deliberately.
+
+## Dynamic Field Arrays
+
+Dynamic rows require stable business or generated field identity. Array indexes may identify form paths, but they should not be the React key when rows can be inserted, reordered, or removed.
+
+```jsx
+import { useFieldArray, useForm } from "react-hook-form";
+
+function TeamForm() {
+	const { control, register, handleSubmit } = useForm({
+		defaultValues: { members: [{ name: "", role: "member" }] },
+	});
+	const { fields, append, remove, move } = useFieldArray({
+		control,
+		name: "members",
+	});
+
+	return (
+		<form onSubmit={handleSubmit(saveTeam)}>
+			{fields.map((field, index) => (
+				<fieldset key={field.id}>
+					<legend>Member {index + 1}</legend>
+					<input
+						aria-label={`Member ${index + 1} name`}
+						{...register(`members.${index}.name`, { required: true })}
+					/>
+					<select {...register(`members.${index}.role`)}>
+						<option value="member">Member</option>
+						<option value="lead">Lead</option>
+					</select>
+					<button type="button" onClick={() => remove(index)}>Remove</button>
+					{index > 0 && (
+						<button type="button" onClick={() => move(index, index - 1)}>Move up</button>
+					)}
+				</fieldset>
+			))}
+			<button type="button" onClick={() => append({ name: "", role: "member" })}>
+				Add member
+			</button>
+			<button type="submit">Save team</button>
+		</form>
+	);
+}
+```
+
+After adding or removing a row, manage focus and announce the structural change where needed. Validate cross-row rules such as duplicate email addresses and minimum/maximum team size.
+
+```mermaid
+flowchart TB
+	A[Add, remove, or reorder row] --> ID[Preserve stable field IDs]
+	ID --> REG[Update registered field paths]
+	REG --> F[Move focus intentionally]
+	F --> ANN[Announce structural change]
+	ANN --> VAL[Revalidate array and cross-row rules]
+```
+
+## File Uploads
+
+File inputs are uncontrolled. Browsers do not allow applications to set their value to an arbitrary local file path.
+
+```jsx
+const MAX_AVATAR_BYTES = 2_000_000;
+const ALLOWED_AVATAR_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function AvatarForm() {
+	const [previewUrl, setPreviewUrl] = useState(null);
+	const [error, setError] = useState(null);
+
+	function chooseFile(event) {
+		const file = event.target.files?.[0];
+		setError(null);
+
+		if (!file) return;
+		if (!ALLOWED_AVATAR_TYPES.has(file.type)) {
+			setError("Choose a JPEG, PNG, or WebP image.");
+			return;
+		}
+		if (file.size > MAX_AVATAR_BYTES) {
+			setError("Choose an image smaller than 2 MB.");
+			return;
+		}
+
+		setPreviewUrl((current) => {
+			if (current) URL.revokeObjectURL(current);
+			return URL.createObjectURL(file);
+		});
+	}
+
+	useEffect(() => () => {
+		if (previewUrl) URL.revokeObjectURL(previewUrl);
+	}, [previewUrl]);
+
+	return (
+		<form encType="multipart/form-data">
+			<label htmlFor="avatar">Profile image</label>
+			<input
+				id="avatar"
+				name="avatar"
+				type="file"
+				accept="image/jpeg,image/png,image/webp"
+				onChange={chooseFile}
+				aria-describedby={error ? "avatar-error" : undefined}
+			/>
+			{previewUrl && <img src={previewUrl} alt="Selected profile preview" />}
+			{error && <p id="avatar-error">{error}</p>}
+		</form>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	P[User picks file] --> CV[Client type and size guidance]
+	CV -->|invalid| E[Accessible local error]
+	CV -->|valid| FD[Append File to FormData]
+	FD --> UP[Multipart upload]
+	UP --> SV[Server verifies size, signature, permissions]
+	SV --> SC[Malware scan and safe storage policy]
+	SC --> URL[Return controlled resource identifier]
+```
+
+The `accept` attribute and `file.type` are hints, not security guarantees. The server must inspect content, enforce size limits, generate safe storage names, scan where appropriate, restrict public access, and prevent executable content from being served unsafely. When sending `FormData`, do not manually set the multipart `Content-Type`; the browser or HTTP client adds the required boundary.
+
+## Upload Progress and Cancellation
+
+Progress needs determinate and indeterminate states because total size may be unknown.
+
+```jsx
+async function uploadDocument(file, { signal, onProgress }) {
+	const formData = new FormData();
+	formData.append("document", file);
+
+	return http.post("/documents", formData, {
+		signal,
+		onUploadProgress: ({ loaded, total }) => {
+			onProgress(total ? loaded / total : null);
+		},
+	});
+}
+```
+
+Canceling the client request does not necessarily delete a partially stored server upload. Define server cleanup, resumability, and idempotency for large or critical files.
+
+## Multi-Step Forms
+
+Multi-step forms reduce visual complexity but introduce persistence, navigation, cross-step validation, and recovery concerns.
+
+```mermaid
+stateDiagram-v2
+	[*] --> Identity
+	Identity --> Contact: step valid
+	Contact --> Identity: back
+	Contact --> Review: step valid
+	Review --> Contact: edit
+	Review --> Submitting: confirm
+	Submitting --> Review: server rejects
+	Submitting --> Complete: committed
+	Complete --> [*]
+```
+
+Choose where the draft lives based on lifetime:
+
+| Required lifetime | Suitable owner |
+|---|---|
+| One rendered step | Local state or form library |
+| Across sibling steps | Common route/layout owner |
+| Across routes | Route context, external store, or server draft |
+| Across devices/sessions | Authenticated server-side draft |
+
+Validate each step for progression and validate the complete payload again at final submission. Keep Back navigation predictable, indicate progress textually, and let users review consequential values before commitment.
+
+## Conditional Fields
+
+Conditional fields should follow explicit business state and have a defined value policy when hidden.
+
+```jsx
+{employmentType === "contract" && (
+	<label>
+		Contract end date
+		<input name="contractEndDate" type="date" required />
+	</label>
+)}
+```
+
+Decide whether hiding a field unregisters and clears it or preserves its draft for later. Never submit a hidden stale value accidentally. Server validation must apply conditions independently from the client display.
+
+## Async Field Validation
+
+Checks such as username availability require race control and should complement, not replace, authoritative submission validation.
+
+```jsx
+function useUsernameAvailability(username) {
+	const [state, setState] = useState({ status: "idle", message: null });
+
+	useEffect(() => {
+		if (username.length < 3) {
+			setState({ status: "idle", message: null });
+			return;
+		}
+
+		const controller = new AbortController();
+		const timerId = window.setTimeout(async () => {
+			setState({ status: "checking", message: null });
+			try {
+				const available = await accountsApi.isUsernameAvailable(username, {
+					signal: controller.signal,
+				});
+				setState({
+					status: available ? "available" : "unavailable",
+					message: available ? "Username is available." : "Username is already used.",
+				});
+			} catch (error) {
+				if (error.name !== "AbortError") {
+					setState({ status: "error", message: "Availability check failed." });
+				}
+			}
+		}, 400);
+
+		return () => {
+			window.clearTimeout(timerId);
+			controller.abort();
+		};
+	}, [username]);
+
+	return state;
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant D as Debounce timer
+	participant A as Availability API
+	participant F as Field status
+	U->>D: Type candidate one
+	U->>D: Type candidate two
+	D--xD: Cancel obsolete timer
+	D->>A: Check latest candidate
+	U->>D: Type candidate three
+	D--xA: Abort obsolete request
+	D->>A: Check latest candidate
+	A-->>F: Latest result only
+```
+
+Availability can change between the check and submission. A unique database constraint and clear server error remain mandatory.
+
+## Editing Existing Records
+
+Separate server snapshots from editable drafts. Initialize a draft when the record identity changes, then track dirty fields rather than continuously overwriting edits when background data refreshes.
+
+Potential conflict strategies include:
+
+- Reject stale updates using an entity version or ETag.
+- Show changed server values and let the user reconcile.
+- Merge only non-dirty fields where domain-safe.
+- Lock records for workflows that genuinely require exclusive editing.
+
+```mermaid
+flowchart TD
+	S[Server snapshot version 4] --> D[User edit draft]
+	D --> M[Submit with expected version 4]
+	M --> V{Current server version?}
+	V -->|4| C[Commit version 5]
+	V -->|5 or later| X[Conflict response]
+	X --> R[Reload, compare, or merge explicitly]
+```
+
+Blindly replacing server records from an old form can silently erase another user's changes.
+
+## Unsaved Changes
+
+Track meaningful dirtiness by comparing normalized draft values with the loaded baseline or by using form-library metadata. A navigation blocker should appear only when leaving would lose real work.
+
+Persist drafts when the workflow is long, but avoid storing passwords, payment data, health information, tokens, or other sensitive values in local storage. Clear server drafts according to retention policy.
+
+## Form Security
+
+```mermaid
+flowchart TB
+	B[Browser form] --> TLS[HTTPS transport]
+	TLS --> CSRF[CSRF and origin policy]
+	CSRF --> AUTH[Authentication and authorization]
+	AUTH --> PARSE[Strict parsing and size limits]
+	PARSE --> VALID[Server validation]
+	VALID --> TX[Parameterized transaction]
+	TX --> AUDIT[Redacted audit and response]
+```
+
+| Risk | Required mitigation |
+|---|---|
+| Client validation bypass | Repeat every rule server-side |
+| CSRF with cookie auth | SameSite policy plus token/origin defenses as required |
+| Injection | Parameterized database/API operations; never concatenate commands |
+| XSS | Render data as text; sanitize intentional rich HTML |
+| Mass assignment | Allowlist accepted server fields |
+| Overposting privilege fields | Ignore/reject client-controlled roles and ownership |
+| Duplicate financial/order mutation | Server idempotency key and transaction rules |
+| Sensitive logging | Redact passwords, tokens, payment and personal data |
+| File upload abuse | Size/type/signature validation, scanning, safe storage |
+| Brute force/abuse | Rate limits, monitoring, and risk-appropriate controls |
+
+Password confirmation, disabled buttons, hidden inputs, and route guards are user-interface features, not security boundaries. Hidden fields are fully editable by users.
+
+## Form Performance
+
+- Keep rapidly changing field state close to the field or form owner.
+- Prefer uncontrolled registration/subscriptions for very large independent forms.
+- Split sections so unrelated fields do not rerender together.
+- Derive simple validation instead of synchronizing duplicate error state through effects.
+- Debounce only expensive or remote checks, not the visible input value.
+- Virtualize exceptionally large repeated editors only after preserving keyboard/focus behavior.
+- Avoid recreating large schemas and default-value objects unnecessarily.
+- Profile before applying `memo`, `useMemo`, or `useCallback` broadly.
+
+Rendering a normal form on each keystroke is often acceptable. Optimization is justified when profiling shows expensive dependent UI, broad context updates, very large arrays, or heavy third-party controls.
+
+## Testing Forms
+
+Test forms through labels, roles, visible messages, keyboard interactions, and submission outcomes.
+
+```jsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+test("preserves input and shows a server email error", async () => {
+	const user = userEvent.setup();
+	const createAccount = vi.fn().mockRejectedValue({
+		fields: { email: "An account already uses this email." },
+	});
+
+	render(<AccountForm onCreate={createAccount} />);
+
+	await user.type(screen.getByLabelText(/name/i), "Asha Rao");
+	await user.type(screen.getByLabelText(/email/i), "asha@example.com");
+	await user.click(screen.getByRole("button", { name: /create account/i }));
+
+	expect(await screen.findByText(/already uses this email/i)).toBeVisible();
+	expect(screen.getByLabelText(/email/i)).toHaveValue("asha@example.com");
+});
+```
+
+Coverage should include:
+
+- Keyboard-only completion and submission.
+- Native and custom validation behavior.
+- Error associations and focus movement.
+- Loading, duplicate click, failure, retry, and success.
+- Server field and form-level errors.
+- Dynamic add/remove/reorder behavior.
+- File type, size, cancellation, and upload failure.
+- Dirty-state navigation and draft restoration.
+- Browser autofill and password-manager behavior where critical.
+- End-to-end validation of the real API contract.
+
+Do not test by calling component handlers directly. Use representative user interactions so DOM and accessibility contracts participate.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Missing label | Control lacks an accessible name | Associate `<label>` with stable `id` |
+| Placeholder used as label | Instruction disappears during entry | Use persistent visible label |
+| Utility button lacks type | Unexpected form submission | Set `type="button"` |
+| Controlled value can become `undefined` | Controlled/uncontrolled warning | Initialize with a compatible value |
+| Number parsed on every keystroke | Empty/intermediate states break | Store edit string; parse at boundary |
+| Errors shown before interaction | Hostile and noisy experience | Validate on submit/blur or after touch |
+| Client validation trusted | Attackers bypass rules | Validate and authorize server-side |
+| Input cleared after server failure | User loses work | Preserve draft and map errors |
+| One `isLoading` flag | Validation/submission states blur | Model explicit status |
+| Submit disabled forever after error | Retry becomes impossible | Restore editing state |
+| Multipart header set manually | Missing boundary breaks upload | Let browser/client set it |
+| File type trusted from client | Malicious content accepted | Inspect and validate server-side |
+| Array index used as React key | Row values/focus move incorrectly | Use stable generated record ID |
+| Server data continuously copied into draft | User edits are overwritten | Initialize by identity and handle conflicts |
+| Sensitive draft stored locally | Data persists beyond intended scope | Keep sensitive values ephemeral |
+| Every field in global state | Broad renders and coupling | Keep draft state near the form |
+
+## Production Checklist
+
+1. Define the form's data owner, mutation owner, and success destination.
+2. Use semantic controls, labels, fieldsets, legends, and button types.
+3. Select controlled, uncontrolled, or library ownership intentionally.
+4. Normalize and validate values at explicit boundaries.
+5. Repeat all validation and authorization on the server.
+6. Associate help and error text programmatically with fields.
+7. Focus a useful error summary or first invalid field after submission.
+8. Preserve input across recoverable failures.
+9. Prevent accidental duplicates and use server idempotency where needed.
+10. Cancel obsolete requests and define retry behavior.
+11. Handle dirty drafts, record conflicts, and navigation loss.
+12. Validate files by content and policy on the server.
+13. Redact sensitive values from logs, analytics, and storage.
+14. Test keyboard, assistive-technology, mobile, autofill, and API behavior.
+15. Monitor validation failures, abandonment, latency, and mutation errors without collecting sensitive field contents.
+
+## Real-World Form Architectures
+
+### E-Commerce Checkout
+
+Use semantic address/payment sections, server-owned cart totals, explicit shipping and tax recalculation, idempotent order creation, and a final review step. Never trust hidden prices, discounts, inventory, or client-computed totals.
+
+### Banking Transfer
+
+Use a reducer or state machine for entry, review, authorization, submission, and receipt. Validate recipient, limits, balances, and permissions server-side; use idempotency; avoid ambiguous retries; and provide a stable transaction reference.
+
+### HRMS Employee Onboarding
+
+Use React Hook Form for dynamic dependents/documents, schema guidance, server field errors, resumable server drafts, role-aware sections, file scanning, and an accessible progress model. Restrict who can read the submitted personal data.
+
+### CRM Record Editing
+
+Keep a local edit draft separate from cached server data, track dirty fields, submit with a record version, map domain errors, and provide explicit conflict resolution when another user updates the record.
+
+### Search and Filters
+
+Use urgent controlled state for typing and place shareable committed filters in URL search parameters. Defer expensive result rendering or debounce remote requests without delaying visible input feedback.
+
+A professional form preserves user effort, exposes a clear correction path, treats the server as authority, and remains usable across keyboard, touch, assistive technology, slow networks, and failure states.
 
 ---
 
