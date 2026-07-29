@@ -13915,38 +13915,1067 @@ A professional tree-shaking strategy begins with analyzable modules and truthful
 
 [Previous: Tree Shaking](#module-15-tree-shaking) | [Next: Error Handling](#module-17-error-handling)
 
-Authentication proves identity; authorization decides permission. JWT is a token format, not an authentication architecture. Access tokens should be short-lived; refresh tokens rotate and require replay protection. Browser storage choice is a threat-model decision: `localStorage` is readable by successful XSS; HttpOnly Secure SameSite cookies resist token theft by JavaScript but require CSRF controls where applicable. In-memory access tokens reduce persistence but are lost on reload.
+## Introduction
+
+Authentication establishes who or what is interacting with a system. Authorization determines what that authenticated principal may do. Session management preserves authentication state across requests. These are related but separate security responsibilities.
+
+A frontend participates in authentication UX and protocol redirects, but it cannot create a trusted identity by itself. Trust is established and enforced by an identity provider, application backend, authorization server, and protected APIs.
+
+```mermaid
+flowchart LR
+	USER[User] --> CLIENT[React application]
+	CLIENT --> IDP[Identity provider or auth server]
+	CLIENT --> BACKEND[Application backend or BFF]
+	BACKEND --> API[Protected APIs]
+	IDP --> TRUST[Verified identity/session evidence]
+	TRUST --> BACKEND
+	BACKEND --> POLICY[Server authorization policy]
+	POLICY --> API
+```
+
+The core rule is: **client-side authentication state controls presentation; server-side authentication and authorization protect data and operations**.
+
+## Terminology
+
+| Term | Meaning |
+|---|---|
+| Principal | User, service, or workload represented by an identity |
+| Credential | Evidence used to authenticate, such as a password or passkey |
+| Session | Server-recognized authenticated interaction over time |
+| Identity provider | System that authenticates users and issues identity assertions |
+| Authorization server | OAuth role that issues access tokens to authorized clients |
+| Resource server | API that validates tokens and enforces access policy |
+| Access token | Credential authorizing access to a resource server |
+| Refresh token | Credential used to obtain new access tokens |
+| ID token | OpenID Connect assertion describing an authentication event/user identity |
+| Scope | Delegated API permission requested/granted in OAuth |
+| Claim | Named statement carried in a token or identity response |
+| MFA | Authentication using multiple factor categories |
+| Step-up authentication | Stronger or fresher verification for a sensitive action |
+| Federation | Trust relationship across identity domains |
+| BFF | Backend for Frontend that mediates browser/API interaction |
+
+JWT is a token serialization format. OAuth 2.0 is an authorization framework. OpenID Connect adds authentication and identity semantics to OAuth. None of these terms alone describes a complete secure architecture.
+
+## Authentication, Authorization, and Session Management
+
+```mermaid
+flowchart TD
+	REQ[Incoming request] --> AUTHN{Authenticated?}
+	AUTHN -->|no| LOGIN[Start or resume authentication]
+	AUTHN -->|yes| SESSION[Resolve trusted session/principal]
+	SESSION --> AUTHZ{Authorized for resource and action?}
+	AUTHZ -->|no| DENY[Return forbidden or conceal resource]
+	AUTHZ -->|yes| VALIDATE[Validate operation and business invariants]
+	VALIDATE --> EXECUTE[Execute and audit as required]
+```
+
+Authentication does not imply permission. A signed-in customer may read their own orders but not another customer's orders. A role can be one policy input, but ownership, tenant, account state, transaction risk, and resource attributes may also matter.
+
+## Threat Modeling First
+
+Choose an authentication architecture from threats and product constraints rather than copying token-storage snippets.
+
+Consider:
+
+- Successful cross-site scripting and token theft.
+- Cross-site request forgery against cookie-authenticated endpoints.
+- Credential stuffing and password reuse.
+- Session fixation and session hijacking.
+- Refresh-token replay.
+- OAuth redirect and authorization-code interception.
+- Login CSRF and account confusion.
+- Open redirects.
+- Malicious browser extensions or compromised devices.
+- Shared devices and unattended sessions.
+- Multi-tenant data access.
+- Privilege changes during an active session.
+- Sensitive information in logs, URLs, analytics, or error reports.
+- Dependency and identity-provider compromise.
+
+```mermaid
+flowchart TD
+	ASSET[Identity, session, account data, privileged actions] --> ACTOR[Identify users and attackers]
+	ACTOR --> ENTRY[Map login, callback, refresh, API, logout paths]
+	ENTRY --> THREAT[Analyze XSS, CSRF, replay, redirect, fixation]
+	THREAT --> CONTROL[Select architecture and controls]
+	CONTROL --> TEST[Test abuse cases and recovery]
+	TEST --> MONITOR[Monitor and revise]
+```
+
+No browser storage choice eliminates all threats. HttpOnly cookies reduce JavaScript token theft but require CSRF design. In-memory tokens reduce persistence but remain usable by active malicious JavaScript. `localStorage` survives reloads but is readable by any successful same-origin script execution.
+
+## Common Browser Architectures
+
+### Server Session Cookie
+
+The server stores session state and sends the browser an opaque session identifier in a secure cookie.
 
 ```mermaid
 sequenceDiagram
- participant U as User
- participant R as React app
- participant A as Auth API
- participant P as Protected API
- U->>R: Submit credentials
- R->>A: Login over TLS
- A-->>R: Secure refresh cookie + access/session state
- R->>P: Authorized request
- P-->>R: 401 expired
- R->>A: Single-flight refresh
- A-->>R: Rotated session/access token
- R->>P: Retry once
+	participant U as User
+	participant B as Browser
+	participant S as Application server
+	participant DB as Session store
+	U->>B: Submit login or complete federation
+	B->>S: Authentication request over TLS
+	S->>DB: Create rotated session
+	S-->>B: Set-Cookie opaque session id
+	B->>S: Request with cookie
+	S->>DB: Resolve session and principal
+	DB-->>S: Session state
+	S-->>B: Authorized response
 ```
 
+Advantages:
+
+- Tokens and server credentials need not be exposed to browser JavaScript.
+- Immediate server-side revocation is straightforward.
+- Session policy can remain centralized.
+
+Tradeoffs:
+
+- Requires session storage or a verifiable server session design.
+- Cookie-authenticated unsafe requests require CSRF protection.
+- Cross-origin deployments need careful cookie and CORS configuration.
+
+### Backend for Frontend
+
+A BFF keeps OAuth tokens on a trusted backend and gives the browser an HttpOnly session cookie. The browser calls the BFF, which calls downstream APIs.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser SPA
+	participant F as BFF
+	participant I as Identity provider
+	participant A as Protected API
+	B->>F: Begin login
+	F->>I: Authorization request
+	I-->>F: Authorization response
+	F->>I: Redeem code from trusted server
+	I-->>F: Tokens
+	F-->>B: Secure HttpOnly session cookie
+	B->>F: Same-origin API request plus CSRF protection
+	F->>A: Access token on server side
+	A-->>F: Protected result
+	F-->>B: Browser-safe response
+```
+
+The BFF pattern can reduce token exposure and simplify browser CORS, but it adds server infrastructure, session management, CSRF controls, scaling, and operational ownership.
+
+### Public SPA with OAuth/OIDC
+
+A browser SPA is a public client: it cannot keep a client secret. It commonly uses Authorization Code with PKCE through a standards-compliant identity SDK.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser SPA
+	participant I as Identity provider
+	participant A as API
+	B->>B: Generate verifier, challenge, state, nonce
+	B->>I: Authorization request with challenge
+	I->>I: Authenticate and obtain consent
+	I-->>B: Redirect with code and state
+	B->>B: Validate state and callback context
+	B->>I: Redeem code plus verifier
+	I-->>B: ID/access tokens per policy
+	B->>B: Validate SDK-managed response
+	B->>A: Access token for intended audience
+	A-->>B: Protected response
+```
+
+PKCE binds the authorization code to the client instance that initiated the flow. `state` correlates requests and helps prevent request-forgery/account-confusion attacks. OIDC `nonce` binds the ID token to the authentication request. Use a maintained SDK rather than hand-building protocol validation.
+
+## Choosing an Architecture
+
+```mermaid
+flowchart TD
+	START[Browser authentication requirement] --> SERVER{Can a trusted same-site backend/BFF own the session?}
+	SERVER -->|yes| COOKIE[Prefer server/BFF session for strong token isolation]
+	SERVER -->|no| SPA[Public SPA OAuth/OIDC flow]
+	SPA --> SDK[Use Authorization Code plus PKCE with maintained SDK]
+	COOKIE --> CSRF[Design cookie and CSRF controls]
+	SDK --> STORE[Define in-memory/persistence and refresh policy]
+	CSRF --> TEST[Threat-model and test full lifecycle]
+	STORE --> TEST
+```
+
+Decision inputs include hosting topology, API ownership, identity provider capability, offline needs, cross-origin constraints, regulation, session revocation, mobile/native clients, and operational capacity.
+
+## Cookies
+
+Authentication cookies should generally use:
+
+```http
+Set-Cookie: __Host-session=<opaque>; Path=/; Secure; HttpOnly; SameSite=Lax
+```
+
+| Attribute | Purpose |
+|---|---|
+| `Secure` | Sends cookie only over HTTPS, except browser-defined local behavior |
+| `HttpOnly` | Prevents JavaScript from reading the cookie |
+| `SameSite` | Restricts cross-site sending according to `Strict`, `Lax`, or `None` semantics |
+| `Path` | Limits request paths receiving the cookie |
+| `Domain` | Broadens host scope; omit when host-only is desired |
+| `Max-Age`/`Expires` | Controls persistence; omit for browser-session cookie |
+
+The `__Host-` prefix requires `Secure`, `Path=/`, and no `Domain`, helping prevent weaker subdomain cookie injection. Support depends on browser behavior, but modern production architectures should use the strongest appropriate attributes.
+
+`SameSite=None` requires `Secure` and permits cross-site sending. Use it only when the deployment genuinely requires cross-site cookies and pair it with robust CSRF protection. Same-site is not the same as same-origin.
+
+## CSRF Protection
+
+CSRF exploits automatic credential inclusion, commonly cookies, to cause an unwanted state-changing request.
+
+```mermaid
+sequenceDiagram
+	participant U as User browser
+	participant M as Malicious site
+	participant A as Authenticated application
+	U->>A: Establish cookie session
+	U->>M: Visit attacker-controlled page
+	M->>A: Trigger cross-site mutation request
+	A->>A: Check SameSite, Origin, CSRF token, method/content type
+	alt controls pass legitimately
+		A-->>U: Process request
+	else forged request
+		A-->>U: Reject
+	end
+```
+
+Defense in depth can include:
+
+- Appropriate `SameSite` cookies.
+- Synchronizer tokens stored server-side and submitted explicitly.
+- Signed double-submit cookie patterns implemented correctly.
+- `Origin`/`Referer` validation for unsafe methods.
+- Requiring custom headers and rejecting simple cross-site content types.
+- Avoiding state changes through `GET`.
+- Reauthentication for highly sensitive operations.
+
+Do not treat CORS as a complete CSRF defense. CORS primarily controls whether browser JavaScript can read responses; some cross-origin requests can still be sent.
+
+## XSS and Token Exposure
+
+Successful XSS runs with the application's origin privileges.
+
+```mermaid
+flowchart TD
+	XSS[Attacker executes same-origin script] --> READ{Credential readable by JavaScript?}
+	READ -->|local/session storage| STEAL[Exfiltrate reusable credential]
+	READ -->|memory| USE[Use credential during active compromise]
+	READ -->|HttpOnly cookie| REQUEST[Cannot read cookie, but can issue authenticated requests]
+	STEAL --> REPLAY[Replay elsewhere until expiry/revocation]
+	USE --> DAMAGE[Perform user-authorized actions]
+	REQUEST --> DAMAGE
+```
+
+HttpOnly cookies materially reduce direct credential exfiltration but do not make XSS harmless. Prevent XSS with framework-safe rendering, output encoding, sanitization for trusted HTML use cases, CSP, dependency controls, and avoidance of dangerous DOM APIs.
+
+Never render untrusted HTML with `dangerouslySetInnerHTML` without a reviewed sanitizer and clear content policy.
+
+## Token Storage Tradeoffs
+
+| Location | Persistence | JavaScript readable | Primary concerns |
+|---|---:|---:|---|
+| HttpOnly cookie | Session or persistent | No | CSRF, ambient authority, cookie scope |
+| JavaScript memory | Until reload/tab close | Yes during execution | XSS can use it; refresh loses state |
+| `sessionStorage` | Per tab/session | Yes | XSS theft, duplicated-tab behavior |
+| `localStorage` | Persistent | Yes | XSS theft and long-lived replay |
+| IndexedDB | Persistent | Yes | XSS theft, complexity, offline data exposure |
+
+There is no universally safe browser-accessible token store. Prefer architecture-level token isolation such as a BFF when risk and infrastructure justify it. If a SPA must hold tokens, minimize lifetime, audience, scope, persistence, and exposure.
+
+## Access Tokens, ID Tokens, and Refresh Tokens
+
+An access token is intended for a resource server. An ID token is intended for the client and communicates authentication claims. Do not send an ID token to an API as an access token.
+
+```mermaid
+flowchart LR
+	IDP[Identity provider] --> ID[ID token]
+	IDP --> ACCESS[Access token]
+	IDP --> REFRESH[Refresh token where allowed]
+	ID --> CLIENT[Client identity/session UX]
+	ACCESS --> API[Resource server authorization]
+	REFRESH --> AS[Authorization server token endpoint]
+	REFRESH -. not sent to resource API .-> API
+```
+
+Tokens should be restricted by audience, issuer, scope, lifetime, and where supported sender constraints. The API validates tokens; the frontend decoding a token is not validation.
+
+## JWT Validation
+
+A resource server accepting a JWT access token typically validates:
+
+- Cryptographic signature with trusted current keys.
+- Allowed algorithm policy.
+- Issuer (`iss`).
+- Audience (`aud`).
+- Expiration (`exp`) and, where relevant, not-before (`nbf`).
+- Token type or profile expectations.
+- Required scopes/permissions.
+- Tenant and subject constraints.
+- Revocation/session state where architecture requires it.
+
+```mermaid
+flowchart TD
+	TOKEN[Bearer token] --> PARSE[Parse without trusting claims]
+	PARSE --> SIG{Valid signature and algorithm?}
+	SIG -->|no| REJECT[Reject]
+	SIG -->|yes| ISS{Trusted issuer and audience?}
+	ISS -->|no| REJECT
+	ISS -->|yes| TIME{Valid time window?}
+	TIME -->|no| REJECT
+	TIME -->|yes| POLICY{Required scope and resource policy?}
+	POLICY -->|no| FORBID[Forbid]
+	POLICY -->|yes| ALLOW[Process authorized operation]
+```
+
+The frontend may decode claims for non-authoritative display hints, but it must handle missing/stale claims and never use decoded content as trusted proof.
+
+## OAuth/OIDC Request Protections
+
+Authorization requests should use exact registered redirect URIs and appropriate protections:
+
+- Authorization Code flow with PKCE for public browser clients.
+- High-entropy `state` bound to the initiating browser transaction.
+- OIDC `nonce` validated through the SDK.
+- Issuer and authorization-server mix-up defenses provided by current libraries/profiles.
+- Exact callback routing and one-time transaction handling.
+- No wildcard redirect URIs unless a provider-specific reviewed case requires them.
+- No tokens in query strings or application logs.
+
+Implicit flow returns tokens through the browser redirect and is not the preferred modern SPA flow. Resource Owner Password Credentials bypasses modern federation controls and should not be used for ordinary frontend authentication.
+
+## Login State Machine
+
+Authentication state should be explicit rather than represented only by `user === null`.
+
+```mermaid
+stateDiagram-v2
+	[*] --> unknown
+	unknown --> anonymous: session check says no session
+	unknown --> authenticated: session restored
+	unknown --> error: bootstrap failure
+	anonymous --> redirecting: start login
+	redirecting --> callback: provider redirects back
+	callback --> authenticated: callback validated
+	callback --> anonymous: denied or invalid
+	authenticated --> refreshing: access expires
+	refreshing --> authenticated: refresh succeeds
+	refreshing --> anonymous: session no longer valid
+	authenticated --> anonymous: logout/revocation
+	error --> unknown: retry
+```
+
+Suggested statuses:
+
+```ts
+type AuthState =
+	| { status: "unknown" }
+	| { status: "anonymous" }
+	| { status: "redirecting" }
+	| { status: "authenticated"; user: UserSummary }
+	| { status: "refreshing"; user: UserSummary }
+	| { status: "error"; error: PublicAuthError };
+```
+
+This prevents protected content flashes, redirect loops, and confusion between an anonymous session and a failed network request.
+
+## Session Bootstrap
+
+Resolve authentication before rendering protected application routes.
+
 ```jsx
-function RequireRole({ allow }) {
-	const { status, user } = useAuth();
-	if (status === "loading") return <PageSpinner />;
-	if (!user) return <Navigate to="/login" replace />;
-	return allow.includes(user.role) ? <Outlet /> : <Navigate to="/forbidden" replace />;
+function AuthBootstrap({ children }) {
+	const { status, restoreSession } = useAuth();
+
+	useEffect(() => {
+		const controller = new AbortController();
+		restoreSession({ signal: controller.signal });
+		return () => controller.abort();
+	}, [restoreSession]);
+
+	if (status === "unknown") {
+		return <FullPageProgress label="Checking your session" />;
+	}
+
+	if (status === "error") {
+		return <SessionUnavailable />;
+	}
+
+	return children;
 }
 ```
 
-This guard improves UX only. The API must enforce authorization for every protected operation. On startup, resolve session before rendering protected content to avoid flashes. A refresh implementation should queue concurrent failures behind one promise, retry once, reject on refresh failure, clear cached user data, and redirect without loops. Logout should invalidate the server session/refresh token, clear client caches, close sensitive subscriptions, and broadcast across tabs if required.
+In a production implementation, ensure `restoreSession` has stable semantics according to the application's React patterns. Do not interpret offline/network failure as definite logout; present recovery when the server session may still be valid.
 
-Never decode a JWT and treat claims as trusted authorization without server verification. Do not log tokens, place them in URLs, or store secrets in the bundle. Add CSP, output encoding, dependency hygiene, CSRF strategy, idle/absolute timeout policy, audit logging, and step-up authentication for high-risk banking actions.
+## Protected Routes
 
-**Mini project:** role-based banking shell with bootstrap, cookie session, refresh rotation simulation, multi-tab logout, return URL validation, and authorization tests. **Interview:** private routes do not secure data; only server authorization does.
+```jsx
+function RequireAuthentication() {
+	const location = useLocation();
+	const { status } = useAuth();
+
+	if (status === "unknown" || status === "refreshing") {
+		return <PageSpinner />;
+	}
+
+	if (status !== "authenticated") {
+		const returnTo = `${location.pathname}${location.search}`;
+		return (
+			<Navigate
+				to="/login"
+				replace
+				state={{ returnTo }}
+			/>
+		);
+	}
+
+	return <Outlet />;
+}
+```
+
+Validate return destinations against same-origin allowlisted application paths. Never redirect directly to an arbitrary query-string URL.
+
+```jsx
+function safeReturnPath(candidate) {
+	if (typeof candidate !== "string" || !candidate.startsWith("/")) {
+		return "/";
+	}
+
+	if (candidate.startsWith("//") || candidate.includes("\\")) {
+		return "/";
+	}
+
+	return candidate;
+}
+```
+
+Route guards prevent confusing UI access. They do not protect API resources, hidden buttons, downloaded data, or direct HTTP requests.
+
+## Authorization Models
+
+Common models include:
+
+| Model | Decision inputs | Suitable examples |
+|---|---|---|
+| RBAC | Roles and permissions | Support agent, administrator |
+| ABAC | Subject, resource, action, environment attributes | Transaction risk and geography |
+| ReBAC | Relationships between principals/resources | Document owner, team member |
+| Entitlements | Product/tenant capabilities | Licensed reporting feature |
+| Ownership checks | Resource belongs to authenticated subject | Customer order/account |
+
+```mermaid
+flowchart TD
+	ACTION[Requested action] --> SUBJECT[Trusted principal attributes]
+	ACTION --> RESOURCE[Loaded resource attributes]
+	ACTION --> CONTEXT[Time, tenant, risk, device context]
+	SUBJECT --> POLICY[Server policy decision]
+	RESOURCE --> POLICY
+	CONTEXT --> POLICY
+	POLICY -->|allow| EXECUTE[Execute operation]
+	POLICY -->|deny| DENY[Deny and audit as appropriate]
+```
+
+Frontend permission checks should use server-provided capabilities to present relevant UI, while the API independently enforces every action.
+
+```jsx
+function Can({ permission, children, fallback = null }) {
+	const { permissions } = useAuth();
+	return permissions.includes(permission) ? children : fallback;
+}
+```
+
+Avoid scattering raw role-name comparisons through components. Capabilities communicate intent better and make policy changes less invasive, though they remain presentation hints on the client.
+
+## `401` Versus `403`
+
+| Status | Meaning | Typical frontend behavior |
+|---|---|---|
+| `401 Unauthorized` | Missing, expired, or unacceptable authentication | Attempt one permitted refresh or begin login |
+| `403 Forbidden` | Authenticated but not allowed | Show access-denied state; do not refresh repeatedly |
+| `404 Not Found` | Resource absent or intentionally concealed | Show not-found state without leaking existence |
+
+Do not refresh on every `403`, retry indefinitely, or convert all API failures into logout.
+
+## Refresh Coordination
+
+When several requests receive `401` simultaneously, launch one refresh and queue the rest behind it.
+
+```mermaid
+sequenceDiagram
+	participant R1 as Request A
+	participant R2 as Request B
+	participant C as API client
+	participant S as Auth server
+	R1->>C: API call
+	R2->>C: API call
+	C-->>R1: 401 observed
+	C-->>R2: 401 observed
+	C->>S: One refresh request
+	S-->>C: Rotated session/access token
+	C->>C: Release queued requests
+	C-->>R1: Retry once
+	C-->>R2: Retry once
+```
+
+```js
+let refreshPromise = null;
+
+async function refreshOnce() {
+	if (!refreshPromise) {
+		refreshPromise = refreshSession().finally(() => {
+			refreshPromise = null;
+		});
+	}
+
+	return refreshPromise;
+}
+
+async function authorizedFetch(input, init = {}) {
+	let response = await fetch(input, credentials(init));
+
+	if (response.status !== 401 || init.authRetry) {
+		return response;
+	}
+
+	await refreshOnce();
+	response = await fetch(input, credentials({ ...init, authRetry: true }));
+	return response;
+}
+```
+
+This illustrates concurrency, not a complete client. Exclude login, refresh, and logout endpoints from interception; preserve abort signals; retry only once; handle non-replayable request bodies; and clear authenticated caches when refresh definitively fails.
+
+## Refresh Token Rotation and Replay
+
+With refresh-token rotation, each use returns a new token and invalidates or supersedes the old token. Reuse of an old token can indicate theft.
+
+```mermaid
+sequenceDiagram
+	participant C as Legitimate client
+	participant A as Authorization server
+	participant X as Attacker with copied token
+	C->>A: Use refresh token R1
+	A-->>C: Access token plus R2; retire R1
+	X->>A: Replay R1
+	A->>A: Detect retired-token reuse
+	A-->>X: Reject
+	A->>A: Revoke token family/session per policy
+```
+
+The server must implement rotation atomically and define concurrency grace carefully. The frontend should serialize refresh work and respond to replay/session revocation without loops.
+
+## Token Expiry and Clock Skew
+
+Do not rely solely on client clocks for authorization. The API validates expiry. A client may refresh shortly before expiration to improve UX, but server `401` handling remains necessary.
+
+Avoid decoding an access token every render. Centralize lifecycle management in the identity SDK or auth service. Account for sleep/wake, suspended tabs, clock changes, and offline periods.
+
+## Password Authentication
+
+When the application directly handles passwords:
+
+- Submit only over HTTPS.
+- Never log, persist, replay, or place passwords in URLs.
+- Allow password managers and paste.
+- Use appropriate `autocomplete` values such as `username`, `current-password`, and `new-password`.
+- Do not impose arbitrary composition rules that reduce usability; follow current organizational/identity guidance.
+- Support breached-password screening and server-side rate controls where applicable.
+- Hash passwords server-side with a suitable adaptive password hashing algorithm.
+- Return generic authentication failures that avoid account enumeration while preserving supportability.
+
+```jsx
+<form onSubmit={handleSubmit}>
+	<label htmlFor="email">Email</label>
+	<input id="email" name="email" type="email" autoComplete="username" required />
+
+	<label htmlFor="password">Password</label>
+	<input
+		id="password"
+		name="password"
+		type="password"
+		autoComplete="current-password"
+		required
+	/>
+
+	<button type="submit">Sign in</button>
+</form>
+```
+
+Disable duplicate submission while a request is pending, but restore controls after recoverable failure and announce errors accessibly.
+
+## Passkeys and WebAuthn
+
+Passkeys use WebAuthn public-key credentials and can provide phishing-resistant authentication when deployed correctly. The server creates challenges and validates responses; the browser invokes the credential API.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant S as Application server
+	participant A as Authenticator
+	B->>S: Request authentication options
+	S-->>B: Challenge, RP ID, allowed credentials/policy
+	B->>A: navigator.credentials.get options
+	A->>A: User verification
+	A-->>B: Signed assertion
+	B->>S: Return assertion
+	S->>S: Verify challenge, origin, RP ID, signature, counters/policy
+	S-->>B: Establish authenticated session
+```
+
+Use a maintained server library and browser integration. Challenges must be random, short-lived, single-use, and bound to the ceremony. Verify origin, relying-party ID, credential public key, and user/account binding on the server.
+
+Design account recovery so it does not become weaker than the passkey authentication it replaces.
+
+## MFA
+
+MFA combines factors from distinct categories:
+
+- Knowledge: something the user knows.
+- Possession: something the user has.
+- Inherence: something the user is.
+
+Two passwords are not two factors. Prefer phishing-resistant methods for high-risk systems. SMS can be better than password-only in some contexts but has interception, SIM-swap, and delivery risks.
+
+Provide recovery codes or an appropriately secured recovery process. Display recovery codes once, encourage protected storage, and never expose them through logs or analytics.
+
+## Step-Up Authentication
+
+Sensitive operations may require recent or stronger authentication even within a valid session.
+
+```mermaid
+stateDiagram-v2
+	[*] --> authenticated
+	authenticated --> sensitiveAction: user requests transfer/change
+	sensitiveAction --> stepUpRequired: server requires stronger/fresh auth
+	stepUpRequired --> verifying: passkey/MFA/reauthentication
+	verifying --> authorizedWindow: verification succeeds
+	verifying --> authenticated: denied/cancelled
+	authorizedWindow --> completed: server executes action
+	authorizedWindow --> authenticated: window expires
+```
+
+The server decides whether step-up is required and binds successful verification to the intended session/action or a short authorization window. A modal shown only by the frontend is not a security control.
+
+## Session Lifetime
+
+Define:
+
+- Idle timeout based on inactivity.
+- Absolute maximum session lifetime.
+- Access-token lifetime.
+- Refresh/session rotation policy.
+- Remember-me behavior.
+- Reauthentication age for sensitive actions.
+- Revocation triggers after password reset, suspected compromise, or role changes.
+
+Warn users before an idle timeout when data loss is possible, but do not extend the session solely because a timer or background request fired. Let trusted server activity policy remain authoritative.
+
+## Logout
+
+Logout is a security workflow, not just deleting a React user object.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant C as React client
+	participant B as Backend/auth server
+	participant T as Other tabs
+	U->>C: Select logout
+	C->>B: Invalidate server session/refresh credential
+	B-->>C: Clear authentication cookie/session
+	C->>C: Clear user-specific caches and state
+	C->>C: Close sockets/workers/subscriptions
+	C->>T: Broadcast logout event
+	C->>C: Navigate to signed-out route
+```
+
+Consider identity-provider logout separately from local application logout. Global single sign-out behavior varies and can produce surprising cross-application effects. Use exact post-logout redirect allowlists.
+
+Clear sensitive query caches, persisted state, drafts according to policy, WebSocket subscriptions, and service-worker messages. Do not delete unrelated user preferences unnecessarily.
+
+## Multi-Tab Coordination
+
+Tabs can disagree after login, logout, refresh, or account changes. Use `BroadcastChannel` where supported or carefully scoped storage events for non-secret event messages.
+
+```js
+const authChannel = new BroadcastChannel("auth-events");
+
+authChannel.addEventListener("message", ({ data }) => {
+	if (data?.type === "signed-out") {
+		clearAuthenticatedState();
+		navigateToSignedOutPage();
+	}
+});
+
+export function announceLogout() {
+	authChannel.postMessage({ type: "signed-out" });
+}
+```
+
+Never broadcast tokens. Treat channel messages as hints; confirm trusted session state with the server when needed. Coordinate refresh across tabs only if the architecture requires it and race behavior is well understood.
+
+## Offline and Network Failure
+
+Network failure is not equivalent to unauthenticated state.
+
+```mermaid
+flowchart TD
+	FAIL[Session/API request fails] --> KIND{Failure type}
+	KIND -->|verified 401/session invalid| OUT[Transition to anonymous]
+	KIND -->|403| DENY[Keep session, show forbidden]
+	KIND -->|offline/timeout/5xx| UNKNOWN[Preserve cautious state and offer retry]
+	UNKNOWN --> RECOVER[Revalidate when connectivity returns]
+```
+
+Avoid redirecting to login whenever `fetch` throws. That can discard user work and create loops during outages. Sensitive offline data needs an explicit encryption, retention, and device-risk policy.
+
+## SSR and Hydration
+
+Server-rendered applications should resolve authentication per request and serialize only the minimum browser-safe user state.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant S as SSR server
+	participant SS as Session store
+	B->>S: Request with session cookie
+	S->>SS: Resolve session
+	SS-->>S: Principal and safe capabilities
+	S-->>B: HTML plus minimal escaped bootstrap state
+	B->>B: Hydrate with matching auth status
+	B->>S: Revalidate session as policy requires
+```
+
+Never use a process-global user store. Create request-scoped state to prevent cross-user leakage. Safely serialize bootstrap data against script injection, keep tokens and secrets out of HTML, and prevent private responses from entering shared CDN caches.
+
+## CORS and Credentialed Requests
+
+For cross-origin cookie requests:
+
+```js
+fetch("https://api.example.com/account", {
+	credentials: "include",
+	headers: { Accept: "application/json" },
+});
+```
+
+The API must return an exact allowed origin, permit credentials, and handle preflight correctly. `Access-Control-Allow-Origin: *` cannot be used with credentialed browser requests.
+
+CORS is not authentication. A non-browser client can call the API directly. The API must validate credentials and authorization regardless of origin headers.
+
+## Axios Interceptors
+
+Interceptors can centralize credentials and refresh handling, but they can also create retry loops and hidden coupling.
+
+```js
+api.interceptors.response.use(
+	(response) => response,
+	async (error) => {
+		const request = error.config;
+		const status = error.response?.status;
+
+		if (status !== 401 || request.authRetry || request.skipAuthRefresh) {
+			throw error;
+		}
+
+		request.authRetry = true;
+		await refreshOnce();
+		return api(request);
+	},
+);
+```
+
+Register interceptors once and eject them during teardown in test or dynamic-client scenarios. Do not intercept the refresh request itself. Preserve cancellation and avoid replaying unsafe mutations unless server/idempotency semantics permit it.
+
+## Sensitive Data in URLs
+
+URLs can enter browser history, server logs, referrer headers, screenshots, analytics, and monitoring. Never place access tokens, refresh tokens, passwords, recovery codes, or sensitive personal data in query strings.
+
+OAuth authorization responses should follow current provider/library guidance. Clean callback artifacts from the visible URL with router replacement after secure processing, without breaking protocol validation.
+
+## Error Handling
+
+Normalize authentication errors into user-safe categories:
+
+| Category | UI behavior |
+|---|---|
+| Invalid credentials | Generic sign-in error without account enumeration |
+| Interaction required | Offer sign-in or step-up action |
+| Consent denied | Explain cancellation and preserve safe return path |
+| Session expired | Clear sensitive state and request authentication |
+| Network unavailable | Preserve recoverable state and retry |
+| Account locked/disabled | Provide approved support path |
+| Callback invalid | Stop flow, clear transaction, log redacted correlation data |
+
+Do not display raw identity-provider errors, stack traces, tokens, claims, or internal policy details.
+
+## Accessibility and UX
+
+Authentication is a critical workflow and must support:
+
+- Correct labels and autocomplete attributes.
+- Keyboard-only operation.
+- Visible focus and predictable focus movement.
+- Screen-reader announcements for validation and pending states.
+- Password managers and paste.
+- Sufficient timeout warnings and extensions when policy permits.
+- Recovery paths that do not rely solely on memory or one device.
+- Clear distinction between authentication failure and service outage.
+- No countdown-only or puzzle interactions without accessible alternatives.
+
+Do not disable the sign-in button merely because fields are initially empty if doing so hides validation and keyboard behavior. Prevent duplicate requests once submission begins.
+
+## Privacy
+
+Collect and expose the minimum identity data required for the current screen. Avoid putting complete profiles or sensitive claims in client state when a display name and capabilities are sufficient.
+
+Do not send tokens, email addresses, subject identifiers, tenant IDs, or authentication errors to analytics without a documented lawful purpose, redaction policy, and access controls. Hashing an identifier does not automatically make it anonymous.
+
+## Observability and Audit
+
+Authentication telemetry should answer operational questions without recording credentials.
+
+Useful signals:
+
+- Login start/success/failure category.
+- Callback validation failure category.
+- Session bootstrap latency and availability.
+- Refresh success, failure, and replay detection.
+- Logout and revocation outcome.
+- Step-up challenge outcome.
+- Identity provider and API availability.
+- Redirect-loop detection.
+
+```mermaid
+flowchart LR
+	EVENT[Auth lifecycle event] --> REDACT[Remove credentials, raw claims, PII]
+	REDACT --> CONTEXT[Attach release, route, provider, correlation ID]
+	CONTEXT --> METRIC[Aggregate operational metrics]
+	CONTEXT --> AUDIT[Server-side security audit where required]
+	METRIC --> ALERT[Availability/anomaly alert]
+```
+
+Security audit logs should be server-generated or server-verified. Client telemetry is useful but attacker-controllable and should not be treated as authoritative evidence.
+
+## Testing Strategy
+
+Test authentication across layers.
+
+### Unit Tests
+
+- State-machine transitions.
+- Safe return-path validation.
+- Capability selectors.
+- Error normalization.
+- Refresh single-flight behavior.
+- Retry-once guard.
+
+### Integration Tests
+
+- Session bootstrap before protected rendering.
+- Login callback success and invalid state.
+- Anonymous redirect with return path.
+- `401`, `403`, offline, and server-error behavior.
+- Logout cache cleanup.
+- Multi-tab logout event.
+
+### End-to-End Tests
+
+- Real or standards-faithful identity flow in an isolated environment.
+- Direct navigation to protected routes.
+- Expired session and refresh rotation.
+- MFA/passkey flows supported by the test environment.
+- CSRF rejection and allowed legitimate mutation.
+- Role/tenant changes during sessions.
+- Logout, back button, and cached-page behavior.
+- Accessibility of login and recovery.
+
+```mermaid
+flowchart TB
+	MODEL[Auth state and pure policy helpers] --> UNIT[Unit tests]
+	CLIENT[React provider, routes, API client] --> INTEGRATION[Integration tests]
+	SERVER[Session, OAuth callback, API policy] --> CONTRACT[Contract/security tests]
+	DEPLOY[Deployed browser plus identity test tenant] --> E2E[Critical end-to-end journeys]
+	E2E --> EVIDENCE[Release evidence and monitoring]
+```
+
+Avoid embedding production credentials in tests. Use isolated test users/tenants, controlled secrets in CI, and cleanup routines. Never weaken production identity policy globally to make automation easier.
+
+## Authorization Test Matrix
+
+For each protected operation, test:
+
+- Anonymous principal.
+- Authenticated allowed principal.
+- Authenticated principal missing permission.
+- Correct role but wrong resource owner.
+- Correct role but wrong tenant.
+- Disabled or revoked account.
+- Stale token after privilege removal.
+- Malformed/expired/wrong-audience token.
+- Step-up required and completed/denied.
+
+Frontend tests confirm presentation; API tests confirm enforcement.
+
+## Secure Auth Provider Structure
+
+```jsx
+const AuthContext = createContext(null);
+
+export function AuthProvider({ children, authService }) {
+	const [state, dispatch] = useReducer(authReducer, { status: "unknown" });
+
+	useEffect(() => {
+		const controller = new AbortController();
+
+		authService.restore({ signal: controller.signal }).then(
+			(session) => dispatch({ type: "restored", session }),
+			(error) => {
+				if (!controller.signal.aborted) {
+					dispatch({ type: "restoreFailed", error: normalizeAuthError(error) });
+				}
+			},
+		);
+
+		return () => controller.abort();
+	}, [authService]);
+
+	const value = {
+		...state,
+		login: (options) => authService.login(options),
+		logout: () => authService.logout(),
+		hasPermission: (permission) =>
+			state.status === "authenticated" &&
+			state.permissions.includes(permission),
+	};
+
+	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+```
+
+Keep protocol details inside an auth service or maintained SDK adapter. Components consume stable application state and commands. Do not expose raw refresh tokens through context.
+
+## Security Headers
+
+Authentication benefits from host-level controls:
+
+- Content Security Policy.
+- `frame-ancestors` to prevent unauthorized framing/clickjacking.
+- `X-Content-Type-Options: nosniff`.
+- Referrer policy to reduce URL leakage.
+- HSTS after HTTPS deployment is correct.
+- Permissions Policy where relevant.
+
+Header policy must be tested with identity redirects, popup flows, silent renew mechanisms, passkeys, and required third-party resources. Do not broadly allow every identity-provider domain/script source without understanding the resulting trust.
+
+## Common Mistakes
+
+| Mistake | Consequence | Professional correction |
+|---|---|---|
+| Treating JWT as an auth architecture | Missing lifecycle and threat controls | Design protocol, storage, validation, and revocation together |
+| Storing long-lived tokens in `localStorage` by default | XSS enables reusable token theft | Prefer BFF/cookie or minimize SPA token exposure |
+| Putting a client secret in SPA config | Secret is public | Register browser as a public client |
+| Using implicit or password grant for a new SPA | Weaker/obsolete flow assumptions | Use Authorization Code with PKCE through SDK |
+| Decoding JWT and trusting claims in React | Client data treated as authority | API validates token and enforces policy |
+| Route guard considered security | Direct API calls bypass UI | Enforce every operation server-side |
+| Refreshing on every error | Loops and request storms | Refresh only eligible `401` once |
+| Concurrent refresh requests | Rotation races and revocation | Use single-flight coordination |
+| Retrying mutation blindly | Duplicate action | Require idempotency/replay-safe semantics |
+| Logging tokens or callbacks | Credential leakage | Redact and log categories/correlation IDs |
+| Arbitrary `returnTo` redirect | Open redirect/phishing | Allow only validated same-app paths |
+| CORS considered authentication/CSRF defense | Requests remain exploitable | Add credential validation and CSRF controls |
+| `SameSite=None` used casually | Broader ambient cookie exposure | Use only when required with CSRF defense |
+| Network error treated as logout | Data loss and redirect loops | Distinguish invalid session from outage |
+| Logout clears UI only | Server credential remains valid | Revoke session and clear all sensitive state |
+| Tokens broadcast across tabs | Wider credential exposure | Broadcast event hints only |
+| Client role hidden button as authorization | Operation remains callable | Enforce server capabilities/resource policy |
+| Global SSR auth store | Cross-user data leakage | Create request-scoped state |
+| User profile cached publicly | Privacy breach | Mark private responses and minimize bootstrap data |
+| Password paste disabled | Blocks managers and harms usability | Support password managers and accessible inputs |
+| Recovery weaker than MFA/passkey | Strong auth bypassed | Threat-model recovery as part of authentication |
+
+## Incident Response
+
+When credentials or tokens are exposed:
+
+1. Revoke affected sessions, refresh-token families, keys, or credentials.
+2. Determine scope, audience, lifetime, logs, and affected users/tenants.
+3. Rotate server secrets and signing keys according to controlled key-rollover procedures when necessary.
+4. Preserve audit evidence securely.
+5. Notify security/legal/privacy owners according to policy.
+6. Patch the root exposure path.
+7. Add regression tests and detection.
+8. Communicate user actions clearly when password reset or reauthentication is required.
+
+Deleting a token from source or logs does not invalidate copies already obtained.
+
+## Production Checklist
+
+1. Document authentication, authorization, session, and recovery architecture.
+2. Threat-model XSS, CSRF, replay, redirects, fixation, and multi-tenant access.
+3. Prefer trusted-server/BFF token isolation when appropriate.
+4. Treat browser SPAs as public OAuth clients with no client secret.
+5. Use Authorization Code with PKCE and a maintained SDK.
+6. Register exact redirect and post-logout destinations.
+7. Validate state, nonce, issuer, audience, signature, and time claims in the correct component.
+8. Distinguish access tokens, ID tokens, and refresh tokens.
+9. Minimize token scope, audience, lifetime, and persistence.
+10. Use Secure, HttpOnly, narrowly scoped cookies where applicable.
+11. Implement layered CSRF protection for cookie-authenticated mutations.
+12. Maintain strong XSS prevention and CSP.
+13. Resolve session state before protected rendering.
+14. Model unknown, anonymous, authenticated, refreshing, and error states explicitly.
+15. Validate all return paths against safe application routes.
+16. Coordinate refresh with one request and one retry maximum.
+17. Handle refresh rotation, replay, expiry, and revocation server-side.
+18. Distinguish `401`, `403`, offline, and server failure behavior.
+19. Enforce every authorization decision in the API.
+20. Use resource ownership and tenant checks in addition to roles.
+21. Require server-driven step-up for sensitive actions.
+22. Design passkey/MFA recovery to match authentication strength.
+23. Revoke server sessions and clear sensitive caches on logout.
+24. Coordinate logout across tabs without broadcasting credentials.
+25. Keep tokens, passwords, and sensitive claims out of URLs and logs.
+26. Make login, MFA, recovery, and timeout UX accessible.
+27. Protect SSR state from cross-request and shared-cache leakage.
+28. Test production identity flows, CSRF, refresh races, and authorization matrices.
+29. Monitor redacted auth outcomes and redirect-loop anomalies.
+30. Maintain tested incident-revocation and key-rotation procedures.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Use a server session or BFF for customer accounts when possible, preserve anonymous carts safely through login, protect address/payment mutations with CSRF and reauthentication as appropriate, and enforce order ownership on the API.
+
+### Banking
+
+Prefer phishing-resistant authentication, short sessions, device/risk signals, step-up for transfers and beneficiary changes, strong audit trails, replay protection, no client-held privileged secrets, and immediate server authorization for every account action.
+
+### Enterprise CRM
+
+Federate with enterprise identity, map groups to application capabilities server-side, enforce tenant/customer boundaries, respond to role revocation during active sessions, and provide audited administrative impersonation only through a controlled backend workflow.
+
+### Multi-Tenant SaaS
+
+Bind trusted tenant context to the authenticated session and resource lookup; never trust a tenant ID supplied only by the client. Validate invitations, tenant switching, domain discovery, and cross-tenant cache separation.
+
+### Healthcare Portal
+
+Minimize exposed identity/health data, enforce consent and relationship policies, use step-up for high-risk disclosures, protect shared-device sessions, audit access server-side, and ensure recovery and support workflows satisfy privacy requirements.
+
+### Public SPA with External Identity Provider
+
+Use Authorization Code with PKCE through the provider's maintained SPA SDK, keep tokens in memory where feasible, use narrow API audiences/scopes, coordinate refresh, validate callbacks, and test direct navigation and provider outages.
+
+### BFF Application
+
+Keep OAuth tokens server-side, issue a host-scoped HttpOnly session cookie, require CSRF protection, proxy only intended API operations, centralize refresh/revocation, and scale the session store with explicit idle and absolute expiry.
+
+A professional authentication system treats the browser as an untrusted presentation environment, keeps protocol and session responsibilities explicit, enforces authorization at protected resources, and tests the entire lifecycle from login through revocation and recovery.
 
 ---
 
