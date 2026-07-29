@@ -355,6 +355,24 @@ function App() {
 
 `App` owns state; `Quantity` receives the value and reports user intent through a callback. A click runs the handler, queues state, renders `App` and `Quantity`, and commits only changed host output. This parent-to-child data and child-to-parent event flow keeps ownership explicit.
 
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant Q as Quantity child
+	participant A as App state owner
+	participant R as React
+	participant D as Browser DOM
+	U->>Q: Click Increase
+	Q->>A: Call onChange(value + 1)
+	A->>R: setQuantity(nextValue)
+	R->>A: Render App with new snapshot
+	A->>Q: Pass updated value prop
+	Q-->>R: Return updated element output
+	R->>D: Commit changed output text
+```
+
+The sequence emphasizes ownership. The child does not mutate the parent's state. It reports intent through `onChange`; the parent queues the update; React renders a new snapshot; and only then does the committed DOM display the new quantity.
+
 React uses synthetic event objects with browser-like APIs. Use `preventDefault()` to stop a form's default navigation when managing submission in React. Use `stopPropagation()` sparingly because it changes ancestor event behavior and can make component composition surprising.
 
 ```jsx
@@ -581,37 +599,575 @@ Performance guidance:
 
 [Previous: Fundamentals](#module-1-react-fundamentals) | [Next: Lifecycle](#module-3-component-lifecycle)
 
-## Introduction and Internal Working
+## Introduction
 
-The browser owns the DOM and pixel pipeline. React holds element descriptions, update queues, hook state, and current/work-in-progress Fiber trees in JavaScript memory. Fiber replaced the older synchronous stack reconciler with units of work that can be prioritized, paused, discarded, and resumed before commit. Fiber fields are private implementation details.
+React internals explain observable application behavior: why a component can render without changing the DOM, why a changed key resets state, why effects need cleanup, why Strict Mode repeats development work, and how transitions keep urgent input responsive.
+
+The most important boundary is that React and the browser perform different jobs:
+
+- **React** calculates a desired host tree, tracks component state, schedules updates, reconciles identities, and commits host operations.
+- **The browser** owns DOM nodes, style calculation, layout geometry, painting, compositing, event delivery, and pixels on the screen.
+- **JavaScript memory** contains elements, Fibers, update queues, hook state, closures, application data, and references to browser objects.
+
+React internals are useful mental models, not public application APIs. Fiber fields, lane constants, effect flags, and implementation file names may change between releases. Production code should depend on documented React behavior rather than private fields.
+
+### Why React Introduced an Abstraction over DOM Updates
+
+Direct DOM manipulation is not inherently slow or incorrect. The difficulty appears when a large product has many states and every state transition must manually update all affected nodes while preserving consistency. React provides a declarative state-to-UI model and centralizes update coordination.
+
+| Concern | Manual imperative coordination | React coordination |
+|---|---|---|
+| Source of truth | Can become split between data and DOM | Component state/props/context describe output |
+| Update logic | Developer selects every mutation | React reconciles previous and next output |
+| Reuse | Usually convention-based | Components provide explicit boundaries |
+| Scheduling | Commands execute when called | Updates enter React's scheduling model |
+| State preservation | Developer manages node/instance identity | Type, position, and key guide identity |
+| Cost | Can be optimal when carefully designed | Adds render/reconciliation overhead for consistency and composition |
+
+## Browser Rendering Pipeline
+
+When a browser loads an application, it parses HTML into the DOM and stylesheets into the CSSOM. It combines relevant information into a render representation, calculates geometry, paints drawing instructions, and composites layers. JavaScript and React normally execute on the main thread, so long work can delay user input and painting.
+
+```mermaid
+flowchart LR
+	H[HTML bytes] --> DP[HTML parser]
+	DP --> DOM[DOM tree]
+	C[CSS bytes] --> CP[CSS parser]
+	CP --> CSSOM[CSSOM]
+	DOM --> ST[Style calculation]
+	CSSOM --> ST
+	ST --> L[Layout geometry]
+	L --> P[Paint records]
+	P --> CO[Composite layers]
+	CO --> PX[Pixels]
+	J[JavaScript and React commits] --> DOM
+	J --> ST
+```
+
+Diagram flow:
+
+1. HTML parsing creates browser node objects in the DOM.
+2. CSS parsing creates rules used by style calculation.
+3. Style calculation determines applicable computed styles.
+4. Layout calculates element sizes and positions.
+5. Paint produces drawing commands for text, borders, images, and effects.
+6. Compositing combines layers into the final frame.
+7. A React commit can invalidate part of this work by changing DOM properties, structure, or styles.
+
+### Browser Performance Consequences
+
+Not every DOM change causes the same work:
+
+| Change | Possible browser work |
+|---|---|
+| Text or color | Style and paint; layout may be unnecessary |
+| Width, height, font metrics | Style, layout, paint, and composite |
+| Transform or opacity on a promoted layer | Often compositing without full layout |
+| Reading layout after a write | May force synchronous style/layout calculation |
+| Adding thousands of nodes | DOM allocation, style matching, layout, paint, and memory growth |
+
+> [!WARNING]
+> React can reduce unnecessary DOM mutations, but it cannot make an inherently expensive layout, image, animation, or huge DOM tree free.
+
+## DOM, Real DOM, and React Elements
+
+The **DOM** is the browser's object representation of the document. A DOM node is mutable, participates in layout and events, and exposes methods such as `focus()`, `remove()`, and `getBoundingClientRect()`.
+
+A **React element** is an immutable JavaScript description of desired output. It commonly includes a type, props, and key. Calling a component or evaluating JSX creates descriptions; it does not immediately create or mutate browser nodes.
+
+"Virtual DOM" is an informal term for React's in-memory UI descriptions and comparison process. It is not one special browser API and should not be confused with the Fiber tree:
+
+| Structure | Meaning | Mutable by application code? | Lifetime |
+|---|---|---:|---|
+| React element | Immutable output description | No | Usually one render calculation |
+| Fiber | Internal work/state record | Never directly | Preserved while identity survives |
+| DOM node | Browser host object | Through React/ref integration | Preserved while matching host identity survives |
+| Component function | Reusable rendering definition | Source code, not an instance | Module lifetime |
 
 ```mermaid
 flowchart TB
- E[Elements] --> W[Work-in-progress Fiber tree]
- C[Current Fiber tree] <--> W
- W --> R[Reconciliation effects]
- R --> D[DOM mutations]
- D --> S[Style]
- S --> L[Layout]
- L --> P[Paint and composite]
+	JSX[JSX expression] --> EL[React element description]
+	EL --> FI[Fiber work record]
+	FI --> HOST{Host output?}
+	HOST -->|Component| CHILD[Render child elements]
+	HOST -->|DOM element| OP[Prepare host operation]
+	CHILD --> FI
+	OP --> DN[Browser DOM node]
 ```
 
-React's diffing heuristics preserve a subtree when type, position, and key match. Different type/key replaces it and resets state. Stable keys match siblings across insertion and movement. Render calculates and may be interrupted; commit applies the selected finished work synchronously, assigns refs, and runs layout work. Passive effects follow.
+The diagram shows that JSX first becomes element data. Fiber records connect that output to preserved state and work. Only host elements such as `div`, `button`, and `input` lead to DOM operations. A component such as `ProductCard` is called to obtain more element descriptions.
 
-The scheduler uses priority lanes. Concurrent rendering does not run components on parallel threads; it allows interruptible coordination. Automatic batching in React 18 groups updates from React events, promises, timers, and native handlers when using `createRoot`, reducing commits.
+## Reconciliation and the Diffing Algorithm
+
+Reconciliation compares new element output with the current Fiber tree to determine which identities can be reused and which host operations are required. React uses practical heuristics rather than calculating the mathematically minimal edit sequence for arbitrary trees.
+
+### Core Identity Rules
+
+1. **Same component or host type at the same position:** preserve identity and reconcile props/children.
+2. **Different type at the same position:** remove the old subtree and mount a new one.
+3. **Same sibling type and key:** preserve identity even when its sibling position changes.
+4. **Changed key:** create a new identity and reset state below that point.
+5. **Removed child:** schedule unmount behavior and host removal.
+
+```mermaid
+flowchart TD
+	N[Next element at a position] --> T{Same type?}
+	T -->|No| RM[Unmount old subtree]
+	RM --> NM[Mount new subtree and state]
+	T -->|Yes| K{Same key?}
+	K -->|No| RM
+	K -->|Yes| PR[Preserve Fiber and state]
+	PR --> PP[Compare props]
+	PP --> CH[Reconcile children]
+	CH --> EF[Record required effects]
+```
+
+### State Preservation and Reset
 
 ```jsx
-function ResettableEditor({ customerId }) {
-	// A changed key intentionally creates a new identity and state.
-	return <CustomerEditor key={customerId} customerId={customerId} />;
+function ProfileWorkspace({ customerId }) {
+	return (
+		<section>
+			{/* State resets intentionally when the business identity changes. */}
+			<CustomerEditor key={customerId} customerId={customerId} />
+		</section>
+	);
 }
 ```
 
-Strict Mode performs development-only checks, including repeated render calculations and an extra effect setup-cleanup-setup cycle. This exposes impure render and missing cleanup; production output is not doubled.
+Changing `customerId` changes the key, so React unmounts the previous editor identity and mounts a fresh one. This is appropriate when drafts must not leak between customers. It is inappropriate when the key changes accidentally on every render, such as `Math.random()`.
 
-## Performance and Memory
+### List Reconciliation Example
 
-Rendering costs JavaScript even when no DOM changes result. Commit can trigger style/layout/paint. Long main-thread tasks delay input. Retained timers, subscriptions, detached DOM, caches, and closures can prevent garbage collection. Keep render pure, cancel obsolete work, virtualize large lists, avoid layout read/write thrashing, and use transitions only where stale content is acceptable.
+```jsx
+function StudentRows({ students }) {
+	return students.map((student) => (
+		<StudentRow key={student.id} student={student} />
+	));
+}
+```
+
+If a student moves from index 5 to index 1, the stable ID lets React associate the existing row state with that student. With index keys, React associates identities with positions, which can move input state, focus, or animation state to the wrong record.
+
+> [!NOTE]
+> A key only needs to be unique among siblings. React does not pass `key` as a normal prop; pass the ID separately when the component needs it.
+
+## Fiber Architecture
+
+Before Fiber, React's older stack reconciler processed a large update synchronously once it began. Fiber, introduced with React 16, represents the tree as linked units of work. This architecture supports priorities, interruption before commit, error boundaries, Suspense coordination, and concurrent rendering features.
+
+A Fiber conceptually records information such as:
+
+- Component or host type and key
+- Parent, first child, and sibling relationships
+- Current props and memoized state
+- Hook state and update queues
+- Pending work priority
+- Flags describing commit work
+- A link to the alternate Fiber in the other tree
+
+These are conceptual categories, not a stable public schema.
+
+```mermaid
+flowchart TB
+	ROOT[Host root Fiber] --> APP[App Fiber]
+	APP --> NAV[Navigation Fiber]
+	APP --> PAGE[ProductPage Fiber]
+	PAGE --> INFO[ProductInfo Fiber]
+	PAGE --> CART[AddToCart Fiber]
+	CUR[Current tree] <--> ALT[Work-in-progress alternates]
+	APP -. alternate .-> ALT
+```
+
+### Current and Work-in-Progress Trees
+
+React maintains a current committed tree and prepares changes in work-in-progress Fibers. The work-in-progress tree can reuse alternate records rather than allocating an entirely unrelated permanent tree for every update.
+
+```mermaid
+stateDiagram-v2
+	[*] --> CurrentTree
+	CurrentTree --> WorkInProgress: update scheduled
+	WorkInProgress --> WorkInProgress: perform units of work
+	WorkInProgress --> Abandoned: superseded or failed work
+	Abandoned --> WorkInProgress: restart latest update
+	WorkInProgress --> FinishedTree: render completes
+	FinishedTree --> CurrentTree: atomic commit switches current
+```
+
+The state diagram explains why render must be restartable. Work that has not committed may be abandoned. Application-visible side effects during render would therefore run without a corresponding committed UI.
+
+### Fiber Memory Behavior
+
+While a component is mounted, its Fiber can retain hook state, update queues, memoized values, props, and closures referenced by those values. Removed Fibers and elements become eligible for garbage collection only when no remaining application, browser, cache, timer, subscription, or developer-tool reference retains them.
+
+## Update Queues, Lanes, and the Scheduler
+
+Calling a setter creates/enqueues an update associated with the relevant Fiber. React classifies work into priority lanes so urgent interaction can be processed before non-urgent rendering. The scheduler coordinates when render work should run or yield to the browser.
+
+Important principles:
+
+- A setter requests work; it does not mutate the current render's variable.
+- Multiple queued updater functions are processed in order.
+- Urgent input should not be blocked behind expensive non-urgent results.
+- React may render lower-priority work later or restart it with newer inputs.
+- Once a selected tree enters commit, React does not expose a half-committed tree.
+
+```mermaid
+sequenceDiagram
+	participant U as User input
+	participant H as Event handler
+	participant Q as Update queue
+	participant S as React scheduler
+	participant R as Render work
+	participant C as Commit
+	U->>H: Type a character
+	H->>Q: Queue urgent input update
+	H->>Q: Queue transition result update
+	Q->>S: Pending lanes available
+	S->>R: Process urgent lane first
+	R->>C: Commit latest input
+	S->>R: Continue non-urgent results
+	Note over R: May yield or restart
+	R->>C: Commit finished latest results
+```
+
+This sequence does not imply parallel JavaScript threads. It shows priority and interruptibility in React's render coordination.
+
+## Render Phase
+
+The render phase calculates the next UI and required work. At a high level React:
+
+1. Selects pending lanes to process.
+2. Begins at an affected Fiber/root.
+3. Calls function components or class `render` methods.
+4. Processes hooks and update queues for the selected work.
+5. Reconciles returned children.
+6. Records flags for insertions, updates, deletions, refs, and effects.
+7. Completes the tree or yields/restarts before commit.
+
+Render must not perform observable external mutation.
+
+```jsx
+// Wrong: an abandoned or repeated render still sends analytics.
+function Product({ product }) {
+	analytics.track("product_rendered", { id: product.id });
+	return <h2>{product.name}</h2>;
+}
+
+// Correct: track the business event caused by user intent.
+function Product({ product }) {
+	function selectProduct() {
+		analytics.track("product_selected", { id: product.id });
+	}
+
+	return <button onClick={selectProduct}>{product.name}</button>;
+}
+```
+
+Pure rendering permits repeated calls with no external difference until commit. Calculations, local variable creation, and reading props/state are appropriate. Network requests, subscriptions, DOM mutation, timers, and analytics mutation belong in event handlers, effects, or dedicated integration layers.
+
+### Render Without DOM Mutation
+
+A parent update can call a child again even when the child returns equivalent host output. React still paid component and reconciliation CPU cost, but commit may have no host changes.
+
+```jsx
+function Greeting({ name }) {
+	console.log("Greeting rendered");
+	return <p>Hello, {name}</p>;
+}
+```
+
+If the parent renders while `name` remains identical, the log can run again while the existing `p` and text remain unchanged. This distinction is essential when profiling.
+
+## Commit Phase
+
+Commit applies a finished render result to the host environment. Unlike concurrent render work, the selected commit is synchronous from the application's perspective so users do not observe a partially applied tree.
+
+A simplified commit sequence is:
+
+1. **Before mutation:** capture information needed before host changes, including class snapshots.
+2. **Mutation:** insert, update, or remove host nodes and detach affected refs.
+3. **Layout:** attach refs and run layout effects/class post-commit lifecycle work.
+4. **Browser opportunity:** style, layout, and paint occur as required.
+5. **Passive effects:** React later flushes `useEffect` cleanup/setup work.
+
+```mermaid
+sequenceDiagram
+	participant R as Finished React work
+	participant D as DOM
+	participant L as Layout effects
+	participant B as Browser
+	participant P as Passive effects
+	R->>R: Before-mutation work
+	R->>D: Insert, update, remove nodes
+	D->>L: Attach refs and run layout work
+	L->>B: Release main thread
+	B->>B: Style, layout, paint, composite
+	B->>P: Flush passive cleanup and setup
+```
+
+`useLayoutEffect` can read the committed DOM and synchronously queue correction before paint, but it blocks painting. `useEffect` is preferable for work that does not need to affect the current frame.
+
+## Complete Rendering Pipeline
+
+For a state update caused by a click:
+
+1. The browser dispatches the click event.
+2. React's event handler executes with the current render snapshot.
+3. A state setter enqueues one or more updates.
+4. React batches eligible updates until the event work completes.
+5. The scheduler chooses lanes to process.
+6. React creates/updates work-in-progress Fibers.
+7. Components run and return element descriptions.
+8. Reconciliation preserves or replaces identities.
+9. React records required host and effect work.
+10. A completed tree enters commit.
+11. DOM mutations and layout work run.
+12. The browser recalculates and paints only what its engine determines is invalidated.
+13. Passive effects clean up previous synchronization and establish the next synchronization.
+
+```mermaid
+flowchart LR
+	EV[Browser event] --> EH[React handler]
+	EH --> UQ[Update queues]
+	UQ --> BA[Batch eligible work]
+	BA --> SC[Select lanes]
+	SC --> RE[Render Fibers]
+	RE --> DI[Diff identities]
+	DI --> FW[Finished work]
+	FW --> CM[Commit host changes]
+	CM --> BP[Browser pipeline]
+	BP --> PE[Passive effects]
+```
+
+This end-to-end model separates an update request, React calculation, host mutation, and browser rendering. Performance investigation should identify which stage is actually expensive.
+
+## Concurrent Rendering
+
+Concurrent rendering is React's ability to prepare certain UI work interruptibly before commit. It does not mean components execute safely on background threads, and it does not make all updates asynchronous. Urgent controlled inputs still need immediate state updates.
+
+```jsx
+import { useState, useTransition } from "react";
+
+function SearchWorkspace() {
+	const [query, setQuery] = useState("");
+	const [filter, setFilter] = useState("");
+	const [isPending, startTransition] = useTransition();
+
+	function handleChange(event) {
+		const nextQuery = event.target.value;
+		setQuery(nextQuery); // Urgent: keep the controlled input responsive.
+		startTransition(() => {
+			setFilter(nextQuery); // Non-urgent: expensive results may lag.
+		});
+	}
+
+	return (
+		<>
+			<input value={query} onChange={handleChange} />
+			{isPending && <span>Updating results...</span>}
+			<ExpensiveResults filter={filter} />
+		</>
+	);
+}
+```
+
+If another keystroke arrives while results are rendering, React can prioritize the new input and supersede obsolete result work. This improves responsiveness but does not reduce the cost of `ExpensiveResults`; optimize or virtualize it when necessary.
+
+### Tearing and External Stores
+
+Concurrent rendering can expose inconsistency if components read a mutable external store at different times. `useSyncExternalStore` provides React with a subscription and stable snapshot contract so a committed tree observes a consistent external state.
+
+## Automatic Batching
+
+Batching groups multiple state updates into fewer render/commit cycles. With a React 18 `createRoot`, updates in React events, promises, timers, and native event callbacks are generally batched.
+
+```jsx
+function SaveButton() {
+	const [status, setStatus] = useState("idle");
+	const [savedCount, setSavedCount] = useState(0);
+
+	async function save() {
+		setStatus("saving");
+		await api.save();
+		setSavedCount((current) => current + 1);
+		setStatus("saved");
+	}
+
+	return <button onClick={save}>{status}: {savedCount}</button>;
+}
+```
+
+After the promise resolves, the count and status updates can be processed in one render. Batching improves throughput; it does not change snapshot semantics. Functional updaters remain necessary when next state depends on previous pending state.
+
+`flushSync` can force React to commit synchronously for rare browser/third-party integration requirements. It defeats batching and can expose fallbacks or hurt responsiveness, so it should not be routine application code.
+
+## Strict Mode
+
+Strict Mode enables development-only checks for behavior that is unsafe under modern rendering. It can:
+
+- Call component render logic more than once to expose impure calculations
+- Invoke state initializer/updater functions more than once in development checks
+- Run an additional effect setup-cleanup-setup cycle on initial mount
+- Warn about deprecated or unsafe patterns
+
+```mermaid
+sequenceDiagram
+	participant R as React Strict Mode
+	participant C as Component
+	participant E as Effect
+	R->>C: Development render check
+	R->>C: Development render check again
+	R->>R: Commit visible tree
+	R->>E: Run setup
+	R->>E: Run cleanup test
+	R->>E: Run setup again
+	Note over R,E: Production does not run this test cycle
+```
+
+### Incorrect and Correct Cleanup
+
+```jsx
+// Wrong: no cleanup, so remount/testing can retain duplicate listeners.
+useEffect(() => {
+	window.addEventListener("resize", handleResize);
+}, []);
+
+// Correct: cleanup mirrors setup.
+useEffect(() => {
+	window.addEventListener("resize", handleResize);
+	return () => window.removeEventListener("resize", handleResize);
+}, []);
+```
+
+Disabling Strict Mode hides evidence; it does not repair impure rendering or leaked synchronization.
+
+## Hydration and Server-Rendered Output
+
+Hydration attaches React behavior to compatible HTML that was already generated on a server. React expects the client component tree to produce matching initial output. Differences caused by timestamps, random values, browser-only branches, locale mismatches, or invalid HTML can produce hydration warnings and replacement work.
+
+```jsx
+// Wrong for deterministic server/client first output.
+function RequestId() {
+	return <span>{Math.random()}</span>;
+}
+
+// Appropriate for stable accessibility relationships.
+function EmailField() {
+	const id = useId();
+	return <><label htmlFor={id}>Email</label><input id={id} /></>;
+}
+```
+
+Server rendering creates HTML; it does not preserve a server Fiber tree in the browser. The client creates its own React structures while hydrating the existing host nodes.
+
+## Memory Model and Garbage Collection
+
+React participates in JavaScript memory management but does not replace garbage collection. Memory remains reachable through references.
+
+| Retained object | Common retaining reference | Release strategy |
+|---|---|---|
+| Component/Fiber state | Mounted tree | Unmount or replace identity |
+| Subscription callback | External event source | Unsubscribe in cleanup |
+| Timer closure | Browser timer queue | Clear timer in cleanup |
+| In-flight request callback | Promise/request | Abort and ignore obsolete completion |
+| Cached data | Store/query cache | Expiration, eviction, bounded policy |
+| DOM node | Ref or third-party library | Clear integration and destroy plugin |
+| Large memoized value | Mounted hook state | Remove unnecessary memo or unmount owner |
+
+### Memory Leak Example
+
+```jsx
+function LivePrices({ productId }) {
+	useEffect(() => {
+		const subscription = prices.subscribe(productId, updatePrice);
+		return () => subscription.unsubscribe();
+	}, [productId]);
+
+	return <PriceDisplay productId={productId} />;
+}
+```
+
+When `productId` changes, cleanup releases the old subscription before the new synchronization is established. On unmount, final cleanup lets the external source release the callback closure and captured references.
+
+## Performance Analysis
+
+Separate four kinds of cost:
+
+1. **Scheduling and queueing:** usually small, but update storms can accumulate work.
+2. **Render/reconciliation:** JavaScript CPU spent calling components and comparing output.
+3. **Commit:** refs, effects, and DOM mutations.
+4. **Browser rendering:** style, layout, paint, compositing, and image work.
+
+Use the React DevTools Profiler for component render and commit information. Use browser Performance and Memory tools for long tasks, event timing, forced layouts, paint, allocations, and retained objects. Measure a production build because development checks and source instrumentation change results.
+
+```mermaid
+flowchart TD
+	S[Slow interaction] --> P[Record production profile]
+	P --> Q{Dominant cost?}
+	Q -->|React render| RR[Colocate state or reduce expensive renders]
+	Q -->|DOM size| VD[Virtualize or paginate]
+	Q -->|Layout or paint| LP[Reduce invalidation and layout thrashing]
+	Q -->|Network or bundle| NB[Cache, split, compress, prefetch carefully]
+	Q -->|Memory growth| MG[Inspect retainers and cleanup]
+	RR --> M[Measure again]
+	VD --> M
+	LP --> M
+	NB --> M
+	MG --> M
+```
+
+### Common Performance Problems
+
+- State placed at the application root causes broad render work for local interactions.
+- Unstable objects/functions defeat memoized child props.
+- Huge lists create excessive React work and browser DOM/layout cost.
+- Layout reads immediately after DOM/style writes force synchronous calculation.
+- Effects trigger chains of state updates and additional commits.
+- Duplicate server data is copied into several stores and drifts.
+- Overuse of memoization increases comparison work and retained memory.
+
+## Real-World Internal Flows
+
+### E-Commerce Search
+
+Typing updates the controlled input urgently. Product filtering can be deferred or transitioned. A virtualized result list controls DOM size. Stable product keys preserve row identity. Remote requests should be canceled or keyed in a server-state cache.
+
+### Banking Transfer
+
+Form input remains urgent and controlled. A submit event starts the external mutation. Pending/success/failure states create explicit render snapshots. Authorization occurs on the API. A transaction ID provides stable business identity; sensitive data must not appear in logs or client bundles.
+
+### Chat Application
+
+A subscription effect acquires a room connection after commit and releases it when the room changes. Incoming messages enqueue updates. Stable message IDs preserve rows. Windowing limits DOM size, while cleanup prevents callbacks from retaining unmounted room state.
+
+### Analytics Dashboard
+
+Route-level code splitting reduces initial modules. Query caching avoids duplicate remote work. A chart boundary isolates failures. Expensive chart layout can dominate browser paint even when React reconciliation is efficient, so both React and browser profiles are required.
+
+## Common Mistakes and Production Best Practices
+
+| Mistake | Why it fails | Better approach |
+|---|---|---|
+| Calling APIs during render | Render may repeat or be abandoned | Event handler, effect with cleanup, or data layer |
+| Treating Virtual DOM as always faster | React calculation also costs CPU | Measure complete interaction cost |
+| Random or index keys in changing lists | Identity/state attaches to wrong row | Stable data identifiers |
+| Assuming render means DOM change | Reconciliation may find no host difference | Profile render and commit separately |
+| Disabling Strict Mode to stop duplicates | Hides impurity/leaks | Make setup idempotent and add cleanup |
+| Using transitions for controlled input state | Input can lag behind typing | Keep input urgent; transition slow consumers |
+| Reading private Fiber fields | Internal schema is unsupported | Depend on documented behavior and DevTools |
+| Memoizing everything | Adds comparisons and retains values | Optimize measured expensive paths |
+
+Production guidance:
+
+- Keep render deterministic and free of external mutation.
+- Preserve identity deliberately with component type, position, and stable keys.
+- Treat effects as synchronization processes with symmetric cleanup.
+- Keep urgent interaction separate from non-urgent expensive rendering.
+- Bound DOM size through pagination or virtualization.
+- Use React Profiler and browser tooling together.
+- Confirm behavior in production builds and representative devices.
+- Document performance budgets and validate them in delivery pipelines.
 
 ---
 
