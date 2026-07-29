@@ -14,6 +14,7 @@ This handbook assumes knowledge of JavaScript functions, objects, arrays, promis
 > [!WARNING]
 > Browser-delivered code is public. Environment variables, minification, and obfuscation do not protect secrets.
 
+<a id="table-of-contents"></a>
 ## Table of Contents
 
 1. [React Fundamentals](#module-1-react-fundamentals)
@@ -17393,41 +17394,1033 @@ A professional frontend architecture makes dependencies and ownership visible, k
 
 [Previous: Architecture](#module-18-project-architecture) | [Next: Interview Handbook](#final-interview-handbook)
 
-Development prioritizes feedback: source maps, HMR, diagnostics, and unminified modules. Production prioritizes correctness and delivery: validated environment configuration, transformed syntax, bundled/split assets, tree shaking, minification, hashing, compression at the host/CDN, and observable releases.
+## Introduction
+
+Building converts source code and controlled inputs into deployable artifacts. Deployment moves an approved artifact into an environment. Release makes capability available to users. These stages may happen together in a small project, but they represent different responsibilities and failure modes.
 
 ```mermaid
 flowchart LR
- S[Source + config] --> Q[Lint/test/type checks]
- Q --> B[Production build]
- B --> A[Analyze/test artifact]
- A --> D[Deploy immutable assets]
- D --> C[CDN + cache headers]
- C --> M[Monitor canary]
- M -->|bad release| R[Rollback]
+	SOURCE[Source and lockfile] --> BUILD[Build immutable artifact]
+	BUILD --> DEPLOY[Deploy artifact to infrastructure]
+	DEPLOY --> RELEASE[Expose release to users]
+	RELEASE --> OPERATE[Observe and operate]
+	OPERATE --> ROLLBACK[Rollback or advance]
 ```
+
+A successful `npm run build` proves only that asset generation completed. It does not prove deep-link routing, configuration, cache headers, security policy, API connectivity, browser compatibility, observability, or rollback.
+
+## Delivery Terminology
+
+| Term | Meaning |
+|---|---|
+| Continuous integration | Frequent automated integration, checks, and artifact creation |
+| Continuous delivery | Every approved artifact is releasable through an automated path |
+| Continuous deployment | Approved changes reach production automatically |
+| Artifact | Immutable output promoted between environments |
+| Deployment | Installation of an artifact into an environment |
+| Release | Enabling an artifact/capability for users |
+| Promotion | Moving the same verified artifact to a later environment |
+| Rollback | Restoring a known prior artifact/configuration |
+| Roll forward | Fixing through a new artifact when rollback is unsuitable |
+| Preview environment | Temporary environment associated with a branch/change |
+| Canary | Limited production exposure used to evaluate a release |
+| Blue-green | Switching traffic between old and new environments |
+
+## Development and Production
+
+Development optimizes feedback; production optimizes correctness, delivery, security, and operability.
+
+| Development | Production |
+|---|---|
+| HMR and fast transforms | Optimized immutable assets |
+| Detailed diagnostics | Redacted user-safe errors |
+| Local API proxy | Real API origin/reverse proxy |
+| Development source maps | Controlled source-map workflow |
+| Local environment values | Validated deployment configuration |
+| In-memory dev server | CDN/web server/object storage |
+| Minimal caching | Explicit HTML/asset cache policy |
+
+Always test the production artifact. Development behavior is not deployment evidence.
+
+## End-to-End Delivery Pipeline
+
+```mermaid
+flowchart LR
+	COMMIT[Commit or release trigger] --> INSTALL[Locked dependency install]
+	INSTALL --> STATIC[Lint, types, formatting policy]
+	STATIC --> TEST[Unit and integration tests]
+	TEST --> BUILD[Production build]
+	BUILD --> ANALYZE[Budgets, security, artifact inspection]
+	ANALYZE --> PUBLISH[Publish immutable artifact]
+	PUBLISH --> PREVIEW[Deploy preview/staging]
+	PREVIEW --> SMOKE[Browser and synthetic checks]
+	SMOKE --> APPROVE[Approval or automated policy]
+	APPROVE --> PROD[Production deployment]
+	PROD --> VERIFY[Post-deploy verification]
+	VERIFY --> OBSERVE[Canary telemetry and SLOs]
+```
+
+Fail early on cheap deterministic checks, but do not postpone all production-like validation until after deployment.
+
+## Reproducible Builds
+
+A reproducible build controls inputs:
+
+- Source commit.
+- Dependency lockfile.
+- Node.js and package-manager versions.
+- Build-tool versions.
+- Public build configuration.
+- Operating system/container image where relevant.
+- Time, locale, and generated identifiers when they affect output.
 
 ```bash
 npm ci
+npm run lint
+npm run typecheck
 npm test -- --run
 npm run build
 ```
 
-Deploy `dist` for Vite and `build` for CRA. Netlify uses a rewrite such as `/* /index.html 200`; Vercel uses a rewrite to `/index.html`; static GitHub Pages often needs a correct base path and SPA fallback strategy. Each platform should inject public config at build time, serve HTTPS, compress assets, and preserve hashed files with long immutable caching while giving HTML short/no cache so it discovers new hashes.
+Use `npm ci` in CI when the project uses npm: it installs from the lockfile and fails when manifest and lockfile disagree. Equivalent frozen-lockfile commands apply to other package managers.
 
-CI/CD overview: install from lockfile, static checks, tests, build, vulnerability/policy checks, artifact smoke test, deploy preview, approval/canary, production, synthetic check, telemetry, rollback. Do not rebuild during rollback; redeploy a known immutable artifact. Upload source maps to monitoring with release IDs and restrict public exposure. Set CSP/security headers at the host.
+```mermaid
+flowchart TD
+	SOURCE[Commit] --> BUILDENV[Controlled build environment]
+	LOCK[Reviewed lockfile] --> BUILDENV
+	TOOLCHAIN[Pinned runtime and package manager] --> BUILDENV
+	CONFIG[Validated public config] --> BUILDENV
+	BUILDENV --> ARTIFACT[Traceable artifact plus metadata]
+```
 
-### Production Checklist
+Byte-for-byte reproducibility can be difficult when tools embed timestamps or absolute paths. At minimum, make inputs traceable and eliminate uncontrolled dependency resolution.
 
-- Deep links and refresh work; base paths are correct.
-- Environment values are validated and contain no secrets.
-- Error/loading/empty/offline paths work.
-- Bundle and performance budgets pass.
-- Hashed assets and HTML use appropriate cache policies.
-- Source maps, release metadata, monitoring, and alerts are configured.
-- Accessibility and critical browser/device flows pass.
-- Rollback is documented and tested.
+## Artifact Immutability
 
-**Mini project:** deploy the same Vite SPA to Netlify and Vercel with preview environments, route rewrites, security headers, immutable caching, smoke tests, and rollback evidence. **Interview:** a successful build only proves asset generation; deployment must also prove routing, configuration, headers, cache behavior, runtime API access, and observability.
+Build once, publish once, and promote the same artifact. Rebuilding for production can produce different dependencies, generated IDs, or environment behavior from the staging artifact that was tested.
+
+```mermaid
+flowchart TB
+	BUILD[One controlled build] --> ART[Artifact digest A7F]
+	ART --> DEV[Development verification]
+	ART --> STAGE[Staging promotion]
+	ART --> CANARY[Production canary]
+	ART --> PROD[Full production]
+	DEV -. no rebuild .-> STAGE
+	STAGE -. no rebuild .-> PROD
+```
+
+If environment values are embedded at build time, each environment has a distinct artifact. If the organization requires build-once/promote-many, use a designed and validated runtime public configuration mechanism from Module 12.
+
+## Artifact Contents
+
+Typical frontend artifact:
+
+```text
+dist/
+|-- index.html
+|-- assets/
+|   |-- index.a8f3c1.js
+|   |-- vendor.73bd91.js
+|   |-- index.2cd810.css
+|   `-- logo.93aa20.webp
+|-- manifest.json
+`-- runtime-config.json        # only when intentionally runtime-managed
+```
+
+Vite commonly emits `dist`; Create React App emits `build`; custom Webpack output is configuration-defined. Deploy only expected generated assets. Exclude test reports, private source maps, local `.env` files, CI credentials, and development servers.
+
+## Build Metadata and Provenance
+
+Attach non-sensitive release metadata:
+
+```json
+{
+  "release": "2026.07.29.4",
+  "commit": "8a32f10",
+  "artifactDigest": "sha256:...",
+  "builtAt": "2026-07-29T15:20:00Z"
+}
+```
+
+Metadata supports support cases, source-map matching, rollback, and incident diagnosis. Avoid developer usernames, internal paths, secret repository URLs, tokens, or unreviewed CI environment dumps.
+
+Software provenance and artifact signing may be required in higher-assurance environments. Verify signatures/digests at promotion boundaries rather than trusting filenames.
+
+## CI Pipeline Design
+
+```mermaid
+flowchart TD
+	TRIGGER[Pull request or release] --> CACHE[Restore safe dependency/build caches]
+	CACHE --> MATRIX[Supported runtime/test matrix]
+	MATRIX --> CHECKS[Static checks and tests]
+	CHECKS --> BUILD[Production build]
+	BUILD --> REPORTS[Bundle, accessibility, security reports]
+	REPORTS --> ART[Publish artifact and evidence]
+	ART --> RETAIN[Retention and access policy]
+```
+
+CI principles:
+
+- Use least-privileged short-lived credentials.
+- Protect production environments and deployment branches.
+- Separate untrusted pull-request execution from secret-bearing jobs.
+- Pin third-party actions/tasks where possible.
+- Avoid printing complete environment objects.
+- Keep caches untrusted until validated.
+- Archive only required evidence with retention policy.
+- Cancel superseded branch builds when safe.
+
+## Pipeline Caching
+
+Cache dependency downloads and deterministic build intermediates, not correctness.
+
+Cache keys should include relevant inputs such as lockfile hash, Node version, OS, and build configuration. A stale cache must never bypass dependency installation, tests, or artifact validation.
+
+Do not restore secret files or production artifacts from broad pull-request writable caches.
+
+## Quality Gates
+
+A production pipeline can gate on:
+
+- Lint and type correctness.
+- Unit/integration/E2E tests.
+- Accessibility checks.
+- Dependency/license/vulnerability policy.
+- Bundle and route budgets.
+- Browser support/transformation policy.
+- Secret scanning and emitted-asset inspection.
+- Infrastructure/configuration validation.
+- Preview smoke tests.
+- Manual approval for regulated/high-risk environments.
+
+```mermaid
+flowchart LR
+	ART[Candidate artifact] --> FUNCTIONAL[Functional gates]
+	ART --> SECURITY[Security/policy gates]
+	ART --> PERF[Performance budgets]
+	ART --> OPERATE[Operational readiness]
+	FUNCTIONAL --> DECIDE{All required gates pass?}
+	SECURITY --> DECIDE
+	PERF --> DECIDE
+	OPERATE --> DECIDE
+	DECIDE -->|yes| PROMOTE[Promote]
+	DECIDE -->|no| BLOCK[Block with actionable evidence]
+```
+
+Every gate needs an owner, documented threshold, and remediation path. Permanently ignored warnings are not gates.
+
+## Preview Environments
+
+Preview environments provide realistic review for each change.
+
+They should use:
+
+- Non-production data and credentials.
+- Isolated callback/redirect URLs.
+- Clear visual/environment identification.
+- Automatic expiration and cleanup.
+- Protected access for sensitive products.
+- Production-like routing and headers where practical.
+- No indexing by search engines.
+- Safe third-party integrations or sandboxes.
+
+```mermaid
+sequenceDiagram
+	participant PR as Pull request
+	participant CI as CI pipeline
+	participant HOST as Preview host
+	participant TEST as Browser checks
+	PR->>CI: Build candidate
+	CI->>HOST: Deploy immutable preview artifact
+	HOST-->>CI: Preview URL
+	CI->>TEST: Run smoke/accessibility tests
+	TEST-->>PR: Status and evidence
+	PR->>CI: Close or merge
+	CI->>HOST: Expire preview
+```
+
+Do not connect untrusted preview code to production databases or privileged internal APIs.
+
+## Hosting Topologies
+
+### Static Object Storage and CDN
+
+```mermaid
+flowchart LR
+	USER[Browser] --> DNS[DNS and TLS]
+	DNS --> CDN[CDN edge]
+	CDN -->|cache hit| USER
+	CDN -->|cache miss| ORIGIN[Object storage/static origin]
+	ORIGIN --> CDN
+	USER --> API[API/BFF origin]
+```
+
+This is effective for SPAs and static sites. Configure fallback routing, MIME types, headers, compression, invalidation, and origin access correctly.
+
+### Web Server Container
+
+An Nginx/Caddy/Apache container can serve static assets and proxy `/api`. It enables runtime-config generation and unified same-origin routing but adds image patching and orchestration responsibilities.
+
+### SSR/Framework Server
+
+Server-rendered applications need runtime processes, scaling, health checks, request-scoped security, server bundles, and static asset delivery. Separate server and client caching policies.
+
+### Edge Runtime
+
+Edge rendering reduces distance for some workloads but has runtime, package, execution-time, storage, and observability constraints. Choose it from measured latency and product needs.
+
+## SPA Routing
+
+Client-side routes require the host to return `index.html` for navigational paths while preserving real `404` responses for missing assets and API paths.
+
+```mermaid
+flowchart TD
+	REQ[GET request] --> API{API path?}
+	API -->|yes| BACKEND[Forward to API]
+	API -->|no| FILE{Static file exists?}
+	FILE -->|yes| ASSET[Serve file]
+	FILE -->|no| NAV{HTML navigation route?}
+	NAV -->|yes| INDEX[Serve index.html]
+	NAV -->|no| NOTFOUND[Return 404]
+```
+
+An indiscriminate rewrite can return HTML for a missing JavaScript chunk, causing confusing MIME or parse failures. Test direct navigation, refresh, nested paths, missing assets, and APIs.
+
+## Base Paths
+
+Applications hosted under `/portal/` must align:
+
+- Build-tool base/public path.
+- Router basename.
+- Host rewrite root.
+- Asset and manifest URLs.
+- Service-worker scope.
+- OAuth redirect URLs.
+
+```mermaid
+flowchart LR
+	PATH[Deployment /portal/] --> BUILD[Vite base/Webpack public path]
+	PATH --> ROUTER[Router basename]
+	PATH --> HOST[Host fallback scope]
+	PATH --> AUTH[Registered callback URLs]
+	BUILD --> OK[Correct assets and chunks]
+	ROUTER --> OK
+	HOST --> OK
+	AUTH --> OK
+```
+
+Test paths with and without trailing slashes and URL-encoded segments.
+
+## Cache Strategy
+
+Hashed immutable assets and mutable HTML need different policies.
+
+| Resource | Typical policy |
+|---|---|
+| Content-hashed JS/CSS/media | `public, max-age=31536000, immutable` |
+| HTML entry | `no-cache` or short cache with revalidation |
+| Runtime configuration | Explicit short/no-store/version policy |
+| Manifest | Coordinated with HTML/server release |
+| Source maps | Private upload or controlled access |
+| Service worker | Framework-specific update policy |
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant C as CDN
+	participant O as Origin
+	B->>C: Request index.html
+	C->>O: Revalidate mutable HTML
+	O-->>B: HTML references app.A7F.js
+	B->>C: Request app.A7F.js
+	alt immutable asset cached
+		C-->>B: Cached asset
+	else cache miss
+		C->>O: Fetch hashed asset
+		O-->>C: Asset
+		C-->>B: Asset
+	end
+```
+
+Do not set immutable caching on filenames whose contents can change.
+
+## CDN Invalidation and Release Overlap
+
+Prefer new content-hashed filenames over invalidating assets in place. Invalidate or revalidate HTML when necessary, but retain old hashed assets for open tabs and stale HTML during an overlap window.
+
+```mermaid
+flowchart TD
+	OLDHTML[Open tab references release A] --> OLDA[Asset A hashes]
+	NEWHTML[New request receives release B] --> NEWA[Asset B hashes]
+	DEPLOY[Deployment] --> KEEP[Keep A and B hashed assets]
+	KEEP --> OLDA
+	KEEP --> NEWA
+	WINDOW[After defined retention window] --> CLEAN[Remove unreferenced old assets]
+```
+
+Immediate deletion of previous chunks produces `ChunkLoadError` for active sessions.
+
+## Compression
+
+Use Brotli and gzip at the CDN/web server. Compression complements minification; it does not replace it.
+
+Ensure:
+
+- Correct `Content-Encoding`.
+- `Vary: Accept-Encoding` where relevant.
+- Appropriate MIME types.
+- Precompressed file generation matches server configuration.
+- Already compressed images/fonts are not wastefully recompressed.
+- Compression thresholds avoid overhead on tiny responses.
+
+Measure transferred bytes and decompression/main-thread cost on representative devices.
+
+## HTTP and Security Headers
+
+Typical policies require application-specific design:
+
+```http
+Content-Security-Policy: default-src 'self'; script-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+```
+
+Do not copy CSP blindly. Inventory scripts, styles, workers, fonts, APIs, identity providers, and monitoring. Prefer nonces/hashes and avoid broad `unsafe-inline`/`unsafe-eval`. HSTS should be enabled only after HTTPS and subdomain readiness are verified.
+
+```mermaid
+flowchart LR
+	APP[Application resource needs] --> POLICY[Generate reviewed header policy]
+	POLICY --> PREVIEW[Test in report-only/preview]
+	PREVIEW --> VIOLATIONS[Analyze legitimate violations]
+	VIOLATIONS --> ENFORCE[Enforce narrow policy]
+	ENFORCE --> MONITOR[Monitor regressions]
+```
+
+## TLS and DNS
+
+Production delivery requires:
+
+- Valid certificates with automated renewal.
+- Modern TLS policy.
+- Correct DNS and ownership validation.
+- Redirect from HTTP to HTTPS.
+- Safe apex/subdomain strategy.
+- Certificate-expiry monitoring.
+- Planned DNS TTL during migrations.
+
+Do not expose origin servers accidentally when CDN/WAF controls are expected.
+
+## Environment Configuration
+
+Frontend variables embedded at build time are public. Validate API URLs, environment names, release IDs, and feature configuration before building or bootstrapping.
+
+```mermaid
+flowchart TD
+	VALUE[Configuration value] --> SECRET{Secret or privileged credential?}
+	SECRET -->|yes| SERVER[Keep in secret manager/server runtime]
+	SECRET -->|no| CHANGE{Must vary without rebuild?}
+	CHANGE -->|no| BUILD[Validated build-time public config]
+	CHANGE -->|yes| RUNTIME[Validated runtime public config]
+	BUILD --> ART[Browser-visible artifact]
+	RUNTIME --> ART
+```
+
+Do not inject a secret into `VITE_*`, `REACT_APP_*`, HTML, JavaScript, source maps, or public runtime JSON.
+
+## Secret Management
+
+CI and server deployments may need secrets for artifact repositories, cloud APIs, source-map upload, or server runtimes.
+
+Use:
+
+- Secret managers or protected CI environment stores.
+- Short-lived workload identity over long-lived static keys.
+- Least privilege and environment separation.
+- Rotation and access audit.
+- Masking as defense in depth, not primary protection.
+- No secrets available to untrusted pull-request code.
+
+If a secret reaches a browser artifact or public log, assume compromise and rotate it.
+
+## Containers
+
+A multi-stage container can build and serve static assets:
+
+```dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+```
+
+Production improvements include pinned image digests, non-root execution where supported, read-only filesystem, image scanning, health checks, minimal packages, and generated SBOM/provenance according to policy.
+
+```mermaid
+flowchart LR
+	SOURCE[Source] --> BUILDSTAGE[Node build stage]
+	BUILDSTAGE --> DIST[Static dist only]
+	DIST --> RUNTIME[Minimal web-server image]
+	RUNTIME --> SCAN[Image/config scan]
+	SCAN --> REGISTRY[Immutable registry digest]
+	REGISTRY --> DEPLOY[Orchestrator deployment]
+```
+
+Container environment variables do not alter already-built JavaScript unless startup intentionally generates runtime configuration.
+
+## Static Server Configuration
+
+Illustrative Nginx shape:
+
+```nginx
+server {
+    listen 8080;
+    root /usr/share/nginx/html;
+
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+    }
+}
+```
+
+Production configuration also needs security headers, MIME types, API exclusions/proxying, compression, access logs, and orchestration health behavior. Test the effective server, not only the template.
+
+## Platform Deployment Patterns
+
+### Netlify
+
+A simple SPA redirect can be expressed in a platform redirects file:
+
+```text
+/*    /index.html   200
+```
+
+Place specific asset/API rules before a broad fallback and configure headers separately.
+
+### Vercel
+
+Use rewrites for SPA routing when deploying a static SPA, but do not rewrite missing assets or APIs to HTML. Framework deployments often have platform-native routing and should follow that framework adapter.
+
+### GitHub Pages
+
+Set the correct repository base path. GitHub Pages does not provide the same arbitrary rewrite capabilities as every static host, so SPAs need a deliberate fallback strategy or hash routing. Test project pages versus custom domains.
+
+### Cloud Object Storage
+
+Configure index/error behavior, CDN fallback routing, MIME types, origin access, cache metadata, TLS/custom domain, and atomic upload order.
+
+Platform syntax changes over time. Keep platform configuration versioned and validate against current provider behavior.
+
+## Atomic Deployment
+
+Users should never receive HTML referencing assets that are not yet available.
+
+```mermaid
+sequenceDiagram
+	participant CI as Deployment pipeline
+	participant O as Asset origin
+	participant C as CDN
+	participant U as User
+	CI->>O: Upload new hashed assets
+	CI->>O: Verify assets and metadata
+	CI->>O: Publish new HTML last
+	CI->>C: Revalidate/invalidate HTML policy
+	U->>C: Request HTML
+	C-->>U: HTML references available hashes
+```
+
+For manifest-driven server rendering, coordinate server release, manifest, and assets. Blue-green directories or release prefixes can provide atomic switching.
+
+## Release Strategies
+
+### Rolling
+
+Replace instances incrementally. Frontend static assets still need release overlap and API compatibility.
+
+### Blue-Green
+
+```mermaid
+flowchart LR
+	USERS[Users] --> ROUTER[Traffic router]
+	ROUTER --> BLUE[Blue current release]
+	GREEN[Green candidate release] --> TEST[Smoke and synthetic checks]
+	TEST --> SWITCH[Traffic switch]
+	SWITCH --> ROUTER
+	ROUTER --> GREEN
+	BLUE --> ROLLBACK[Fast switch-back option]
+```
+
+Blue-green supports fast switching but doubles environment capacity temporarily and still requires data/API compatibility.
+
+### Canary
+
+Expose a small cohort, compare telemetry, then expand.
+
+```mermaid
+flowchart TD
+	CANDIDATE[Candidate release] --> ONE[1 percent cohort]
+	ONE --> CHECK1{Health and business metrics pass?}
+	CHECK1 -->|no| STOP[Stop and rollback cohort]
+	CHECK1 -->|yes| TEN[10 percent cohort]
+	TEN --> CHECK2{Metrics pass?}
+	CHECK2 -->|no| STOP
+	CHECK2 -->|yes| FULL[100 percent release]
+```
+
+Select cohorts consistently to avoid users switching versions mid-session. Compare user outcomes, not only server errors.
+
+### Feature Flags
+
+Deploy code dark, then release capability through flags. Flags enable targeted rollout and rollback but retain both code paths and require cleanup. They cannot replace deployment rollback for broken bootstrap or shared infrastructure.
+
+## Backward Compatibility
+
+Frontend and API versions coexist during caches, open tabs, rolling releases, and rollback.
+
+```mermaid
+flowchart LR
+	OLD[Old frontend] --> API[Compatible API window]
+	NEW[New frontend] --> API
+	API --> DATA[Data/schema migration]
+	ROLLBACK[Rollback frontend/server] --> API
+```
+
+Use additive API changes, tolerant readers, explicit versioning where needed, expand-and-contract data migrations, and deprecation windows. Do not deploy a frontend that requires an API change before that API is available.
+
+## Database Migration Coordination
+
+Even static frontends depend indirectly on backend schemas. Safe sequence:
+
+1. Expand backend/database to support old and new clients.
+2. Deploy backend compatibility.
+3. Deploy/release new frontend.
+4. Confirm old-client traffic has expired or is supported.
+5. Contract/remove obsolete fields in a later release.
+
+Rollback plans must consider data written by the new version. Artifact rollback cannot undo an incompatible data migration automatically.
+
+## Health and Readiness
+
+For static hosting, health includes more than origin process status:
+
+- HTML reachable.
+- Current referenced assets reachable with correct MIME type.
+- Runtime configuration valid.
+- API/BFF reachable from the browser.
+- Critical route renders.
+- Authentication callback works.
+
+SSR/container workloads also need liveness and readiness endpoints. Liveness answers whether the process should restart; readiness answers whether it should receive traffic.
+
+## Smoke Tests
+
+Post-deploy smoke tests should verify the deployed URL:
+
+```mermaid
+flowchart LR
+	DEPLOY[Deployment completed] --> HTML[Load root and nested route]
+	HTML --> ASSETS[Verify JS/CSS/chunks]
+	ASSETS --> RENDER[Assert application shell]
+	RENDER --> API[Exercise safe critical API path]
+	API --> HEADERS[Check headers/cache/release]
+	HEADERS --> RESULT{Healthy?}
+	RESULT -->|yes| CONTINUE[Continue rollout]
+	RESULT -->|no| HALT[Halt/rollback]
+```
+
+Smoke checks should be fast, deterministic, isolated, and safe to repeat. Do not create real charges or uncontrolled production data.
+
+## Synthetic Monitoring
+
+Run critical journeys continuously from representative regions:
+
+- Load home/application shell.
+- Authenticate with a dedicated test identity where approved.
+- Fetch a core resource.
+- Complete a safe synthetic transaction.
+- Validate latency and content.
+- Report release and region.
+
+Synthetic tests complement real-user monitoring. They cannot represent every browser, network, or account state.
+
+## Real User Monitoring
+
+Capture privacy-reviewed client signals:
+
+- Core Web Vitals.
+- Route transitions.
+- JavaScript errors and unhandled rejections.
+- Chunk-load failures.
+- API latency/failure categories.
+- Release, environment, device/browser class.
+- Critical business journey completion.
+
+```mermaid
+flowchart LR
+	USER[Real user session] --> SIGNAL[Performance/error/journey signals]
+	SIGNAL --> REDACT[Redact and sample]
+	REDACT --> RELEASE[Associate with release/cohort]
+	RELEASE --> DASH[Dashboards and SLOs]
+	DASH --> DECISION[Continue, pause, or rollback]
+```
+
+Do not capture tokens, form content, personal data, or DOM recordings without explicit privacy design.
+
+## Source Maps
+
+Generate source maps according to a controlled policy and upload them to monitoring before releasing the matching assets.
+
+```mermaid
+sequenceDiagram
+	participant CI as CI
+	participant MON as Monitoring
+	participant CDN as Public CDN
+	CI->>CI: Build assets and source maps for release R
+	CI->>MON: Upload private maps tagged R
+	CI->>CDN: Deploy assets without public maps where policy requires
+	CDN-->>CI: Verify release R
+	CI->>MON: Finalize/record release
+```
+
+Ensure maps match exact hashes. Delete maps according to retention policy only after corresponding error-analysis needs expire.
+
+## Alerts and SLOs
+
+Define service-level indicators from user outcomes:
+
+- Successful application loads.
+- Critical route availability.
+- Checkout/form completion.
+- Error-free sessions.
+- Performance thresholds.
+
+Alert on sustained impact or error-budget burn, not every individual exception. Include runbook, release, cohort, region, and rollback controls in alert context.
+
+## Rollback
+
+Rollback should redeploy or switch to a known immutable artifact, not rebuild an old commit.
+
+```mermaid
+flowchart TD
+	ALERT[Release regression] --> PAUSE[Pause rollout/flag]
+	PAUSE --> DECIDE{Can feature flag isolate safely?}
+	DECIDE -->|yes| FLAG[Disable capability]
+	DECIDE -->|no| ROLLBACK[Promote prior artifact/config]
+	FLAG --> VERIFY[Verify recovery]
+	ROLLBACK --> VERIFY
+	VERIFY --> INCIDENT[Preserve evidence and investigate]
+```
+
+A rollback plan includes:
+
+- Prior artifact digest/location.
+- Compatible configuration.
+- API/data compatibility.
+- CDN/HTML cache behavior.
+- Feature-flag state.
+- Source-map/release mapping.
+- Verification and communication.
+
+Test rollback before an incident.
+
+## Roll Forward
+
+Roll forward when data/schema changes make rollback unsafe, when the defect is isolated and quickly repairable, or when reverting would reintroduce a more severe issue. Use a new reviewed artifact and maintain incident discipline; do not patch files directly on production hosts.
+
+## Disaster Recovery
+
+Plan for loss or compromise of:
+
+- Primary hosting region/provider.
+- CDN configuration.
+- DNS control.
+- Artifact registry/storage.
+- CI/CD credentials.
+- Source repository.
+- Runtime configuration source.
+- Monitoring provider.
+
+```mermaid
+flowchart TB
+	SOURCE[Source and IaC backups] --> REBUILD[Controlled rebuild capability]
+	ARTIFACTS[Replicated immutable artifacts] --> RESTORE[Restore deployment]
+	DNS[Protected DNS recovery] --> RESTORE
+	SECRETS[Rotatable credentials] --> RESTORE
+	RESTORE --> VERIFY[Security and functional verification]
+	VERIFY --> TRAFFIC[Controlled traffic restoration]
+```
+
+Document recovery time and recovery point objectives where required. Practice recovery; an untested document is a hypothesis.
+
+## Infrastructure as Code
+
+Version hosting, CDN, DNS, headers, redirects, environment bindings, identities, and monitoring where the platform permits.
+
+Benefits:
+
+- Reviewable changes.
+- Repeatable environments.
+- Drift detection.
+- Disaster recovery.
+- Least-privilege policy visibility.
+
+Protect state files and secrets. Use plan/review/apply separation and environment controls for production.
+
+## Deployment Security
+
+```mermaid
+flowchart TD
+	DEV[Developer change] --> REVIEW[Code and policy review]
+	REVIEW --> CI[Isolated CI with workload identity]
+	CI --> SCAN[Dependency, artifact, IaC scans]
+	SCAN --> SIGN[Sign/attest artifact]
+	SIGN --> REGISTRY[Protected artifact registry]
+	REGISTRY --> VERIFY[Verify digest/provenance]
+	VERIFY --> PROD[Least-privileged deployment]
+```
+
+Controls include:
+
+- Protected branches/environments.
+- Required review and status checks.
+- Short-lived cloud identity.
+- Separation of build and production deployment permissions.
+- Dependency and container scanning.
+- Artifact verification.
+- Audit logs and approval evidence.
+- Emergency access with expiry and review.
+- Regular credential rotation.
+
+## Supply Chain Risk
+
+Loaders, plugins, package scripts, CI actions, and build images execute trusted code. Pin versions, review lockfile changes, restrict lifecycle scripts according to policy, use trusted registries, and monitor advisories.
+
+An audit report is not proof of safety. Combine vulnerability data with exploitability, reachability, compensating controls, and timely remediation.
+
+## Accessibility Release Gates
+
+Include:
+
+- Automated checks on changed pages.
+- Keyboard smoke tests for critical flows.
+- Focus behavior after route changes/dialogs/errors.
+- Color contrast and responsive zoom checks.
+- Screen-reader review for high-risk workflows.
+
+Do not block only on a numeric accessibility score; test behavior and own exceptions.
+
+## Performance Release Gates
+
+Track:
+
+- Initial and route-level compressed JS/CSS.
+- Image/font budgets.
+- Core Web Vitals under representative conditions.
+- Long-task/main-thread cost.
+- API latency and route transition time.
+- Cache-hit behavior across releases.
+
+```mermaid
+flowchart LR
+	BASE[Approved baseline] --> CANDIDATE[Candidate measurements]
+	CANDIDATE --> DELTA[Compare budgets and regressions]
+	DELTA -->|within policy| PASS[Pass]
+	DELTA -->|regression| REVIEW[Explain, optimize, or reject]
+	REVIEW --> CANDIDATE
+```
+
+A bundle-size warning alone does not measure user experience, but it is useful early evidence.
+
+## Service Worker Deployment
+
+Service workers add a second release lifecycle because they can serve cached HTML/assets after deployment.
+
+```mermaid
+stateDiagram-v2
+	[*] --> installing
+	installing --> waiting: assets prepared
+	waiting --> active: activation policy satisfied
+	active --> updating: new worker discovered
+	updating --> waiting
+	active --> failed: cache/runtime error
+	failed --> recovering: clear/repair strategy
+```
+
+Design update prompts, cache versioning, activation, critical-form protection, rollback, and stale asset compatibility. Do not force activation if it can mix incompatible page and worker state.
+
+## Multi-Region and Edge Delivery
+
+CDNs distribute static assets naturally. SSR/API multi-region systems must address session affinity, data consistency, failover, region-specific identity/configuration, and telemetry correlation.
+
+Test regional DNS/CDN behavior and ensure legal/data-residency constraints are satisfied. More regions increase operational surface and are not automatically faster for every dynamic dependency.
+
+## Deployment Runbook
+
+A runbook should state:
+
+1. Trigger and responsible owner.
+2. Required gates and approvals.
+3. Artifact digest and release metadata.
+4. Configuration and feature-flag changes.
+5. Deployment sequence.
+6. Smoke and canary checks.
+7. Dashboards and alert thresholds.
+8. Pause, rollback, and roll-forward commands.
+9. Communication channels.
+10. Evidence and post-deploy record.
+
+Keep commands automated and non-interactive where possible. Avoid undocumented manual production mutations.
+
+## Testing the Deployment Contract
+
+Test the deployed system, not only source code:
+
+- Root and nested route navigation.
+- Missing asset returns real `404` rather than HTML.
+- Correct base path and lazy chunks.
+- MIME types, compression, and cache headers.
+- CSP and security headers.
+- Public configuration and absence of secrets.
+- API, cookies, CORS, CSRF, and authentication callbacks.
+- Source-map release linkage.
+- Offline/error/degraded states.
+- Rollback to prior artifact.
+
+```mermaid
+flowchart LR
+	ART[Built artifact] --> LOCAL[Production-like local server]
+	LOCAL --> PREVIEW[Preview environment]
+	PREVIEW --> CANARY[Production canary]
+	CANARY --> FULL[Full release]
+	LOCAL --> TEST[Contract tests]
+	PREVIEW --> TEST
+	CANARY --> TEST
+```
+
+## Common Failure Scenarios
+
+| Symptom | Likely cause | Correction |
+|---|---|---|
+| Refreshing nested route returns `404` | Missing SPA fallback | Rewrite navigations to HTML only |
+| JavaScript request returns HTML | Broad fallback catches missing asset | Exclude assets and return real `404` |
+| Lazy chunk fails after deploy | Old assets deleted or wrong base path | Retain release overlap and align paths |
+| Users remain on old release | HTML/service-worker/CDN cached too long | Revalidate HTML and fix update policy |
+| Every deploy invalidates vendor cache | Unstable chunking/runtime IDs | Inspect hashing/chunk strategy |
+| Production API fails while dev works | Dev proxy assumed in production | Configure real origin/reverse proxy/CORS |
+| Environment value is undefined | Wrong prefix/mode/build injection | Validate configuration before build |
+| Secret appears in bundle | Client-exposed build variable | Rotate and move operation server-side |
+| Source stack cannot symbolicate | Map/release mismatch | Upload exact maps before release |
+| CSP blocks application | Policy and emitted runtime disagree | Test report-only and narrow dependencies |
+| Browser downloads JS as text/error | Wrong MIME type or `nosniff` | Configure server metadata correctly |
+| Rollback does not recover | API/data/config incompatibility | Plan compatibility and verify rollback |
+| Canary looks healthy but users fail | Wrong cohort/metrics | Monitor critical user outcomes |
+| Preview accesses production | Environment isolation failure | Separate identities, data, and network policy |
+| Container env changes nothing | JS values embedded at build | Generate runtime config or rebuild |
+| HSTS breaks subdomain | Premature includeSubDomains | Verify all HTTPS coverage first |
+
+## Common Mistakes
+
+| Mistake | Consequence | Professional correction |
+|---|---|---|
+| Rebuilding during promotion | Untested artifact reaches production | Promote immutable artifact |
+| Deploying from developer machine | Uncontrolled inputs and credentials | Use audited CI/CD |
+| Only testing `npm run build` | Hosting failures escape | Test deployed artifact contract |
+| Same cache policy for HTML and hashes | Stale or inefficient releases | Separate mutable and immutable resources |
+| Deleting old assets immediately | Active tabs lose chunks | Retain overlap window |
+| SPA rewrite catches APIs/assets | HTML returned incorrectly | Route by request class/existence |
+| Using preview server in production | Unsupported security/operations | Use production host/CDN |
+| Secrets in frontend env | Public credential exposure | Keep privileged values server-side |
+| Broad production CI secrets in PRs | Supply-chain compromise | Isolate untrusted jobs |
+| Source maps publicly exposed accidentally | Source disclosure | Private upload/controlled policy |
+| No release metadata | Errors cannot map to artifact | Attach release/digest everywhere |
+| Manual hotfix on host | Drift and unrepeatable rollback | Build a new artifact through pipeline |
+| Rollback never tested | Incident recovery fails | Exercise rollback regularly |
+| Feature flags never removed | Permanent code complexity | Assign owner/expiry/removal |
+| Alerting on every exception | Alert fatigue | Alert on user impact/SLO burn |
+| Relying only on synthetic tests | Real-user regressions missed | Combine synthetic and RUM |
+| Infrastructure configured by dashboard only | Drift and poor recovery | Use versioned IaC where possible |
+| CSP copied from template | Broken app or weak policy | Inventory and test exact resources |
+| Data migration ignored in rollback | Old app cannot use new data | Expand/contract compatibility |
+| Deployment success equals release success | Users may still fail | Verify and observe rollout |
+
+## Production Checklist
+
+1. Pin source, lockfile, Node, package manager, and build tools.
+2. Build in controlled least-privileged CI.
+3. Run lint, type, test, accessibility, security, and performance gates.
+4. Validate all public configuration before building or bootstrapping.
+5. Keep every secret out of browser artifacts.
+6. Attach release, commit, and artifact digest metadata.
+7. Publish one immutable artifact and promote it without rebuilding.
+8. Verify artifact contents and provenance.
+9. Isolate preview environments from production data and credentials.
+10. Configure exact base paths and SPA fallback behavior.
+11. Return real `404` responses for missing assets.
+12. Serve correct MIME types with `nosniff`.
+13. Compress text assets with Brotli/gzip.
+14. Cache hashed assets immutably and HTML with revalidation.
+15. Retain previous hashed assets through a defined overlap window.
+16. Configure TLS, DNS, certificate renewal, and origin protection.
+17. Enforce reviewed CSP and security headers.
+18. Upload exact private source maps before release.
+19. Coordinate frontend, API, configuration, and data compatibility.
+20. Use safe atomic deployment ordering.
+21. Select rolling, blue-green, canary, or flag rollout intentionally.
+22. Run deployed smoke tests on root, routes, chunks, API, and auth.
+23. Monitor synthetic and real-user signals by release/cohort.
+24. Define SLOs and actionable alerts.
+25. Pause rollout automatically or manually on guardrail failure.
+26. Roll back by promoting a known prior artifact.
+27. Document when roll forward is safer than rollback.
+28. Test rollback, service-worker updates, and disaster recovery.
+29. Version infrastructure and platform configuration.
+30. Keep deployment evidence, audit logs, and runbooks current.
+
+## Real-World Architectures
+
+### E-Commerce SPA
+
+Deploy immutable static assets through a CDN, retain old checkout chunks, use idempotent synthetic orders in a sandbox, canary by stable user cohort, and monitor product-view, cart, checkout, and payment journey completion.
+
+### Banking Portal
+
+Use protected CI environments, signed artifacts, strict CSP, private source maps, phishing-resistant deployment access, staged rollout, server-enforced authorization, audited approvals, tested rollback, and disaster-recovery exercises.
+
+### Enterprise CRM
+
+Provide protected previews with synthetic tenant data, coordinate API compatibility for long-lived tabs, split large editor/report assets, monitor route-level performance, and promote the same artifact across governed environments.
+
+### Multi-Tenant SaaS
+
+Keep tenant-private data out of static assets and runtime public configuration, validate tenant routing, isolate caches, canary by tenant cohort, and ensure rollback preserves tenant/API compatibility.
+
+### Static Documentation or Portfolio
+
+Use object storage/CDN or a managed static host, optimize images/fonts, configure custom-domain TLS, preserve accessibility, set a correct base path, and select SPA fallback only when client routing is actually used.
+
+### SSR Application
+
+Deploy version-matched server and client artifacts, use readiness probes, request-scoped state, private response caching, static asset CDN delivery, streaming-error monitoring, rolling compatibility, and server rollback controls.
+
+### Offline/PWA Application
+
+Coordinate application, service-worker, cache, and API versions. Preserve critical drafts during updates, avoid mixed-release caches, test offline upgrades/rollback, and expose controlled recovery from corrupted storage.
+
+A professional delivery system produces traceable immutable artifacts, validates them in production-like environments, releases them gradually with observable guardrails, and can recover without improvisation. Deployment is complete only when users can successfully run the intended journeys and the team can diagnose or reverse the release safely.
 
 ---
 
