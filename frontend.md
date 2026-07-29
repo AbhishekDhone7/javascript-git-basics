@@ -7128,88 +7128,1274 @@ A professional Context architecture makes dependency scope explicit, keeps owner
 
 [Previous: Context](#module-9-context-api) | [Next: Performance](#module-11-performance-optimization)
 
-Redux implements one-way event flow: UI dispatches actions, middleware may react, reducers calculate next state, and subscribers select updates. Redux Toolkit (RTK) is the official way to write Redux: `configureStore`, `createSlice`, Immer-powered immutable updates, thunks, listeners, entity adapters, and RTK Query.
+## Introduction
+
+Redux is a predictable event-driven state container. Redux Toolkit is the official, recommended way to write Redux applications. It standardizes store configuration, immutable updates, action creation, async workflows, middleware, normalized entities, selector tooling, and development checks.
+
+RTK Query is included with Redux Toolkit and specializes in remote server state. It manages request lifecycle, cache entries, subscriptions, deduplication, invalidation, polling, prefetching, and generated React hooks.
+
+These systems solve different problems:
+
+| System | Primary responsibility |
+|---|---|
+| React local state | One component or nearby subtree interaction state |
+| Context | Deliver stable dependencies through a subtree |
+| Redux Toolkit slices | Cross-feature client state and event workflows |
+| RTK Query | Shared remote server data and mutation lifecycle |
+| URL/router | Navigation, resource identity, shareable filters |
+
+```bash
+npm install @reduxjs/toolkit react-redux
+```
+
+## Redux Mental Model
+
+Redux uses one-way event flow:
+
+1. Application code dispatches a plain action describing what happened.
+2. Middleware may observe, delay, transform, reject, or react to the action.
+3. The root reducer calculates the next state from the previous state and action.
+4. The store publishes the new state snapshot.
+5. Subscriptions run; React-Redux selectors determine which components need rendering.
 
 ```mermaid
 flowchart LR
- UI -->|dispatch action| MW[Middleware]
- MW --> R[Root reducer]
- R --> S[New store state]
- S -->|selector subscription| UI
- MW --> API[Async work]
- API --> MW
+	UI[UI or application event] -->|dispatch action| MW[Middleware pipeline]
+	MW --> R[Root reducer]
+	R --> NS[Next immutable state]
+	NS --> SUB[Store subscriptions]
+	SUB --> SEL[Component selectors]
+	SEL -->|selected value changed| UI
+	MW --> FX[Optional async workflow]
+	FX -->|dispatch result action| MW
 ```
 
-```jsx
-import { configureStore, createAsyncThunk, createEntityAdapter, createSlice } from "@reduxjs/toolkit";
+Redux state is a snapshot, and reducers are pure calculations. Middleware surrounds dispatch and is the appropriate extension point for side effects and cross-cutting behavior.
 
-const products = createEntityAdapter();
-export const fetchProducts = createAsyncThunk("products/fetch", async (_, { signal, rejectWithValue }) => {
-	try { return (await http.get("/products", { signal })).data; }
-	catch (error) { return rejectWithValue(error.message); }
-});
+## When Redux Is Appropriate
 
-const slice = createSlice({
-	name: "products",
-	initialState: products.getInitialState({ status: "idle", error: null }),
-	reducers: { productUpdated: products.updateOne },
-	extraReducers: (builder) => builder
-		.addCase(fetchProducts.pending, (state) => { state.status = "pending"; })
-		.addCase(fetchProducts.fulfilled, (state, action) => { state.status = "succeeded"; products.setAll(state, action.payload); })
-		.addCase(fetchProducts.rejected, (state, action) => { state.status = "failed"; state.error = action.payload ?? action.error.message; }),
-});
+Redux Toolkit is useful when several of these conditions are true:
 
-export const store = configureStore({ reducer: { products: slice.reducer } });
+- Many distant features read or update the same client state.
+- Transitions should be represented as named domain events.
+- Async workflows span multiple features or respond to actions.
+- Fine-grained selector subscriptions are valuable.
+- Debugging benefits from action history and Redux DevTools.
+- Entity normalization and reusable selectors reduce duplication.
+- Middleware must coordinate analytics, persistence, or workflows.
+- The team needs one consistent state architecture at application scale.
+
+Redux is usually unnecessary for an isolated input, modal toggle, hover state, or component-local draft. Shared server resources normally belong in RTK Query rather than hand-written slices.
+
+```mermaid
+flowchart TD
+	S[State requirement] --> L{Local to one component/subtree?}
+	L -->|yes| RS[React state or reducer]
+	L -->|no| U{Shareable URL/navigation state?}
+	U -->|yes| URL[Router/search parameters]
+	U -->|no| R{Remote server resource?}
+	R -->|yes| Q[RTK Query]
+	R -->|no| W{Cross-feature client workflow?}
+	W -->|yes| RTK[Redux Toolkit slice]
+	W -->|no| C[Props or scoped Context]
 ```
 
-Immer lets reducers use mutation syntax on a draft while producing immutable structural sharing. State/actions should remain serializable. Select narrowly; normalized `{ids, entities}` data avoids duplication and makes updates direct. Use listener middleware for workflows reacting to actions/state; custom middleware must call `next(action)` and return its result.
+## Core Redux Terms
 
-## RTK Query
+| Term | Meaning |
+|---|---|
+| Store | Holds the current state and coordinates dispatch/subscriptions |
+| State | Serializable application snapshot owned by the store |
+| Action | Plain event object, conventionally with `type` and optional `payload` |
+| Reducer | Pure function calculating next state from state and action |
+| Dispatch | Sends an action through middleware to reducers |
+| Selector | Reads or derives a value from store state |
+| Middleware | Wraps dispatch to implement side effects or cross-cutting behavior |
+| Slice | Feature reducer, actions, and case logic created together |
+| Thunk | Function dispatched for imperative async or conditional workflow |
+| Listener | Declarative reaction to matching actions/state changes |
 
-RTK Query caches server state by endpoint plus serialized arguments, deduplicates requests, tracks subscribers, expires unused cache, and invalidates tags.
+## Configuring the Store
+
+`configureStore` combines reducers, adds thunk middleware, enables development checks, and connects Redux DevTools.
 
 ```jsx
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+// src/app/store.js
+import { configureStore } from "@reduxjs/toolkit";
+import { api } from "../services/api.js";
+import sessionReducer from "../features/session/sessionSlice.js";
+import notificationsReducer from "../features/notifications/notificationsSlice.js";
+import { listenerMiddleware } from "./listenerMiddleware.js";
+
+export const store = configureStore({
+	reducer: {
+		session: sessionReducer,
+		notifications: notificationsReducer,
+		[api.reducerPath]: api.reducer,
+	},
+	middleware: (getDefaultMiddleware) =>
+		getDefaultMiddleware()
+			.prepend(listenerMiddleware.middleware)
+			.concat(api.middleware),
+	devTools: import.meta.env.MODE !== "production",
+});
+```
+
+Mount one React-Redux provider around the application:
+
+```jsx
+import { Provider } from "react-redux";
+
+root.render(
+	<Provider store={store}>
+		<App />
+	</Provider>,
+);
+```
+
+Create the store outside component rendering for a browser SPA. Server-rendered applications should create an isolated store per request to prevent cross-user state leakage.
+
+```mermaid
+flowchart TB
+	P[React-Redux Provider] --> A[Application tree]
+	ST[Configured store] --> P
+	ST --> SR[Slice reducers]
+	ST --> MW[Middleware]
+	ST --> API[RTK Query reducer and middleware]
+	A -->|useDispatch| MW
+	ST -->|useSelector subscriptions| A
+```
+
+## Designing State Shape
+
+Organize state by ownership and domain responsibility, not by component name or transport endpoint.
+
+```jsx
+{
+	session: {
+		status: "authenticated",
+		userId: "u42"
+	},
+	notifications: {
+		ids: ["n1", "n2"],
+		entities: {
+			n1: { id: "n1", kind: "success", message: "Saved" },
+			n2: { id: "n2", kind: "warning", message: "Session expires soon" }
+		}
+	},
+	checkout: {
+		step: "review",
+		draftId: "draft-9"
+	},
+	api: {
+		/* RTK Query-managed cache state */
+	}
+}
+```
+
+State design rules:
+
+- Store the minimum canonical source of truth.
+- Derive totals, filtered arrays, and status labels with selectors.
+- Avoid duplicating the same entity in several slices.
+- Keep state and actions serializable unless a documented middleware configuration justifies an exception.
+- Store IDs rather than deeply embedding repeated related records.
+- Keep React elements, DOM nodes, promises, class instances, controllers, and functions outside state.
+- Keep server query data in RTK Query unless creating a deliberate editable snapshot.
+
+## Creating Slices
+
+`createSlice` generates action creators and a reducer from named case reducers.
+
+```jsx
+import { createSlice, nanoid } from "@reduxjs/toolkit";
+
+const notificationsSlice = createSlice({
+	name: "notifications",
+	initialState: [],
+	reducers: {
+		notificationAdded: {
+			reducer(state, action) {
+				state.push(action.payload);
+			},
+			prepare({ kind = "info", message }) {
+				return {
+					payload: {
+						id: nanoid(),
+						kind,
+						message,
+						createdAt: Date.now(),
+					},
+				};
+			},
+		},
+		notificationRemoved(state, action) {
+			return state.filter((notification) => notification.id !== action.payload);
+		},
+		allNotificationsCleared() {
+			return [];
+		},
+	},
+});
+
+export const {
+	notificationAdded,
+	notificationRemoved,
+	allNotificationsCleared,
+} = notificationsSlice.actions;
+
+export default notificationsSlice.reducer;
+```
+
+The `prepare` callback centralizes payload construction while keeping reducers focused on transitions. Action names become `sliceName/reducerName`, such as `notifications/notificationAdded`.
+
+## Immer and Immutable Updates
+
+Redux Toolkit wraps case reducers with Immer. Reducers may use mutation-like syntax on a draft; Immer creates an immutable next state with structural sharing.
+
+```jsx
+const preferencesSlice = createSlice({
+	name: "preferences",
+	initialState: {
+		theme: "system",
+		table: { density: "comfortable", pageSize: 25 },
+	},
+	reducers: {
+		themeChanged(state, action) {
+			state.theme = action.payload;
+		},
+		tableDensityChanged(state, action) {
+			state.table.density = action.payload;
+		},
+	},
+});
+```
+
+```mermaid
+flowchart LR
+	PS[Previous immutable state] --> D[Immer draft proxy]
+	A[Case reducer mutations] --> D
+	D --> C{Which branches changed?}
+	C -->|unchanged| REUSE[Reuse previous references]
+	C -->|changed| COPY[Create changed branch copies]
+	REUSE --> NS[Next immutable state]
+	COPY --> NS
+```
+
+Do not mutate values before they enter the reducer, and do not retain draft references outside reducer execution. A case reducer should either mutate the draft or return a replacement value; mixing both for the same execution is invalid.
+
+## Actions as Domain Events
+
+Prefer action names describing what happened rather than imperative setter names.
+
+```jsx
+// Less expressive
+dispatch(setStatus("approved"));
+
+// Domain event
+dispatch(applicationApproved({ applicationId, approvedBy }));
+```
+
+Event-oriented actions improve logs, listener workflows, analytics, and reducer reuse. Keep payloads minimal but sufficient to calculate the transition. Do not include sensitive values merely for debugging convenience.
+
+## `reducers` and `extraReducers`
+
+`reducers` defines cases owned by the slice and generates matching action creators. `extraReducers` lets the slice respond to actions defined elsewhere without generating new action creators.
+
+```jsx
+const sessionSlice = createSlice({
+	name: "session",
+	initialState: { status: "unknown", user: null, error: null },
+	reducers: {
+		signedOut(state) {
+			state.status = "anonymous";
+			state.user = null;
+		},
+	},
+	extraReducers: (builder) => {
+		builder
+			.addCase(restoreSession.pending, (state) => {
+				state.status = "loading";
+			})
+			.addCase(restoreSession.fulfilled, (state, action) => {
+				state.status = action.payload ? "authenticated" : "anonymous";
+				state.user = action.payload;
+				state.error = null;
+			})
+			.addCase(restoreSession.rejected, (state, action) => {
+				state.status = "anonymous";
+				state.error = action.payload ?? action.error.message;
+			});
+	},
+});
+```
+
+Builder callbacks provide safe matching for thunk lifecycle actions and actions from other slices.
+
+## React-Redux Hooks
+
+`useDispatch` returns the store dispatch function. `useSelector` subscribes to the store and returns selected state.
+
+```jsx
+import { useDispatch, useSelector } from "react-redux";
+
+function NotificationBadge() {
+	const dispatch = useDispatch();
+	const unreadCount = useSelector((state) =>
+		state.notifications.filter((item) => !item.read).length,
+	);
+
+	return (
+		<button onClick={() => dispatch(allNotificationsRead())}>
+			Unread notifications: {unreadCount}
+		</button>
+	);
+}
+```
+
+By default, `useSelector` compares the previous and next selected result with strict reference equality. Returning a new object or array each time can render the component after every store update.
+
+```mermaid
+sequenceDiagram
+	participant S as Redux store
+	participant U as Store update
+	participant SEL as Component selector
+	participant C as React component
+	U->>S: Publish next state
+	S->>SEL: Run selector
+	SEL->>SEL: Compare previous and next result
+	SEL-->>C: Render only when selected result changed
+```
+
+Select the smallest values needed. Use multiple `useSelector` calls or a memoized selector for related derived results instead of selecting an entire slice automatically.
+
+## Selectors and Derived Data
+
+Selectors hide state shape and centralize derivation.
+
+```jsx
+export const selectNotifications = (state) => state.notifications;
+
+export const selectUnreadNotifications = createSelector(
+	[selectNotifications],
+	(notifications) => notifications.filter((item) => !item.read),
+);
+
+export const selectUnreadCount = createSelector(
+	[selectUnreadNotifications],
+	(unread) => unread.length,
+);
+```
+
+`createSelector` memoizes the most recent calculation based on input selector results. Memoization is useful when derivation is expensive or returns a new reference consumed by equality checks.
+
+### Parameterized Selectors
+
+```jsx
+const selectProducts = (state) => state.products.entities;
+const selectCategoryId = (_state, categoryId) => categoryId;
+
+export const selectProductsByCategory = createSelector(
+	[selectProducts, selectCategoryId],
+	(products, categoryId) =>
+		Object.values(products).filter((product) => product.categoryId === categoryId),
+);
+```
+
+Shared parameterized selectors may thrash a one-entry cache when many component instances pass different parameters. Prefer entity lookups by ID, selector factories when warranted, or RTK Query endpoint selectors for cached server data.
+
+## Normalized State with `createEntityAdapter`
+
+Normalized state stores entity IDs separately from an entity lookup table, avoiding repeated nested copies.
+
+```jsx
+import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
+
+const customersAdapter = createEntityAdapter({
+	selectId: (customer) => customer.id,
+	sortComparer: (left, right) => left.name.localeCompare(right.name),
+});
+
+const customersSlice = createSlice({
+	name: "customers",
+	initialState: customersAdapter.getInitialState({
+		selectedCustomerId: null,
+	}),
+	reducers: {
+		customersReceived: customersAdapter.setAll,
+		customerAdded: customersAdapter.addOne,
+		customerUpdated: customersAdapter.updateOne,
+		customerRemoved: customersAdapter.removeOne,
+		customerSelected(state, action) {
+			state.selectedCustomerId = action.payload;
+		},
+	},
+});
+
+export const customersSelectors = customersAdapter.getSelectors(
+	(state) => state.customers,
+);
+```
+
+```mermaid
+flowchart LR
+	LIST[Repeated nested customer objects] --> NORM[Normalize]
+	NORM --> IDS[ids ordered identity list]
+	NORM --> ENT[entities lookup by ID]
+	ENT --> UP[Direct update by ID]
+	IDS --> SEL[Generated ordered selectors]
+	ENT --> SEL
+```
+
+Entity adapters are most useful for client-owned normalized collections. RTK Query intentionally caches each endpoint/argument result independently and does not create one global normalized cache automatically.
+
+## Async Logic with `createAsyncThunk`
+
+Use thunks for imperative async workflows that do not primarily represent shared server-cache reads, such as session restoration, multi-step orchestration, or combining services and store decisions.
+
+```jsx
+import { createAsyncThunk } from "@reduxjs/toolkit";
+
+export const submitTransfer = createAsyncThunk(
+	"transfers/submit",
+	async ({ draft, idempotencyKey }, { signal, rejectWithValue }) => {
+		try {
+			return await transfersApi.create(draft, {
+				signal,
+				idempotencyKey,
+			});
+		} catch (error) {
+			if (error.kind === "validation") {
+				return rejectWithValue({
+					kind: "validation",
+					fields: error.fields,
+				});
+			}
+			throw error;
+		}
+	},
+	{
+		condition: (_argument, { getState }) =>
+			getState().transfers.status !== "submitting",
+	},
+);
+```
+
+Dispatching creates a promise with an `abort` method:
+
+```jsx
+useEffect(() => {
+	const promise = dispatch(loadWorkspace(workspaceId));
+	return () => promise.abort();
+}, [dispatch, workspaceId]);
+```
+
+Use `.unwrap()` when event code needs normal promise semantics:
+
+```jsx
+try {
+	const transfer = await dispatch(submitTransfer(input)).unwrap();
+	navigate(`/transfers/${transfer.id}`);
+} catch (error) {
+	setSubmissionError(error);
+}
+```
+
+```mermaid
+stateDiagram-v2
+	[*] --> Condition
+	Condition --> Skipped: condition false
+	Condition --> Pending: condition true
+	Pending --> Fulfilled: payload creator resolves
+	Pending --> RejectedValue: rejectWithValue
+	Pending --> RejectedError: throws
+	Pending --> Aborted: abort requested
+	Fulfilled --> [*]
+	RejectedValue --> [*]
+	RejectedError --> [*]
+	Aborted --> [*]
+	Skipped --> [*]
+```
+
+The thunk `signal` must be passed into the HTTP client for real cancellation. Aborting Redux lifecycle alone cannot stop transport work that never receives the signal.
+
+## Listener Middleware
+
+Listener middleware reacts to actions or state changes and supports cancellation-aware workflows. It is appropriate for event-driven side effects that should not live in components.
+
+```jsx
+import { createListenerMiddleware, isAnyOf } from "@reduxjs/toolkit";
+
+export const listenerMiddleware = createListenerMiddleware();
+
+listenerMiddleware.startListening({
+	matcher: isAnyOf(
+		preferencesSlice.actions.themeChanged,
+		preferencesSlice.actions.tableDensityChanged,
+	),
+	effect: async (_action, listenerApi) => {
+		const preferences = listenerApi.getState().preferences;
+		preferencesStorage.save(preferences);
+	},
+});
+
+listenerMiddleware.startListening({
+	actionCreator: searchQueryChanged,
+	effect: async (action, listenerApi) => {
+		listenerApi.cancelActiveListeners();
+		await listenerApi.delay(300);
+		listenerApi.dispatch(searchCommitted(action.payload));
+	},
+});
+```
+
+```mermaid
+sequenceDiagram
+	participant D as Dispatch
+	participant L as Listener middleware
+	participant R as Reducer
+	participant E as Listener effect
+	D->>L: searchQueryChanged
+	L->>R: Forward action
+	L->>E: Start matching effect
+	D->>L: New searchQueryChanged
+	L--xE: Cancel previous listener task
+	L->>E: Delay then dispatch latest searchCommitted
+```
+
+Listener middleware is not a substitute for RTK Query caching. Use it for workflows, orchestration, persistence, and reactions to domain events.
+
+## Custom Middleware
+
+Custom middleware follows the signature `storeAPI => next => action => result`.
+
+```jsx
+export const auditMiddleware = (storeApi) => (next) => (action) => {
+	const startedAt = performance.now();
+	const result = next(action);
+
+	if (action.meta?.audit) {
+		auditClient.record({
+			type: action.type,
+			durationMs: performance.now() - startedAt,
+			userId: storeApi.getState().session.user?.id,
+		});
+	}
+
+	return result;
+};
+```
+
+Always forward ordinary actions exactly once and return `next(action)`'s result unless the middleware intentionally changes dispatch semantics. Redact payloads; action objects may contain personal or confidential business data.
+
+## Serializability and Development Checks
+
+Redux Toolkit enables serializable-state and immutable-state checks in development. These catch functions, promises, class instances, accidental mutation, and other problematic values.
+
+Prefer storing:
+
+- Strings, numbers, booleans, `null`.
+- Plain objects and arrays.
+- Stable IDs and timestamps represented as numbers/ISO strings.
+- Explicit status/error data safe for DevTools.
+
+Keep outside Redux:
+
+- DOM elements and refs.
+- Abort controllers and active promises.
+- React components/elements.
+- Open sockets and service instances.
+- Raw `Error`, `Date`, `Map`, `Set`, or class instances unless transformed/configured deliberately.
+- Secrets and large binary files.
+
+Do not disable checks globally merely to silence one architecture mistake.
+
+## RTK Query Mental Model
+
+RTK Query creates cache entries using the endpoint name and serialized query argument. Components subscribe to those entries through generated hooks.
+
+```mermaid
+flowchart TB
+	C1[Component A getProduct 42] --> K[Cache key: getProduct plus 42]
+	C2[Component B getProduct 42] --> K
+	K --> D{Cached or request in flight?}
+	D -->|yes| SHARE[Share data/request state]
+	D -->|no| FETCH[Execute baseQuery]
+	FETCH --> K
+	K --> C1
+	K --> C2
+```
+
+RTK Query deduplicates subscribers using the same cache key. Different arguments create different entries, even for overlapping data. Cache entries track data, error, request status, subscription count, timestamps, and tags.
+
+## Creating an API Slice
+
+Create one API slice per base URL or coherent backend boundary in most applications. Multiple API slices add middleware and prevent automatic tag invalidation across slices.
+
+```jsx
+// src/services/api.js
+import {
+	createApi,
+	fetchBaseQuery,
+} from "@reduxjs/toolkit/query/react";
+
+const rawBaseQuery = fetchBaseQuery({
+	baseUrl: "/api",
+	credentials: "include",
+	prepareHeaders: (headers, { getState }) => {
+		const csrfToken = getState().session.csrfToken;
+		if (csrfToken) headers.set("X-CSRF-Token", csrfToken);
+		headers.set("Accept", "application/json");
+		return headers;
+	},
+});
 
 export const api = createApi({
 	reducerPath: "api",
-	baseQuery: fetchBaseQuery({ baseUrl: "/api", credentials: "include" }),
-	tagTypes: ["Product"],
+	baseQuery: rawBaseQuery,
+	tagTypes: ["Product", "Customer", "Invoice"],
+	keepUnusedDataFor: 60,
+	refetchOnFocus: false,
+	refetchOnReconnect: true,
+	endpoints: () => ({}),
+});
+```
+
+Inject feature endpoints from feature modules when code organization requires it:
+
+```jsx
+export const productsApi = api.injectEndpoints({
 	endpoints: (build) => ({
-		getProducts: build.query({
-			query: (params) => ({ url: "products", params }),
-			providesTags: (result = []) => ["Product", ...result.map(({ id }) => ({ type: "Product", id }))],
-		}),
-		updateProduct: build.mutation({
-			query: ({ id, ...patch }) => ({ url: `products/${id}`, method: "PATCH", body: patch }),
-			async onQueryStarted({ id, ...patch }, { dispatch, queryFulfilled }) {
-				const undo = dispatch(api.util.updateQueryData("getProducts", undefined, (draft) => {
-					Object.assign(draft.find((p) => p.id === id), patch);
-				}));
-				try { await queryFulfilled; } catch { undo.undo(); }
-			},
-			invalidatesTags: (_r, _e, { id }) => [{ type: "Product", id }],
+		getProduct: build.query({
+			query: (productId) => `products/${encodeURIComponent(productId)}`,
 		}),
 	}),
 });
 ```
 
-Register `api.reducer` and `api.middleware`. Use generated hooks, `prefetch`, polling options, and focus/reconnect listeners deliberately. Optimistic updates must patch the exact cache key/arguments and rollback failures. Tags describe data relationships, not UI screens.
+Register both `api.reducer` and `api.middleware`, and call `setupListeners(store.dispatch)` when using focus/reconnect behaviors that require listeners.
 
-```text
-src/app/store.js
-src/app/listenerMiddleware.js
-src/services/api.js
-src/features/products/productsSlice.js
-src/features/products/selectors.js
-src/features/products/components/
+## Queries and Generated Hooks
+
+```jsx
+export const productsApi = api.injectEndpoints({
+	endpoints: (build) => ({
+		getProducts: build.query({
+			query: ({ cursor, category, query }) => ({
+				url: "products",
+				params: {
+					cursor,
+					category: category || undefined,
+					q: query || undefined,
+				},
+			}),
+			transformResponse: (response) => ({
+				items: response.items,
+				nextCursor: response.nextCursor ?? null,
+			}),
+			providesTags: (result) => result
+				? [
+					{ type: "Product", id: "LIST" },
+					...result.items.map((product) => ({ type: "Product", id: product.id })),
+				]
+				: [{ type: "Product", id: "LIST" }],
+		}),
+	}),
+});
+
+export const { useGetProductsQuery } = productsApi;
 ```
 
-**Context vs Redux:** use context for stable dependency distribution; Redux for cross-feature event/state workflows; RTK Query for shared server cache. Do not copy query data into slices unless creating a deliberate editable snapshot.
+```jsx
+function ProductList({ filters }) {
+	const {
+		data,
+		error,
+		isLoading,
+		isFetching,
+		refetch,
+	} = useGetProductsQuery(filters);
 
-**Common mistakes:** giant slice, nonserializable values, dispatching in render, selecting whole state, hand-written immutable nesting, duplicate Axios/RTKQ caches, broad invalidation, and optimistic updates without rollback.
+	if (isLoading) return <ProductListSkeleton />;
+	if (error) return <QueryError error={error} onRetry={refetch} />;
+	if (!data.items.length) return <EmptyProducts />;
 
-**Practice:** configure store; build slice; thunk abort; adapter selectors; middleware; listener workflow; API slice; tag invalidation; optimistic update; polling/prefetch. **Mini project:** CRM leads with normalized local workflow state and RTK Query server data. **Interview:** reducers are pure calculations; middleware surrounds dispatch; `extraReducers` responds to external action types without generating them.
+	return (
+		<section aria-busy={isFetching}>
+			<ProductGrid products={data.items} />
+		</section>
+	);
+}
+```
+
+`isLoading` means no data exists for the first request; `isFetching` can be true while previous data remains available during refetch. This distinction supports stable refresh UI without replacing useful content with a full skeleton.
+
+## Cache Entry Lifecycle
+
+```mermaid
+stateDiagram-v2
+	[*] --> Uninitialized
+	Uninitialized --> Pending: first subscribed request
+	Pending --> Fulfilled: response succeeds
+	Pending --> Rejected: response fails
+	Fulfilled --> Refetching: invalidation, focus, polling, manual refetch
+	Rejected --> Pending: retry/refetch
+	Refetching --> Fulfilled: fresh response
+	Fulfilled --> Unused: last subscriber unmounts
+	Rejected --> Unused: last subscriber unmounts
+	Unused --> Fulfilled: subscriber returns before expiry
+	Unused --> Removed: keepUnusedDataFor expires
+	Removed --> [*]
+```
+
+`keepUnusedDataFor` starts after the final subscription is removed. It is not a freshness guarantee. Refetch policies, invalidation, polling, and explicit actions determine when data is requested again.
+
+## Conditional Queries and Lazy Queries
+
+Use `skipToken` or `skip` when required arguments are unavailable.
+
+```jsx
+import { skipToken } from "@reduxjs/toolkit/query";
+
+function CustomerPanel({ customerId }) {
+	const queryArgument = customerId ? customerId : skipToken;
+	const result = useGetCustomerQuery(queryArgument);
+	return <CustomerView query={result} />;
+}
+```
+
+Use a lazy query when an imperative user event should trigger the read:
+
+```jsx
+const [trigger, result] = useLazyGetInvoicePreviewQuery();
+
+<button onClick={() => trigger(invoiceId, true)}>
+	Preview invoice
+</button>
+```
+
+The second trigger argument can prefer cached data when available. Do not use lazy queries simply to recreate effect-based fetching when a normal declarative subscription matches the UI.
+
+## Query Arguments and Cache Keys
+
+Cache identity depends on serialized arguments. Pass serializable, stable domain values.
+
+```jsx
+const filters = {
+	category: searchParams.get("category") ?? "all",
+	query: searchParams.get("q") ?? "",
+	page: Number(searchParams.get("page")) || 1,
+};
+
+const result = useGetProductsQuery(filters);
+```
+
+RTK Query serializes arguments deterministically, but values such as functions, class instances, or arbitrary non-serializable objects do not belong in query arguments. Normalize defaults so semantically identical requests use the same cache identity.
+
+## Mutations
+
+Mutations represent server changes and expose a trigger plus mutation state.
+
+```jsx
+const productsApi = api.injectEndpoints({
+	endpoints: (build) => ({
+		createProduct: build.mutation({
+			query: (input) => ({
+				url: "products",
+				method: "POST",
+				body: input,
+			}),
+			invalidatesTags: [{ type: "Product", id: "LIST" }],
+		}),
+		updateProduct: build.mutation({
+			query: ({ id, patch, version }) => ({
+				url: `products/${encodeURIComponent(id)}`,
+				method: "PATCH",
+				body: patch,
+				headers: version ? { "If-Match": version } : undefined,
+			}),
+			invalidatesTags: (_result, _error, argument) => [
+				{ type: "Product", id: argument.id },
+			],
+		}),
+	}),
+});
+```
+
+```jsx
+function ProductEditor({ product }) {
+	const [updateProduct, { isLoading, error }] = useUpdateProductMutation();
+
+	async function save(patch) {
+		try {
+			await updateProduct({
+				id: product.id,
+				patch,
+				version: product.version,
+			}).unwrap();
+		} catch (mutationError) {
+			focusMutationError(mutationError);
+		}
+	}
+
+	return <ProductForm onSave={save} pending={isLoading} error={error} />;
+}
+```
+
+Mutation hook instances have independent result state by default. Use `fixedCacheKey` only when separate instances intentionally need to share mutation status.
+
+## Tag Invalidation
+
+Tags describe cache data relationships. A mutation invalidating a tag causes active cache entries providing that tag to refetch; unused invalidated entries can be removed.
+
+```mermaid
+flowchart LR
+	Q1[getProducts all provides LIST and IDs] --> TAG[Product tags]
+	Q2[getProduct 42 provides ID 42] --> TAG
+	M[updateProduct 42] -->|invalidates ID 42| TAG
+	TAG --> R1[Refetch active getProduct 42]
+	TAG --> R2[Refetch active list that provided 42]
+```
+
+Use abstract IDs such as `LIST` for collection membership and specific IDs for entities. Broadly invalidating an entire type is simple but can trigger unnecessary requests. Tags model data relationships, not page names.
+
+## Optimistic Updates
+
+Optimistic updates patch cached data before the server confirms success, then rollback on failure.
+
+```jsx
+updateProduct: build.mutation({
+	query: ({ id, patch }) => ({
+		url: `products/${id}`,
+		method: "PATCH",
+		body: patch,
+	}),
+	async onQueryStarted({ id, patch, listArgs }, { dispatch, queryFulfilled }) {
+		const productPatch = dispatch(
+			api.util.updateQueryData("getProduct", id, (draft) => {
+				Object.assign(draft, patch);
+			}),
+		);
+
+		const listPatch = dispatch(
+			api.util.updateQueryData("getProducts", listArgs, (draft) => {
+				const product = draft.items.find((item) => item.id === id);
+				if (product) Object.assign(product, patch);
+			}),
+		);
+
+		try {
+			await queryFulfilled;
+		} catch {
+			productPatch.undo();
+			listPatch.undo();
+		}
+	},
+	invalidatesTags: (_result, _error, { id }) => [{ type: "Product", id }],
+}),
+```
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant C as RTK Query cache
+	participant API as Server
+	U->>C: Trigger optimistic mutation
+	C->>C: Apply reversible cache patches
+	C-->>U: Render optimistic state
+	C->>API: Send mutation
+	alt server succeeds
+		API-->>C: Confirmed result
+		C->>C: Keep or reconcile cache
+	else server fails
+		API-->>C: Error
+		C->>C: Undo patches or invalidate
+		C-->>U: Show corrected state and error
+	end
+```
+
+Patch the exact endpoint and argument cache keys. Overlapping optimistic mutations can make rollback ordering complex; invalidating and refetching after failure may be safer. Do not optimistically confirm high-risk irreversible operations such as bank transfers.
+
+## Pessimistic Cache Updates
+
+Wait for the server response, then patch cache entries with authoritative data.
+
+```jsx
+async onQueryStarted(argument, { dispatch, queryFulfilled }) {
+	try {
+		const { data: updatedProduct } = await queryFulfilled;
+		dispatch(
+			api.util.updateQueryData("getProduct", argument.id, (draft) => {
+				Object.assign(draft, updatedProduct);
+			}),
+		);
+	} catch {
+		// Mutation state exposes the error.
+	}
+}
+```
+
+This avoids speculative UI and is appropriate when server transformations, authorization, conflict detection, or business rules significantly determine the result.
+
+## Prefetching, Polling, Focus, and Reconnect
+
+Use refetch mechanisms according to data freshness requirements rather than enabling every option globally.
+
+```jsx
+const prefetchProduct = api.usePrefetch("getProduct");
+
+<Link
+	to={`/products/${product.id}`}
+	onPointerEnter={() => prefetchProduct(product.id, { ifOlderThan: 60 })}
+	onFocus={() => prefetchProduct(product.id, { ifOlderThan: 60 })}
+>
+	{product.name}
+</Link>
+```
+
+```jsx
+const result = useGetJobStatusQuery(jobId, {
+	pollingInterval: 5_000,
+	skipPollingIfUnfocused: true,
+});
+```
+
+Prefetch only likely destinations and respect bandwidth. Polling should stop when no longer needed, account for tab visibility, and use server push when real-time requirements justify it. Reconnect/focus are hints for revalidation, not proof that data changed.
+
+## Pagination and Infinite Lists
+
+The query argument should represent the page or cursor. Standard page queries naturally create one cache entry per argument.
+
+```jsx
+function CustomersPage({ page }) {
+	const { data, isFetching } = useGetCustomersQuery({ page, pageSize: 25 });
+	return <CustomerTable data={data} busy={isFetching} />;
+}
+```
+
+For accumulated cursor pages, use the RTK Query capabilities available in the installed version or design a deliberate endpoint merge policy. Define:
+
+- Cache-key behavior across cursors.
+- Duplicate entity prevention.
+- Merge ordering.
+- Forced-refetch conditions.
+- Termination when no cursor remains.
+- Invalidation after inserts/removals.
+- Accessible Load more and retry controls.
+- Scroll restoration and memory limits.
+
+Do not concatenate pages in component effects while also treating RTK Query as cache owner.
+
+## Selecting from Query Results
+
+`selectFromResult` can limit component updates to a derived portion of a query result.
+
+```jsx
+function ProductPrice({ productId }) {
+	const { price, isFetching } = useGetProductsQuery(
+		{ category: "all", query: "", cursor: null },
+		{
+			selectFromResult: ({ data, isFetching }) => ({
+				price: data?.items.find((product) => product.id === productId)?.price,
+				isFetching,
+			}),
+		},
+	);
+
+	return <output aria-busy={isFetching}>{formatCurrency(price)}</output>;
+}
+```
+
+Return stable values where possible. A newly allocated array/object inside `selectFromResult` can undermine shallow result comparison unless memoized appropriately.
+
+## RTK Query Error Handling
+
+`fetchBaseQuery` returns structured errors instead of throwing ordinary HTTP failures.
+
+```jsx
+function QueryError({ error, onRetry }) {
+	if ("status" in error) {
+		if (error.status === 404) return <NotFoundResource />;
+		if (error.status === 403) return <Forbidden />;
+	}
+
+	return (
+		<div role="alert">
+			<p>Unable to load this information.</p>
+			<button onClick={onRetry}>Try again</button>
+		</div>
+	);
+}
+```
+
+Wrap `baseQuery` when the application needs one normalized error contract, token refresh, or retry policy. Keep refresh single-flight, prevent retry loops, and do not expose raw server diagnostics to users.
+
+## Cache Ownership and Editable Drafts
+
+Do not copy query data into a slice merely to make it accessible globally; query data is already in Redux and available through generated hooks/selectors.
+
+Create a separate draft only when editing semantics require divergence:
+
+```mermaid
+flowchart LR
+	CACHE[RTK Query server snapshot] --> INIT[Initialize edit draft once]
+	INIT --> DRAFT[Local form or workflow draft]
+	DRAFT --> MUT[Submit mutation with version]
+	MUT --> API[Server validates and commits]
+	API --> INV[Update/invalidate cache]
+	INV --> CACHE
+```
+
+Track dirty fields and record versions so background refreshes do not overwrite user edits. After success, reset or close the draft based on workflow policy.
+
+## Store Persistence
+
+Persist only state that must survive reload and is safe to retain. Version the persisted schema and migrate or discard incompatible snapshots.
+
+Suitable candidates may include:
+
+- Non-sensitive display preferences.
+- Explicitly supported local drafts.
+- Dismissed onboarding state.
+
+Avoid persisting:
+
+- RTK Query cache by default without a deliberate hydration/offline design.
+- Access tokens and sensitive personal information.
+- Loading/error flags from a previous runtime.
+- Non-serializable values.
+- State that can be cheaply and correctly reconstructed.
+
+Listener middleware can persist selected slices after relevant actions. Throttle writes and handle storage quota, corruption, multi-tab conflicts, and sign-out cleanup.
+
+## Code Splitting and Reducer Injection
+
+Large applications may inject endpoints or reducers with lazy routes. Endpoint injection is built into RTK Query. Dynamic reducer injection requires a stable reducer-manager architecture and tests for initialization, removal, and state retention.
+
+Do not introduce runtime reducer injection merely to reduce a small bundle. Static feature reducers are simpler and often compress well.
+
+## Performance
+
+- Keep state normalized and canonical.
+- Select the smallest values components render.
+- Memoize expensive derivations that return references.
+- Use entity lookup selectors rather than filtering large arrays per row.
+- Use `selectFromResult` for focused query subscriptions.
+- Avoid dispatching high-frequency pointer/animation data globally.
+- Batch domain changes into meaningful actions when transitions are atomic.
+- Keep middleware work small and move expensive processing off the dispatch path.
+- Use Redux DevTools and React Profiler to measure before restructuring.
+- Configure development checks thoughtfully for very large states, but fix root causes first.
+
+```mermaid
+flowchart TD
+	UP[Store update] --> S1[Selector A returns same primitive]
+	UP --> S2[Selector B returns changed entity]
+	UP --> S3[Selector C creates new array]
+	S1 --> SKIP[Component A skips]
+	S2 --> RB[Component B renders]
+	S3 --> RC[Component C renders even if contents match]
+	RC --> FIX[Memoize derivation or select canonical data]
+```
+
+## Security and Privacy
+
+Redux state and actions are client-side and inspectable. Redux DevTools, logs, persistence, error reports, and analytics can expose payloads.
+
+| Risk | Mitigation |
+|---|---|
+| Token stored in persistent slice | Prefer secure credential architecture; minimize client exposure |
+| Password/payment data dispatched | Keep sensitive form values local and ephemeral |
+| Authorization based on Redux role | Enforce permissions on every API request |
+| Personal data visible in DevTools/logs | Minimize, redact, and disable unsafe telemetry |
+| Persisted state survives sign-out | Purge user-scoped persisted state |
+| Optimistic UI implies server success | Reconcile failures and reserve risky operations for confirmation |
+| Query cache leaks across SSR requests | Create isolated store per request |
+| Feature flag treated as security | Keep server-side authorization independent |
+
+Reducers and selectors must not be trusted to enforce security. Users control the browser and can dispatch arbitrary actions.
+
+## Testing Redux Toolkit
+
+Test pure reducers and selectors directly, and test connected behavior through a real configured store.
+
+```jsx
+test("marks all notifications as read", () => {
+	const previous = [
+		{ id: "n1", read: false },
+		{ id: "n2", read: true },
+	];
+
+	const next = notificationsReducer(previous, allNotificationsRead());
+
+	expect(next.every((notification) => notification.read)).toBe(true);
+	expect(previous[0].read).toBe(false);
+});
+```
+
+```jsx
+function renderWithStore(ui, { preloadedState } = {}) {
+	const store = configureStore({
+		reducer: rootReducer,
+		preloadedState,
+		middleware: (getDefaultMiddleware) =>
+			getDefaultMiddleware().concat(api.middleware),
+	});
+
+	return {
+		store,
+		...render(<Provider store={store}>{ui}</Provider>),
+	};
+}
+```
+
+Prefer a fresh store per test. Do not mock `useSelector` and `useDispatch`; those mocks bypass subscription and selector behavior.
+
+## Testing RTK Query
+
+Use Mock Service Worker or an equivalent network boundary so base query, serialization, middleware, cache state, generated hooks, and UI participate together.
+
+```jsx
+test("invalidates the product after an update", async () => {
+	const store = makeTestStore();
+
+	const subscription = store.dispatch(
+		api.endpoints.getProduct.initiate("p42"),
+	);
+	await subscription.unwrap();
+
+	await store.dispatch(
+		api.endpoints.updateProduct.initiate({
+			id: "p42",
+			patch: { name: "Updated notebook" },
+		}),
+	).unwrap();
+
+	const queryState = api.endpoints.getProduct.select("p42")(store.getState());
+	expect(queryState.status).toMatch(/pending|fulfilled/);
+
+	subscription.unsubscribe();
+});
+```
+
+Cover cache deduplication, argument identity, loading versus fetching, invalidation, optimistic rollback, mutation errors, polling cleanup, refetch policy, auth refresh, and unsubscription. Reset API state between tests when reusing a store is unavoidable.
+
+```mermaid
+flowchart LR
+	T[Test store] --> API[RTK Query reducer and middleware]
+	API --> MSW[Mock HTTP boundary]
+	MSW --> RESP[Success/error response]
+	RESP --> CACHE[Cache transition]
+	CACHE --> UI[Connected component or selector]
+	UI --> ASSERT[Assert user-visible behavior and cache policy]
+```
+
+## Recommended Project Structure
+
+```text
+src/
+  app/
+    store.js
+    hooks.js
+    listenerMiddleware.js
+  services/
+    api.js
+  features/
+    session/
+      sessionSlice.js
+      sessionSelectors.js
+    notifications/
+      notificationsSlice.js
+      Notifications.jsx
+    products/
+      productsApi.js
+      ProductList.jsx
+      ProductEditor.jsx
+```
+
+Keep slice actions, selectors, and feature components near their domain. Keep the base API slice focused on shared transport and cache policy; inject domain endpoints from feature modules when useful.
+
+## Context, Redux, Thunks, and RTK Query
+
+| Requirement | Preferred tool |
+|---|---|
+| Stable theme/locale/service dependency | Context |
+| Local form or component interaction | React state/reducer |
+| Cross-feature client workflow | Redux Toolkit slice |
+| Arbitrary async orchestration | Thunk or listener middleware |
+| React to actions over time | Listener middleware |
+| Shared remote resource cache | RTK Query |
+| Bookmarkable filters/page | URL search parameters |
+
+Use the smallest system that fully owns the requirement. Combining tools is normal when ownership remains clear.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Every value put in Redux | Boilerplate and global coupling | Keep local state local |
+| One giant slice | Ownership and updates become tangled | Split by domain responsibility |
+| Reducer performs side effects | Nondeterministic state transitions | Use thunk/listener/middleware |
+| State mutated outside reducer | Subscribers and history become unreliable | Dispatch actions; use reducer drafts only |
+| Non-serializable state/actions | DevTools, persistence, and checks break | Store plain serializable data |
+| Whole slice selected | Unrelated updates render component | Select narrow values |
+| Selector returns new array each update | Avoidable rendering | Use `createSelector` when warranted |
+| Server data copied into slice | Divergent duplicate cache | Let RTK Query own remote data |
+| One API slice per endpoint | Extra middleware and isolated tags | Share API slice by backend boundary |
+| API middleware not registered | Cache lifecycle features fail | Add reducer and middleware |
+| Query arguments not normalized | Duplicate semantic cache entries | Canonicalize defaults and values |
+| Broad tag invalidation | Request storms | Use LIST and entity IDs intentionally |
+| Optimistic update patches wrong args | Visible cache stays stale | Patch exact endpoint/argument key |
+| Optimistic update has no rollback | Failed mutation leaves false UI | Undo or invalidate/refetch |
+| Thunk signal not passed to transport | Abort does not stop request | Propagate `signal` |
+| Dispatch called during render | Render loop and impurity | Dispatch in events/effects/workflows |
+| Sensitive values included in actions | Exposure through DevTools/logging | Keep data local and redact |
+| Shared store used during SSR | Cross-user state leakage | Create store per request |
+
+## Production Checklist
+
+1. Classify state as local, URL, client workflow, or remote server state.
+2. Configure one stable store with development checks and DevTools policy.
+3. Organize slices by domain ownership.
+4. Keep reducers pure and use Immer draft syntax correctly.
+5. Name actions as meaningful domain events.
+6. Keep state/actions serializable and free of secrets.
+7. Select narrowly and memoize measured derived data.
+8. Normalize client-owned entity collections where useful.
+9. Use thunks/listeners for async workflows, not shared query caches.
+10. Pass cancellation signals through every async layer.
+11. Register RTK Query reducer, middleware, and focus/reconnect listeners as needed.
+12. Design query arguments and tag relationships deliberately.
+13. Roll back or reconcile every optimistic update failure.
+14. Avoid duplicating RTK Query data into ordinary slices.
+15. Define cache lifetime, refetch, polling, and pagination policy.
+16. Create isolated stores for tests and SSR requests.
+17. Test reducers, selectors, workflows, cache transitions, and user behavior.
+18. Profile subscriptions and monitor failed queries/mutations in production.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Use RTK Query for catalog, inventory, promotions, and order status; a client slice or server cart according to product ownership; URL parameters for filters; and idempotent server mutations for checkout. Invalidate entity and collection tags precisely.
+
+### Banking
+
+Use slices for explicit client workflow state, thunks/listeners for controlled orchestration, RTK Query for authorized account snapshots, pessimistic confirmation for transfers, idempotency keys, strict redaction, and isolated SSR stores.
+
+### CRM
+
+Use RTK Query for customers, leads, activity, and invoices; local forms for drafts; entity/version-aware mutations for conflicts; listener middleware for cross-feature notifications; and selectors for client-owned workspace workflow state.
+
+### Analytics Dashboard
+
+Use RTK Query cache entries keyed by validated filters, polling only for active panels, `selectFromResult` for focused widget updates, partial-error handling, prefetch for likely reports, and bounded cache lifetimes for large datasets.
+
+### Collaboration Application
+
+Use RTK Query for initial snapshots and ordinary mutations, an external real-time transport for live events, listener middleware to coordinate domain reactions, normalized client state only where events require it, and explicit reconciliation after reconnect.
+
+A professional Redux architecture records meaningful events, keeps reducers deterministic, narrows subscriptions with selectors, and lets RTK Query own remote cache behavior instead of rebuilding it in slices and effects.
 
 ---
 
