@@ -19,12 +19,15 @@ The goal is to make difficult topics easier by explaining:
 - Root-level practice files for quick drills
 - Git learning guide in [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md)
 - Extended JavaScript notes in [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md)
+- Complete React project in [scholer-desk/](scholer-desk/) for student publishing and campus administration practice
 
 ## Repository Contents
 
 - [JavaScript/](JavaScript/)
 - [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md)
 - [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md)
+- [scholer-desk/](scholer-desk/)
+- [scholer-desk/README.md](scholer-desk/README.md)
 - [assets/screenshots](assets/screenshots)
 - [Array.js](Array.js)
 - [String.js](String.js)
@@ -79,6 +82,28 @@ Covered in [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md):
 17. Interview question bank
 18. Learning roadmap
 
+### C) ScholarDesk React Project
+
+Covered in [scholer-desk/README.md](scholer-desk/README.md):
+
+- Responsive React and Redux Toolkit application
+- Separate student and administrator login flows
+- Student posts, profiles, notifications, and settings
+- Post creation, editing, filtering, search, and detail views
+- Administrator students, posts, categories, analytics, reports, and settings
+- Reusable components, mock datasets, responsive navigation, and CSV exports
+- Complete local testing credentials for all demo users
+
+Run the project locally:
+
+```bash
+cd scholer-desk
+npm install
+npm start
+```
+
+After startup, use `http://localhost:3000/login` for students or `http://localhost:3000/admin/login` for administrators. See the [demo login credentials](scholer-desk/README.md#demo-login-credentials) for all test accounts.
+
 ## Learning Path
 
 If you are a complete beginner, use this order:
@@ -101,6 +126,7 @@ If you are a complete beginner, use this order:
 3. Review outputs and edge cases.
 4. Practice similar problems in the JS practice files.
 5. Use Git guide to track every learning change as commits.
+6. Open [scholer-desk/](scholer-desk/) to practice React architecture and complete student/admin workflows.
 
 ## Daily Practice Pattern
 
@@ -136,6 +162,7 @@ git push
 - [JavaScript/README.md](JavaScript/README.md)
 - [Git-Beginners-Documentation.md](Git-Beginners-Documentation.md)
 - [JavaScript-Beginners-Guide.md](JavaScript-Beginners-Guide.md)
+- [scholer-desk/README.md](scholer-desk/README.md)
 
 ## Final Note
 
@@ -146,37 +173,5 @@ I faced a lot of difficulties in my journey because of lack of guidance, but now
 
 Author: Abhishek Dhone
 
-Last updated: 2026-07-28
-
-## ScholarDesk Student Posts Management System
-
-The workspace now also includes [ScholarDesk](scholer-desk/README.md), a responsive React frontend for student publishing and campus administration workflows.
-
-### Project Location
-
-- Application: [scholer-desk/](scholer-desk/)
-- Project documentation: [scholer-desk/README.md](scholer-desk/README.md)
-- Student login: `http://localhost:3000/login`
-- Administrator login: `http://localhost:3000/admin/login`
-
-### Included Features
-
-- Student and administrator login flows
-- Student posts, profiles, notifications, and settings
-- Post creation, editing, filtering, and detail views
-- Administrator students, posts, categories, analytics, reports, and settings pages
-- Responsive desktop and mobile navigation
-- Mock datasets for local frontend testing
-
-### Run ScholarDesk
-
-```bash
-cd scholer-desk
-npm install
-npm start
-```
-
-All available student and administrator test credentials are documented in the [ScholarDesk README](scholer-desk/README.md#demo-login-credentials).
-
-ScholarDesk documentation updated: 2026-07-29
+Last updated: 2026-07-29
 

@@ -1,10 +1,35 @@
 ﻿# Student Posts Management System
 
-Scalable React architecture for managing student posts, profiles, notifications, and admin moderation workflows. This repository currently contains the initial production-ready project structure with placeholder modules and rich mock datasets.
+Scalable React frontend for managing student posts, profiles, notifications, and administrator moderation workflows. The project includes complete responsive screens, reusable components, role-oriented routes, interactive mock workflows, and rich local datasets.
 
 ## Project Overview
 
-This project is designed as an enterprise-ready frontend architecture using React + Redux Toolkit, with role-oriented routing for students and admins. It intentionally excludes business logic in this phase and focuses on maintainability, modularity, and separation of concerns.
+This project uses React, React Router, Redux Toolkit, Axios, and plain CSS. It provides separate student and administrator experiences with responsive desktop/mobile navigation. User actions run against local mock data, so the frontend can be reviewed without a backend service.
+
+## Current Features
+
+### Student Experience
+
+- Landing, login, registration, password recovery, verification, and success pages
+- Dashboard, post feed, search, category filters, and post details
+- Create, edit, publish, and save-draft interactions
+- Profile, notifications, privacy preferences, and account settings
+- Responsive sidebar, topbar, and mobile Create Post navigation
+
+### Administrator Experience
+
+- Dedicated administrator login and dashboard
+- Student directory filtering, creation, and CSV export
+- Post moderation, status updates, filtering, and export
+- Category creation, analytics, report resolution, and settings
+- Responsive administrator navigation and management tables
+
+### Shared Experience
+
+- Reusable buttons, inputs, post cards, tables, pagination, modal, feedback, and layout components
+- Privacy Policy, Terms of Service, Support, API Documentation, and not-found pages
+- Component-library pages demonstrating reusable UI behavior
+- Realistic mock users, posts, comments, categories, tags, notifications, reports, and analytics
 
 ## Folder Structure
 
@@ -41,12 +66,14 @@ npm install
 npm start
 ```
 
+The development server normally opens at [http://localhost:3000](http://localhost:3000). If port `3000` is occupied, Create React App may offer another available port.
+
 ## Available Scripts
 
-- npm start
-- npm test
-- npm run build
-- npm run eject
+- `npm start` - run the development server
+- `npm test` - run the test runner
+- `npm run build` - create an optimized production build
+- `npm run eject` - expose Create React App configuration
 
 ## Environment Variables
 
@@ -56,7 +83,7 @@ npm start
 
 ## Mock Data Information
 
-The src/mock directory contains realistic dummy data for users, posts, comments, categories, tags, notifications, analytics, dashboard, reports, and settings.
+The `src/mock` directory contains realistic dummy data for users, posts, comments, categories, tags, notifications, analytics, dashboard, reports, and settings. Frontend actions update local component state and reset when the page reloads.
 
 ## Project Architecture
 
@@ -65,14 +92,16 @@ The src/mock directory contains realistic dummy data for users, posts, comments,
 - Service layer split by API and domain
 - Route-level role separation with layout shells
 - Structured CSS layers: base, layouts, components, pages, themes
+- Shared component APIs for navigation and interactive actions
+- Responsive layouts for desktop and mobile viewports
 
 ## Future Enhancements
 
-- Auth and role guards
-- CRUD operations
-- API integration
-- Form validation
-- Testing coverage
+- Backend authentication, sessions, and protected role guards
+- Persistent CRUD APIs and database integration
+- Server-side authorization and credential storage
+- Automated unit, integration, and end-to-end test coverage
+- File upload storage and production deployment configuration
 
 ## Demo Login Credentials
 
