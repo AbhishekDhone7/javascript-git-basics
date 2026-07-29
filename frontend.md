@@ -3356,59 +3356,947 @@ Professional component communication minimizes the number of owners, makes depen
 
 [Previous: Communication](#module-5-component-communication) | [Next: Forms](#module-7-forms)
 
-React Router maps browser locations to a nested UI tree. `BrowserRouter` uses the History API; `Routes` ranks branches; `Route` defines path/element; `Outlet` renders a matched child; `Link`/`NavLink` navigate without document reload. `useParams`, `useSearchParams`, `useLocation`, and `useNavigate` expose route state.
+## Introduction
+
+React Router maps a browser location to a branch of React UI. The URL is not merely a string displayed in the address bar; it is durable application state that supports navigation history, bookmarks, refreshes, sharing, server requests, analytics, and accessibility.
+
+React Router does not replace HTTP APIs, authentication, authorization, or server routing. It coordinates client-side location changes and renders the route branch associated with the current location.
 
 ```bash
 npm install react-router-dom
 ```
 
+This chapter uses React Router 6.4+ concepts, including data routers. The declarative `<BrowserRouter>` API remains useful, while `createBrowserRouter` and `<RouterProvider>` add loaders, actions, route-level errors, pending navigation, and scroll restoration.
+
+## Routing Mental Model
+
+A location contains four relevant pieces:
+
+| Location part | Example | Typical responsibility |
+|---|---|---|
+| Pathname | `/customers/42/invoices` | Resource and nested view identity |
+| Search | `?status=overdue&page=2` | Shareable filters, sorting, pagination |
+| Hash | `#payment-history` | In-document target or specialized state |
+| History state | `{ from: "/checkout" }` | Ephemeral same-session navigation metadata |
+
+The router ranks route branches, matches the strongest branch, extracts dynamic parameters, runs relevant data work, and renders nested elements through outlets.
+
 ```mermaid
-sequenceDiagram
- participant U as User
- participant L as Link
- participant H as History
- participant R as Router
- participant V as Route UI
- U->>L: Click /products/42
- L->>H: pushState
- H->>R: location changes
- R->>R: rank and match branch
- R->>V: render layout + product
+flowchart LR
+	L[Location changes] --> M[Rank route branches]
+	M --> B[Match best branch]
+	B --> P[Extract path parameters]
+	P --> D[Run loaders or actions]
+	D --> E{Data result}
+	E -->|success| R[Render nested route branch]
+	E -->|redirect| N[Navigate to target]
+	E -->|error| X[Render nearest route error boundary]
 ```
 
-```jsx
-const ProductPage = lazy(() => import("./ProductPage.jsx"));
+### Client Navigation Lifecycle
 
-function RequireAuth() {
-	const auth = useAuth();
-	const location = useLocation();
-	if (auth.status === "loading") return <PageSpinner />;
-	return auth.user ? <Outlet /> : <Navigate to="/login" replace state={{ from: location }} />;
-}
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant L as Link or form
+	participant H as Browser history
+	participant R as React Router
+	participant D as Route data
+	participant V as Route UI
+	U->>L: Activate navigation
+	L->>R: Request target location
+	R->>D: Load or mutate route data
+	D-->>R: Data, redirect, or error
+	R->>H: Push or replace history entry
+	R->>V: Commit matched route branch
+	V-->>U: Focusable updated interface
+```
+
+Client-side links avoid downloading a completely new HTML document for each internal route. The router updates browser history and reconciles the next React branch. A normal anchor is still correct for external sites, downloads, documents outside the SPA, and navigation that intentionally requires a full reload.
+
+## Router API Families
+
+React Router offers two primary application styles.
+
+| Style | Core API | Appropriate use |
+|---|---|---|
+| Declarative router | `BrowserRouter`, `Routes`, `Route` | Existing applications or component-driven fetching |
+| Data router | `createBrowserRouter`, `RouterProvider` | Route loaders/actions, pending UI, errors, redirects, scroll restoration |
+
+Do not create both router roots for the same application tree. Components using router hooks must render beneath the selected router provider.
+
+### Declarative Router
+
+```jsx
+import {
+	BrowserRouter,
+	Navigate,
+	Outlet,
+	Route,
+	Routes,
+} from "react-router-dom";
 
 function AppRoutes() {
 	return (
 		<BrowserRouter>
-			<Suspense fallback={<PageSpinner />}>
-				<Routes>
-					<Route element={<AppLayout />}>
-						<Route index element={<Home />} />
-						<Route path="products/:productId" element={<ProductPage />} />
-						<Route element={<RequireAuth />}>
-							<Route path="account" element={<Account />} />
-						</Route>
-						<Route path="*" element={<NotFound />} />
+			<Routes>
+				<Route element={<AppLayout />}>
+					<Route index element={<Dashboard />} />
+					<Route path="products" element={<Products />} />
+					<Route path="products/:productId" element={<ProductDetails />} />
+					<Route element={<RequireSession />}>
+						<Route path="account" element={<Account />} />
 					</Route>
-				</Routes>
-			</Suspense>
+					<Route path="*" element={<NotFound />} />
+				</Route>
+			</Routes>
 		</BrowserRouter>
 	);
 }
 ```
 
-Authorization must also be enforced by the API; a route guard only controls UI/navigation. Put shareable filters in search params, use stable relative links, provide a server rewrite to `index.html` for SPA deep links, and split at meaningful route boundaries.
+### Data Router
 
-**Practice:** nested CRM routes; dynamic product IDs; search-param pagination; post-login return path; role guard; lazy route; 404; test navigation; preserve filter URL; configure hosting fallback. **Interview answer:** `Link` updates history and router state without fetching a new document; a plain anchor performs browser document navigation unless intended.
+```jsx
+import {
+	createBrowserRouter,
+	RouterProvider,
+} from "react-router-dom";
+
+const router = createBrowserRouter([
+	{
+		path: "/",
+		element: <AppLayout />,
+		errorElement: <RootRouteError />,
+		children: [
+			{ index: true, element: <Dashboard /> },
+			{
+				path: "products",
+				element: <Products />,
+				loader: productsLoader,
+			},
+			{
+				path: "products/:productId",
+				element: <ProductDetails />,
+				loader: productLoader,
+			},
+			{ path: "*", element: <NotFound /> },
+		],
+	},
+]);
+
+function App() {
+	return <RouterProvider router={router} fallbackElement={<AppBootScreen />} />;
+}
+```
+
+Create the router outside the component tree so it is not reconstructed during rendering.
+
+## Route Matching and Ranking
+
+React Router ranks route branches by specificity rather than using declaration order as a simple first-match list. Static segments generally outrank dynamic segments, which outrank splats.
+
+| Pattern | Matches | Captured value |
+|---|---|---|
+| `/products` | Exact products route | None |
+| `/products/new` | Static creation route | None |
+| `/products/:productId` | `/products/42` | `productId = "42"` |
+| `/files/*` | `/files/reports/2026.pdf` | Remaining splat path |
+| Index route | Parent path exactly | None |
+| Pathless route | No URL segment | Groups layout, guard, or behavior |
+
+```mermaid
+flowchart TD
+	URL[URL: /products/new] --> S{Static products/new?}
+	S -->|highest specificity| NEW[NewProduct route]
+	S -->|otherwise| D{Dynamic products/:productId?}
+	D -->|match| PD[ProductDetails route]
+	D -->|otherwise| SP[Products splat or not found]
+```
+
+Dynamic parameters are strings and may be absent. Validate identifiers before using them in requests. Do not assume a numeric-looking route parameter is a valid integer or an authorized resource.
+
+## Nested Routes and Layouts
+
+Nested routes model nested UI. A parent element renders shared chrome and an `<Outlet>` at the location where the matched child belongs.
+
+```jsx
+function AppLayout() {
+	return (
+		<div className="app-shell">
+			<PrimaryNavigation />
+			<main id="main-content">
+				<Outlet />
+			</main>
+		</div>
+	);
+}
+
+function CustomerLayout() {
+	const { customerId } = useParams();
+
+	return (
+		<section>
+			<CustomerHeader customerId={customerId} />
+			<CustomerNavigation customerId={customerId} />
+			<Outlet />
+		</section>
+	);
+}
+```
+
+```jsx
+<Routes>
+	<Route path="/" element={<AppLayout />}>
+		<Route index element={<Dashboard />} />
+		<Route path="customers" element={<CustomerList />} />
+		<Route path="customers/:customerId" element={<CustomerLayout />}>
+			<Route index element={<CustomerOverview />} />
+			<Route path="contacts" element={<CustomerContacts />} />
+			<Route path="invoices" element={<CustomerInvoices />} />
+		</Route>
+	</Route>
+</Routes>
+```
+
+```mermaid
+flowchart TB
+	URL[customers/42/invoices] --> A[AppLayout]
+	A --> AO[App outlet]
+	AO --> C[CustomerLayout with customerId 42]
+	C --> CO[Customer outlet]
+	CO --> I[CustomerInvoices]
+```
+
+An index route is the default child rendered when the parent path matches exactly. A pathless route contributes behavior or layout without adding a URL segment.
+
+### Outlet Context
+
+Parents may pass narrowly scoped values to matched children through outlet context.
+
+```jsx
+function ProjectLayout() {
+	const project = useLoaderData();
+	return <Outlet context={{ project }} />;
+}
+
+function ProjectMembers() {
+	const { project } = useOutletContext();
+	return <MemberList projectId={project.id} />;
+}
+```
+
+Use outlet context for data inherently owned by a route layout. Use broader context or a cache when the dependency extends beyond that route branch.
+
+## Links and Active Navigation
+
+Use `<Link>` for internal navigation and `<NavLink>` when the destination needs active or pending styling and semantics.
+
+```jsx
+function CustomerNavigation({ customerId }) {
+	const links = [
+		{ to: ".", end: true, label: "Overview" },
+		{ to: "contacts", label: "Contacts" },
+		{ to: "invoices", label: "Invoices" },
+	];
+
+	return (
+		<nav aria-label="Customer">
+			{links.map((link) => (
+				<NavLink
+					key={link.to}
+					to={link.to}
+					end={link.end}
+					className={({ isActive, isPending }) =>
+						[isActive && "active", isPending && "pending"]
+							.filter(Boolean)
+							.join(" ")
+					}
+				>
+					{link.label}
+				</NavLink>
+			))}
+		</nav>
+	);
+}
+```
+
+Relative links make nested route modules portable. `to="contacts"` resolves from the current route hierarchy, while an absolute path begins with `/`. Use the `end` prop when a parent link should not remain active for all descendants.
+
+## Route Parameters with `useParams`
+
+`useParams` returns parameters captured by the matched route branch. Validate and normalize them at a boundary before requesting data.
+
+```jsx
+function ProductDetails() {
+	const { productId } = useParams();
+	const numericProductId = Number(productId);
+
+	if (!Number.isSafeInteger(numericProductId) || numericProductId <= 0) {
+		return <InvalidResource message="Invalid product identifier." />;
+	}
+
+	return <Product productId={numericProductId} />;
+}
+```
+
+Route parameters communicate identity, not authorization. The server must verify whether the authenticated principal may access that product, customer, account, or invoice.
+
+## Search Parameters as Shareable State
+
+Search parameters are appropriate for filters, sort order, pagination, selected views, and other state users should bookmark, share, refresh, or navigate through.
+
+```jsx
+function ProductFilters() {
+	const [searchParams, setSearchParams] = useSearchParams();
+	const query = searchParams.get("q") ?? "";
+	const page = Math.max(1, Number(searchParams.get("page")) || 1);
+	const sort = ["name", "price", "rating"].includes(searchParams.get("sort"))
+		? searchParams.get("sort")
+		: "name";
+
+	function updateFilter(name, value) {
+		setSearchParams((current) => {
+			const next = new URLSearchParams(current);
+			if (value) next.set(name, value);
+			else next.delete(name);
+			if (name !== "page") next.set("page", "1");
+			return next;
+		}, { replace: true });
+	}
+
+	return (
+		<FilterBar
+			query={query}
+			page={page}
+			sort={sort}
+			onFilterChange={updateFilter}
+		/>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	U[User changes filter] --> SP[Update URLSearchParams]
+	SP --> H[Replace or push history entry]
+	H --> R[Router exposes new search]
+	R --> V[Validate and derive query model]
+	V --> Q[Request or select matching data]
+	Q --> UI[Render shareable filtered view]
+```
+
+Treat the URL as untrusted input. Apply defaults, allowlists, bounds, and decoding rules. Use `replace` for rapid edits such as typing when each character should not create a Back-button entry; use push behavior for meaningful navigation steps.
+
+## Location and Navigation Hooks
+
+### `useLocation`
+
+`useLocation` returns the current pathname, search, hash, history state, and a location key. It is useful for analytics, route transition behavior, and preserving a requested destination.
+
+```jsx
+function RouteAnalytics() {
+	const location = useLocation();
+
+	useEffect(() => {
+		analytics.pageView({
+			path: `${location.pathname}${location.search}`,
+		});
+	}, [location.pathname, location.search]);
+
+	return null;
+}
+```
+
+Never include secrets, access tokens, private personal data, or sensitive financial values in URLs. URLs appear in browser history, logs, screenshots, analytics, referrer headers, and shared links.
+
+### `useNavigate`
+
+Use declarative links and redirects for ordinary navigation. Use `navigate` after an imperative event such as a successful form submission.
+
+```jsx
+function CreateCustomerForm() {
+	const navigate = useNavigate();
+
+	async function submit(event) {
+		event.preventDefault();
+		const customer = await createCustomer(new FormData(event.currentTarget));
+		navigate(`/customers/${customer.id}`, {
+			replace: true,
+			state: { notice: "Customer created" },
+		});
+	}
+
+	return <form onSubmit={submit}>{/* fields */}</form>;
+}
+```
+
+`navigate(-1)` depends on a usable history entry and may leave the application. For a reliable Cancel destination, use an explicit route and optionally enhance it with known safe history behavior.
+
+### Declarative Redirects
+
+`<Navigate>` redirects during rendering in a declarative router. Data-router loaders and actions should usually return or throw `redirect(...)` before rendering protected content.
+
+```jsx
+function LegacyCustomerRoute() {
+	const { customerId } = useParams();
+	return <Navigate to={`/customers/${customerId}/overview`} replace />;
+}
+```
+
+## Data Routers: Loaders
+
+A loader obtains route data before rendering the route element. It receives route parameters and a Web `Request` whose signal is aborted when navigation makes the request obsolete.
+
+```jsx
+import { json } from "react-router-dom";
+
+export async function productLoader({ params, request }) {
+	const productId = Number(params.productId);
+	if (!Number.isSafeInteger(productId) || productId <= 0) {
+		throw new Response("Invalid product ID", { status: 400 });
+	}
+
+	const response = await fetch(`/api/products/${productId}`, {
+		signal: request.signal,
+		headers: { Accept: "application/json" },
+	});
+
+	if (response.status === 404) {
+		throw new Response("Product not found", { status: 404 });
+	}
+	if (!response.ok) {
+		throw new Response("Unable to load product", { status: response.status });
+	}
+
+	return json(await response.json());
+}
+
+function ProductDetails() {
+	const product = useLoaderData();
+	return <ProductView product={product} />;
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant R as Router
+	participant L as Loader
+	participant A as API
+	U->>R: Navigate to product 42
+	R->>L: params plus Request signal
+	L->>A: Fetch product 42
+	U->>R: Navigate to product 84
+	R--xL: Abort obsolete request
+	R->>L: Load product 84
+	L->>A: Fetch product 84
+	A-->>L: Product data
+	L-->>R: Route data
+	R-->>U: Commit product 84 route
+```
+
+Loaders improve routing coordination but are not automatically a complete server cache. Use RTK Query or another cache when data is shared broadly, requires normalized updates, background refetching, sophisticated invalidation, or offline behavior.
+
+## Data Routers: Actions and Forms
+
+An action handles mutations submitted to a route. React Router's `<Form>` progressively models navigation and mutation using Web `FormData` semantics.
+
+```jsx
+import {
+	Form,
+	redirect,
+	useActionData,
+	useNavigation,
+} from "react-router-dom";
+
+export async function createProjectAction({ request }) {
+	const formData = await request.formData();
+	const name = String(formData.get("name") ?? "").trim();
+
+	if (name.length < 3) {
+		return { errors: { name: "Enter at least three characters." } };
+	}
+
+	const project = await api.projects.create({ name });
+	return redirect(`/projects/${project.id}`);
+}
+
+function NewProjectRoute() {
+	const actionData = useActionData();
+	const navigation = useNavigation();
+	const submitting = navigation.state === "submitting";
+
+	return (
+		<Form method="post">
+			<label htmlFor="project-name">Project name</label>
+			<input
+				id="project-name"
+				name="name"
+				aria-invalid={Boolean(actionData?.errors?.name)}
+				aria-describedby={actionData?.errors?.name ? "name-error" : undefined}
+			/>
+			{actionData?.errors?.name && (
+				<p id="name-error" role="alert">{actionData.errors.name}</p>
+			)}
+			<button disabled={submitting}>
+				{submitting ? "Creating..." : "Create project"}
+			</button>
+		</Form>
+	);
+}
+```
+
+After an action completes, the data router revalidates relevant loaders so the UI can reflect server truth. The server must validate every field and enforce authorization regardless of client behavior.
+
+```mermaid
+flowchart LR
+	F[Route Form submission] --> A[Action validates input]
+	A -->|invalid| FE[Return field errors]
+	A -->|valid| API[Mutate through API]
+	API -->|success| RD[Redirect or result]
+	RD --> RV[Revalidate relevant loaders]
+	RV --> UI[Render fresh server state]
+	API -->|failure| EB[Route error boundary]
+```
+
+## Pending UI and Fetchers
+
+`useNavigation` exposes global route navigation state: `idle`, `submitting`, or `loading`. Use it for page-level progress and pending form feedback without inventing disconnected local flags.
+
+```jsx
+function AppLayout() {
+	const navigation = useNavigation();
+	const busy = navigation.state !== "idle";
+
+	return (
+		<>
+			<ProgressBar active={busy} />
+			<main aria-busy={busy}>
+				<Outlet />
+			</main>
+		</>
+	);
+}
+```
+
+`useFetcher` loads or submits route data without navigation. It is appropriate for inline mutations, optimistic controls, autocomplete, and resource interactions that should preserve the current location.
+
+```jsx
+function FavoriteButton({ productId, favorite }) {
+	const fetcher = useFetcher();
+	const optimisticFavorite = fetcher.formData
+		? fetcher.formData.get("favorite") === "true"
+		: favorite;
+
+	return (
+		<fetcher.Form method="post" action={`/products/${productId}/favorite`}>
+			<input type="hidden" name="favorite" value={String(!optimisticFavorite)} />
+			<button aria-pressed={optimisticFavorite}>
+				{optimisticFavorite ? "Remove favorite" : "Add favorite"}
+			</button>
+		</fetcher.Form>
+	);
+}
+```
+
+Optimistic UI must define rollback behavior, duplicate-submission policy, idempotency expectations, and accessible pending/error feedback.
+
+## Route Error Boundaries
+
+Data routers render the nearest `errorElement` when rendering, loading, or action processing throws. Route errors should distinguish expected HTTP responses from unexpected exceptions.
+
+```jsx
+import {
+	isRouteErrorResponse,
+	useRouteError,
+} from "react-router-dom";
+
+function ProductRouteError() {
+	const error = useRouteError();
+
+	if (isRouteErrorResponse(error)) {
+		if (error.status === 404) {
+			return <NotFoundResource resource="product" />;
+		}
+		return <RouteProblem status={error.status} message={error.statusText} />;
+	}
+
+	reportError(error);
+	return <UnexpectedError />;
+}
+```
+
+```mermaid
+flowchart TB
+	E[Loader, action, or render throws] --> N[Find nearest matched errorElement]
+	N --> T{Route error response?}
+	T -->|404| NF[Resource not found UI]
+	T -->|401 or 403| AU[Authentication or permission UI]
+	T -->|other HTTP| HP[HTTP problem UI]
+	T -->|unexpected exception| RP[Report and show recovery UI]
+```
+
+Place error boundaries at meaningful recovery levels. A product failure should not necessarily replace the application shell; a root failure should still offer navigation or reload recovery where possible.
+
+## Authentication and Authorization
+
+A client route guard improves navigation and prevents inappropriate UI display. It is not a security boundary because users can call APIs directly or modify client code. APIs must authenticate requests and authorize every protected operation.
+
+### Declarative Guard
+
+```jsx
+function RequireSession({ allowedRoles }) {
+	const session = useSession();
+	const location = useLocation();
+
+	if (session.status === "loading") return <SessionLoading />;
+
+	if (!session.user) {
+		return (
+			<Navigate
+				to="/login"
+				replace
+				state={{ from: `${location.pathname}${location.search}` }}
+			/>
+		);
+	}
+
+	if (allowedRoles && !allowedRoles.includes(session.user.role)) {
+		return <Navigate to="/forbidden" replace />;
+	}
+
+	return <Outlet />;
+}
+```
+
+### Loader Guard
+
+```jsx
+import { redirect } from "react-router-dom";
+
+async function requireSession(request, allowedRoles = []) {
+	const session = await sessionStore.read(request.signal);
+	const url = new URL(request.url);
+
+	if (!session.user) {
+		const returnTo = `${url.pathname}${url.search}`;
+		throw redirect(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+	}
+
+	if (allowedRoles.length && !allowedRoles.includes(session.user.role)) {
+		throw new Response("Forbidden", { status: 403 });
+	}
+
+	return session;
+}
+```
+
+```mermaid
+flowchart TD
+	N[Protected navigation] --> S{Session known?}
+	S -->|loading| W[Wait or loader resolves]
+	S -->|anonymous| LG[Redirect to login]
+	S -->|authenticated| P{Required permission?}
+	P -->|missing| F[Forbidden route]
+	P -->|allowed| R[Render protected branch]
+	R --> API[API independently authorizes request]
+```
+
+Validate post-login return destinations. Accept only same-origin application paths, typically strings beginning with one `/` but not `//`, and fall back to a known route. Never navigate directly to an arbitrary URL supplied by a query parameter.
+
+## Code Splitting by Route
+
+Routes are natural code-splitting boundaries because users do not need every screen on initial load.
+
+### Component Lazy Loading
+
+```jsx
+const ReportsPage = lazy(() => import("./routes/ReportsPage.jsx"));
+
+function AppRoutes() {
+	return (
+		<Suspense fallback={<RouteSkeleton />}>
+			<Routes>
+				<Route path="reports" element={<ReportsPage />} />
+			</Routes>
+		</Suspense>
+	);
+}
+```
+
+### Lazy Data Route Module
+
+```jsx
+const router = createBrowserRouter([
+	{
+		path: "/reports",
+		lazy: () => import("./routes/reports.route.jsx"),
+	},
+]);
+```
+
+```jsx
+// reports.route.jsx
+export async function loader({ request }) {
+	return loadReports({ signal: request.signal });
+}
+
+export function Component() {
+	const reports = useLoaderData();
+	return <ReportList reports={reports} />;
+}
+
+export function ErrorBoundary() {
+	return <ReportsError error={useRouteError()} />;
+}
+```
+
+Split at meaningful route boundaries, not every tiny component. Provide stable loading UI and monitor chunk failures because a deployment can invalidate assets requested by an older open tab.
+
+## Scroll and Focus Management
+
+Data routers provide `<ScrollRestoration>` for history-aware scroll behavior. Applications still need deliberate focus management after navigation so keyboard and assistive-technology users know the view changed.
+
+```jsx
+function AppLayout() {
+	const location = useLocation();
+	const headingRef = useRef(null);
+
+	useEffect(() => {
+		headingRef.current?.focus();
+	}, [location.pathname]);
+
+	return (
+		<>
+			<PrimaryNavigation />
+			<main>
+				<h1 ref={headingRef} tabIndex={-1}>Workspace</h1>
+				<Outlet />
+			</main>
+			<ScrollRestoration />
+		</>
+	);
+}
+```
+
+Focus the route's meaningful heading or main region, not an arbitrary body element. Avoid moving focus for search-parameter changes that only update filters within the same conceptual page.
+
+```mermaid
+sequenceDiagram
+	participant U as Keyboard user
+	participant R as Router
+	participant D as Document
+	U->>R: Activate customer link
+	R->>D: Commit customer route
+	D->>D: Update title and heading
+	D-->>U: Move focus to route heading
+	U->>D: Continue navigation from known position
+```
+
+## Navigation Blocking and Unsaved Changes
+
+Blocking navigation can protect unsaved work, but it should be a last resort because it interrupts expected browser behavior. Persist drafts where possible and ask only when data loss is real.
+
+An implementation may use the router version's blocker API for in-app navigation and `beforeunload` for document exits. These APIs and their stability vary by React Router version, so isolate the behavior in one hook and test Back, Forward, links, reload, tab close, and successful submission.
+
+```mermaid
+stateDiagram-v2
+	[*] --> Clean
+	Clean --> Dirty: user edits draft
+	Dirty --> Saving: submit
+	Saving --> Clean: save succeeds
+	Saving --> Dirty: save fails
+	Dirty --> Confirming: navigation requested
+	Confirming --> Dirty: user stays
+	Confirming --> Discarded: user leaves
+	Discarded --> [*]
+```
+
+Do not use blockers to trap users in marketing funnels or prevent ordinary navigation.
+
+## Not-Found and Canonical Routing
+
+Use a splat route for unmatched client paths and resource-specific 404 handling for valid route shapes whose records do not exist.
+
+```jsx
+<Route path="*" element={<NotFound />} />
+```
+
+These cases differ:
+
+| Situation | Example | Correct handling |
+|---|---|---|
+| Unknown application path | `/does-not-exist` | App-level 404 route |
+| Known pattern, missing record | `/products/999999` | Loader/API 404 and resource UI |
+| Old path with replacement | `/catalog/42` | Permanent server redirect or client replace |
+| Unauthorized record | `/accounts/secret` | 401/403 without revealing sensitive existence |
+
+Use canonical URL forms for trailing slashes, casing, aliases, and legacy paths. Search engines and analytics benefit from one stable identity per public resource.
+
+## SPA Deployment and Deep Links
+
+Client routing works only after the application JavaScript loads. When a user directly requests `/customers/42`, the web server receives that path first.
+
+```mermaid
+flowchart TD
+	B[Browser requests /customers/42] --> S[Web server or CDN]
+	S --> A{Static asset or API path?}
+	A -->|yes| F[Serve requested resource]
+	A -->|no SPA route| I[Rewrite to index.html]
+	I --> J[Load application JavaScript]
+	J --> R[React Router matches /customers/42]
+	R --> UI[Render customer route]
+```
+
+Configure the host to serve `index.html` for unknown frontend routes while excluding API paths and static assets. Without this fallback, in-app navigation works but refreshes and shared deep links return server 404 responses.
+
+When an application is deployed below a subpath, configure the router basename and asset paths consistently.
+
+```jsx
+const router = createBrowserRouter(routes, {
+	basename: "/scholar-desk",
+});
+```
+
+## BrowserRouter, HashRouter, and MemoryRouter
+
+| Router | Location source | Typical use |
+|---|---|---|
+| `BrowserRouter` | History API pathname | Production web application with server fallback |
+| `HashRouter` | URL fragment after `#` | Static hosting where rewrites are impossible |
+| `MemoryRouter` | In-memory entries | Component tests, stories, non-browser environments |
+| `createMemoryRouter` | Data router in memory | Tests for loaders, actions, redirects, and errors |
+
+Hash routing avoids server fallback requirements but produces less natural URLs and limits normal fragment semantics. Prefer browser routing when deployment configuration is available.
+
+## Testing Routes
+
+Test observable routing behavior: matched content, active navigation, parameter handling, redirects, pending UI, errors, and history changes. Avoid mocking every router hook because doing so can produce tests that no longer represent actual matching behavior.
+
+### Component Route Test
+
+```jsx
+import { render, screen } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+
+test("renders the selected customer", () => {
+	render(
+		<MemoryRouter initialEntries={["/customers/42"]}>
+			<Routes>
+				<Route path="customers/:customerId" element={<CustomerDetails />} />
+			</Routes>
+		</MemoryRouter>,
+	);
+
+	expect(screen.getByRole("heading", { name: /customer 42/i })).toBeVisible();
+});
+```
+
+### Data Router Test
+
+```jsx
+test("shows a route-level not-found response", async () => {
+	const router = createMemoryRouter([
+		{
+			path: "/products/:productId",
+			loader: () => {
+				throw new Response("Not found", { status: 404 });
+			},
+			element: <ProductDetails />,
+			errorElement: <ProductRouteError />,
+		},
+	], { initialEntries: ["/products/404"] });
+
+	render(<RouterProvider router={router} />);
+	expect(await screen.findByText(/product not found/i)).toBeVisible();
+});
+```
+
+Use user-event interactions for links and forms. Add a small number of browser end-to-end tests for refreshes on deep links, authentication returns, Back/Forward behavior, hosting rewrites, scroll/focus, and chunk loading.
+
+## Routing Performance
+
+- Split code at substantial route boundaries.
+- Start route data before rendering when loaders fit the architecture.
+- Cancel obsolete requests through the loader request signal.
+- Keep search-parameter parsing deterministic and inexpensive.
+- Avoid remounting layouts through unstable route definitions or keys.
+- Use cache-aware data libraries when multiple routes consume the same entities.
+- Prefetch only likely destinations and respect bandwidth constraints.
+- Monitor navigation timings, loader failures, and lazy-chunk errors.
+
+Do not wrap route configuration in a component that recreates the router on every render. Avoid fetching the same route data independently in several nested components when one owner or cache can coordinate it.
+
+## Routing Security
+
+| Risk | Example | Mitigation |
+|---|---|---|
+| Open redirect | `?returnTo=https://attacker.example` | Allow only validated same-origin app paths |
+| Sensitive URL data | Token or account details in query | Keep secrets out of paths/search/history state |
+| Client-only authorization | Hidden admin route | Enforce permissions on every API operation |
+| Identifier trust | `/accounts/42` assumed accessible | Validate format and authorize server-side |
+| Unsafe external link | New-tab link controls opener | Use appropriate `rel="noopener noreferrer"` |
+| Route data injection | Unescaped API content | Render as text; sanitize intentional HTML |
+| History-state trust | Privilege carried in location state | Treat navigation state as untrusted metadata |
+
+Route guards improve experience, not security authority. The browser is controlled by the user.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Using `<a>` for every internal route | Full document reload and lost client state | Use `Link` or `NavLink` |
+| Using `Link` for an external document | Router handles a non-app destination | Use a normal anchor |
+| Duplicating filters in component state and URL | Back/Forward and sharing disagree | Make URL canonical or define explicit synchronization |
+| Treating parameters as valid records | Invalid requests and misleading UI | Validate format and handle resource 404 |
+| Absolute paths throughout nested modules | Routes become difficult to move | Prefer intentional relative links |
+| Missing `<Outlet>` | Child route matches but cannot render | Place outlet in parent layout |
+| Recreating router during render | Router state and subscriptions reset | Define router outside components |
+| Guard checks only the UI | Direct API access remains possible | Authorize on server |
+| Arbitrary post-login redirect | Open-redirect vulnerability | Validate same-origin return path |
+| No host rewrite | Deep-link refresh returns 404 | Configure SPA fallback |
+| One root error screen for everything | Small failures replace whole app | Add recovery boundaries by route scope |
+| No route focus management | Screen-reader/keyboard context is unclear | Focus meaningful heading/main region |
+| Index route confused with index key | Wrong conceptual model | Index route is default nested UI, not list identity |
+| Navigation effect used instead of redirect | Protected UI may render briefly | Redirect in loader/route guard |
+
+## Production Architecture Checklist
+
+1. Model URLs around stable user-facing resources and workflows.
+2. Decide whether declarative routing or a data router owns route data flow.
+3. Use nested layouts and outlets to match persistent UI structure.
+4. Validate path and search parameters at route boundaries.
+5. Put bookmarkable filters, sorting, and pagination in the URL.
+6. Keep secrets and sensitive personal data out of locations.
+7. Enforce authentication and authorization on the server.
+8. Define loading, empty, 404, forbidden, and unexpected-error states.
+9. Cancel obsolete requests and prevent duplicate mutations.
+10. Split bundles at meaningful route boundaries.
+11. Manage document titles, focus, scrolling, and active navigation semantics.
+12. Configure deep-link rewrites and test direct URL requests.
+13. Test routes through real matching and representative navigation.
+14. Observe navigation latency, failed loaders, redirects, and chunk errors.
+
+## Real-World Route Architectures
+
+### E-Commerce
+
+Use paths for product/category identity, search parameters for filters and pagination, loaders or a query cache for products, actions/fetchers for cart mutations, and resource-level 404 handling. Preserve checkout steps deliberately and never place payment secrets in the URL.
+
+### Banking
+
+Use nested account routes, strict parameter validation, server-enforced permissions, short-lived session handling, explicit forbidden states, and idempotent actions for transfers. Avoid exposing sensitive account information in route segments, search strings, analytics, or history state.
+
+### CRM
+
+Use `/customers/:customerId` as the resource layout with nested contacts, activity, invoices, and notes. Keep selected tabs in route segments, grid filters in search parameters, customer data in a server cache, and unsaved edit drafts in a scoped form owner.
+
+### Dashboard and Analytics
+
+Use route segments for dashboards/reports, search parameters for time range and comparison settings, lazy route modules for heavy visualization bundles, and route errors that preserve the application shell. Validate expensive query ranges before sending requests.
+
+A professional routing architecture makes navigation durable, predictable, secure at server boundaries, accessible after every transition, and observable in production.
 
 ---
 
