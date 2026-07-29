@@ -14458,7 +14458,7 @@ sequenceDiagram
 	participant A as Authorization server
 	participant X as Attacker with copied token
 	C->>A: Use refresh token R1
-	A-->>C: Access token plus R2; retire R1
+	A-->>C: Access token plus R2, retire R1
 	X->>A: Replay R1
 	A->>A: Detect retired-token reuse
 	A-->>X: Reject
@@ -14984,38 +14984,1352 @@ A professional authentication system treats the browser as an untrusted presenta
 
 [Previous: Authentication](#module-16-authentication) | [Next: Architecture](#module-18-project-architecture)
 
-Errors belong to different boundaries: render failures, event failures, network/HTTP failures, validation, authorization, and unexpected global failures. Normalize transport errors into a domain-safe model and present actionable messages without leaking internals.
+## Introduction
+
+Professional error handling turns failures into controlled outcomes. It protects user work, preserves security boundaries, gives users an appropriate recovery path, and produces enough evidence for engineers to diagnose the underlying cause.
+
+An error strategy is broader than `try/catch`. It defines ownership across rendering, events, asynchronous work, APIs, validation, authentication, storage, workers, deployment, and observability.
+
+```mermaid
+flowchart LR
+	FAIL[Failure occurs] --> DETECT[Detect at owning boundary]
+	DETECT --> CLASSIFY[Classify and normalize]
+	CLASSIFY --> CONTAIN[Contain blast radius]
+	CONTAIN --> UX[Present safe recovery UX]
+	CONTAIN --> OBSERVE[Capture redacted evidence]
+	UX --> RECOVER[Retry, reset, compensate, or escalate]
+	OBSERVE --> REPAIR[Diagnose and repair root cause]
+```
+
+The objective is not to hide every exception. Unexpected failures should be visible to monitoring and contained before they corrupt more state.
+
+## Error Taxonomy
+
+Classify failures before deciding how to handle them.
+
+| Category | Example | Typical owner |
+|---|---|---|
+| Validation | Invalid email or missing required field | Form/domain layer |
+| Business rule | Order cannot be cancelled after shipping | Domain/API plus UI explanation |
+| Authentication | Session expired or invalid | Auth subsystem |
+| Authorization | User lacks permission | API policy plus access-denied UI |
+| Transport | Offline, DNS, timeout, connection reset | API client/query layer |
+| HTTP/API | `404`, `409`, `429`, `500` | Endpoint/domain integration |
+| Render | Component throws while rendering | React error boundary |
+| Event/async | Click handler or promise rejects | Initiating operation |
+| Resource | Script, image, chunk, or worker fails | Asset/runtime boundary |
+| Storage | Quota, denied access, corrupt cache | Persistence adapter |
+| Programmer defect | Impossible state or invariant violation | Engineering defect workflow |
+| Dependency/platform | SDK/browser API failure | Integration boundary |
+
+```mermaid
+flowchart TD
+	E[Observed failure] --> EXPECTED{Expected domain outcome?}
+	EXPECTED -->|yes| DOMAIN[Validation, conflict, permission, unavailable]
+	EXPECTED -->|no| TECH{Infrastructure/transient?}
+	TECH -->|yes| OP[Operational failure]
+	TECH -->|no| BUG[Unexpected defect or invariant breach]
+	DOMAIN --> USER[Actionable domain UX]
+	OP --> POLICY[Retry/degrade/recover policy]
+	BUG --> CONTAIN[Boundary fallback and urgent telemetry]
+```
+
+Expected business outcomes should not be reported as crashes. Unexpected invariant violations should not be silently converted into generic success or empty data.
+
+## Error Ownership
+
+Handle an error at the lowest layer that has enough context to make the correct decision.
 
 ```mermaid
 flowchart TB
- E[Failure] --> C{Category}
- C -->|Render| B[Error boundary fallback]
- C -->|API| N[Normalize + retry policy]
- C -->|Validation| F[Field/form errors]
- C -->|Auth| A[Refresh/logout/forbidden]
- B --> O[Monitoring]
- N --> O
- A --> O
+	TRANSPORT[Transport adapter] --> NORMALIZE[Normalize protocol details]
+	NORMALIZE --> DOMAIN[Domain operation adds business meaning]
+	DOMAIN --> FEATURE[Feature chooses recovery and state]
+	FEATURE --> UI[UI presents actionable message]
+	NORMALIZE --> TELEMETRY[Technical evidence]
+	DOMAIN --> TELEMETRY
 ```
 
-Place boundaries around routes and risky widgets so one chart does not blank the application. Include reset/retry and correlation ID. Event handlers use `try/catch`; rejected async work must be awaited/caught. Retry transient idempotent failures with capped exponential backoff and jitter; never retry every 4xx or non-idempotent mutation blindly.
+Transport code can identify a timeout, but it cannot always decide whether retrying a bank transfer is safe. A feature knows whether a failed save preserves a draft, but it should not parse every vendor-specific response shape.
+
+## Error Model
+
+Normalize unknown failures into a small application-safe model.
+
+```ts
+type AppErrorKind =
+	| "validation"
+	| "authentication"
+	| "authorization"
+	| "not-found"
+	| "conflict"
+	| "rate-limit"
+	| "network"
+	| "timeout"
+	| "unavailable"
+	| "unexpected";
+
+type AppError = {
+	kind: AppErrorKind;
+	message: string;
+	retryable: boolean;
+	status?: number;
+	code?: string;
+	correlationId?: string;
+	fieldErrors?: Record<string, string>;
+	cause?: unknown;
+};
+```
+
+The user-facing message must be controlled by the application. Preserve the original cause for internal diagnostics without rendering it or serializing sensitive details.
+
+## Custom Error Classes
+
+Use classes when behavior benefits from reliable runtime discrimination.
+
+```js
+export class ApiError extends Error {
+	constructor(message, options = {}) {
+		super(message, { cause: options.cause });
+		this.name = "ApiError";
+		this.kind = options.kind ?? "unexpected";
+		this.status = options.status;
+		this.code = options.code;
+		this.correlationId = options.correlationId;
+		this.retryable = options.retryable ?? false;
+	}
+}
+```
+
+Do not create dozens of subclasses when a discriminated object is clearer. Custom classes must preserve stack/cause semantics and work across the application's runtime boundaries.
+
+## React Error Boundaries
+
+An error boundary catches errors thrown during rendering, constructors, and lifecycle methods in its descendant tree. It renders fallback UI instead of allowing that subtree to crash uncontrolled.
 
 ```jsx
-async function save() {
-	setStatus("pending");
+class ErrorBoundary extends React.Component {
+	state = { error: null };
+
+	static getDerivedStateFromError(error) {
+		return { error };
+	}
+
+	componentDidCatch(error, info) {
+		monitoring.captureException(error, {
+			componentStack: info.componentStack,
+			boundary: this.props.name,
+		});
+	}
+
+	handleReset = () => {
+		this.setState({ error: null });
+		this.props.onReset?.();
+	};
+
+	render() {
+		if (this.state.error) {
+			return (
+				<ErrorFallback
+					onRetry={this.handleReset}
+					reference={getPublicErrorReference(this.state.error)}
+				/>
+			);
+		}
+
+		return this.props.children;
+	}
+}
+```
+
+Boundaries do not normally catch errors in event handlers, asynchronous callbacks, server rendering, or the boundary's own fallback. Those require their owning mechanisms.
+
+```mermaid
+flowchart TD
+	THROW[Descendant render throws] --> FIND[React searches ancestor boundaries]
+	FIND --> FOUND{Boundary found?}
+	FOUND -->|yes| FALLBACK[Replace failed subtree with fallback]
+	FALLBACK --> REPORT[Report error and component stack]
+	FALLBACK --> RESET[User retry/navigation/reset]
+	FOUND -->|no| ROOT[React tree may unmount/crash]
+```
+
+## Boundary Placement
+
+Use boundaries at meaningful recovery units.
+
+```mermaid
+flowchart TB
+	ROOT[Root boundary: catastrophic shell failure] --> ROUTER[Router]
+	ROUTER --> R1[Orders route boundary]
+	ROUTER --> R2[Dashboard route boundary]
+	R2 --> CHART[Chart widget boundary]
+	R2 --> FEED[Activity feed boundary]
+	CHART --> CF[Chart-only fallback]
+	R2 --> RF[Route fallback if route composition fails]
+	ROOT --> GF[Global recovery page]
+```
+
+Too few boundaries make one widget blank the application. Too many create fragmented, repetitive fallbacks and can hide systemic defects. Good boundaries align with routes, independently useful panels, third-party widgets, and risky integrations.
+
+## Resetting a Boundary
+
+A fallback retry must change the condition that caused failure. Reset local state, invalidate a query, navigate away, or remount with a new key.
+
+```jsx
+function AccountRoute() {
+	const [resetKey, setResetKey] = useState(0);
+
+	return (
+		<ErrorBoundary
+			key={resetKey}
+			name="account-route"
+			onReset={() => setResetKey((value) => value + 1)}
+		>
+			<AccountPage />
+		</ErrorBoundary>
+	);
+}
+```
+
+Avoid infinite automatic remount loops. User-triggered retry should be bounded and observable.
+
+## Router Error Boundaries
+
+Modern data routers can handle loader, action, and render failures at route boundaries.
+
+```jsx
+const router = createBrowserRouter([
+	{
+		path: "/orders/:orderId",
+		loader: orderLoader,
+		element: <OrderPage />,
+		errorElement: <OrderRouteError />,
+	},
+]);
+
+function OrderRouteError() {
+	const error = useRouteError();
+
+	if (isRouteErrorResponse(error) && error.status === 404) {
+		return <OrderNotFound />;
+	}
+
+	return <RouteFailure reference={getPublicErrorReference(error)} />;
+}
+```
+
+Treat expected `404` and authorization responses differently from unexpected render exceptions. Route fallbacks should preserve navigation and support safe retry.
+
+## Suspense and Errors
+
+Suspense represents pending work; an error boundary handles failed work. They solve different states.
+
+```jsx
+<ErrorBoundary name="reports-route">
+	<Suspense fallback={<ReportsSkeleton />}>
+		<ReportsPage />
+	</Suspense>
+</ErrorBoundary>
+```
+
+```mermaid
+stateDiagram-v2
+	[*] --> pending
+	pending --> content: resource resolves
+	pending --> error: resource rejects
+	content --> pending: refresh/navigation
+	error --> pending: retry/reset
+	error --> content: recovery succeeds
+```
+
+An endless loading fallback is not error handling. Data integrations must reject failures and expose retry/reset behavior.
+
+## Event Handler Errors
+
+React boundaries do not catch ordinary event-handler failures because rendering has already completed.
+
+```jsx
+async function handleSubmit(event) {
+	event.preventDefault();
+	setStatus("submitting");
+
 	try {
 		await ordersApi.submit(draft);
 		setStatus("succeeded");
 	} catch (error) {
-		monitoring.capture(error, { feature: "checkout" });
+		const normalized = normalizeError(error);
+		monitoring.captureHandled(normalized, { feature: "checkout" });
+		setError(normalized);
 		setStatus("failed");
 	}
 }
 ```
 
-Global `error`/`unhandledrejection` listeners are last-resort telemetry, not recovery architecture. Redact PII/tokens, attach release/environment/route/correlation context, upload source maps securely, sample noisy events, and test fallback paths.
+Always restore pending controls in success/failure paths. Protect against duplicate submissions and stale responses after component unmount or a newer request.
 
-**Mistakes:** swallowing errors, endless spinner, raw server messages, retry storms, one root boundary only, and logging sensitive payloads. **Assignment:** route/widget boundaries plus normalized API errors, retry, offline UI, and monitoring assertions.
+## Promise Rejections
+
+Every promise needs an owner.
+
+```js
+// Await and handle.
+try {
+	await synchronizeCart();
+} catch (error) {
+	handleCartFailure(error);
+}
+
+// Explicitly mark intentional fire-and-forget and terminate rejection.
+void analytics.flush().catch((error) => {
+	monitoring.captureHandled(error, { operation: "analytics-flush" });
+});
+```
+
+Do not use empty `.catch(() => {})`. If failure is intentionally ignored, document the product reason and record appropriate low-severity evidence.
+
+## Cancellation Is Not Failure
+
+Abort caused by navigation, superseding input, or component cleanup is expected control flow.
+
+```js
+function isAbortError(error) {
+	return error instanceof DOMException && error.name === "AbortError";
+}
+
+async function loadSearch(query, signal) {
+	try {
+		return await searchApi.find(query, { signal });
+	} catch (error) {
+		if (isAbortError(error)) return null;
+		throw error;
+	}
+}
+```
+
+```mermaid
+flowchart TD
+	END[Operation ends without result] --> ABORT{Signal intentionally aborted?}
+	ABORT -->|yes| CONTROL[Expected cancellation; no error toast]
+	ABORT -->|no| CLASSIFY[Normalize timeout/network/API failure]
+	CLASSIFY --> UX[Apply recovery policy]
+```
+
+Differentiate cancellation from timeout. A timeout may use abort internally but is a user-relevant failure owned by the timeout policy.
+
+## API Response Contracts
+
+Use a consistent machine-readable error format. RFC 9457 Problem Details is one established option.
+
+```json
+{
+  "type": "https://api.example.com/problems/order-conflict",
+  "title": "Order cannot be changed",
+  "status": 409,
+  "detail": "The order was updated by another operation.",
+  "instance": "/orders/8b7f",
+  "code": "ORDER_VERSION_CONFLICT",
+  "correlationId": "01J2EXAMPLE",
+  "errors": {
+    "quantity": ["Quantity exceeds current inventory."]
+  }
+}
+```
+
+Do not expose stack traces, SQL messages, internal service names, secrets, or authorization policy details. Clients should branch on stable status/code, not English message text.
+
+## HTTP Status Semantics
+
+| Status | Meaning | Typical UI policy |
+|---|---|---|
+| `400` | Malformed request | Correct client/request; generic form error if appropriate |
+| `401` | Authentication missing/invalid | Refresh once or authenticate |
+| `403` | Authenticated but forbidden | Access-denied state |
+| `404` | Missing or concealed resource | Not-found state |
+| `409` | State conflict | Refresh data, merge, or explain conflict |
+| `412` | Precondition failed | Resolve optimistic concurrency |
+| `422` | Semantically invalid input | Map validated field/domain errors |
+| `429` | Rate limited | Respect `Retry-After`, slow down |
+| `500` | Unexpected server failure | Safe generic message and correlation ID |
+| `502`/`503`/`504` | Upstream unavailable/timeout | Bounded retry or degraded state |
+
+Status alone may be insufficient. A stable domain code distinguishes two different conflicts or validation outcomes.
+
+## Normalizing Fetch Failures
+
+`fetch` rejects for network-level failures and aborts, not ordinary HTTP error statuses.
+
+```js
+async function requestJson(url, options = {}) {
+	let response;
+
+	try {
+		response = await fetch(url, options);
+	} catch (error) {
+		if (isAbortError(error)) throw error;
+		throw new ApiError("Unable to reach the service.", {
+			kind: navigator.onLine ? "network" : "network",
+			retryable: true,
+			cause: error,
+		});
+	}
+
+	const correlationId = response.headers.get("x-correlation-id") ?? undefined;
+	const contentType = response.headers.get("content-type") ?? "";
+	const body = contentType.includes("application/json")
+		? await response.json().catch(() => null)
+		: null;
+
+	if (!response.ok) {
+		throw normalizeApiFailure(response.status, body, correlationId);
+	}
+
+	return body;
+}
+```
+
+Handle `204 No Content`, non-JSON success bodies, malformed JSON, streaming responses, and schema validation according to the endpoint contract.
+
+```mermaid
+flowchart TD
+	FETCH[Fetch request] --> REJECT{Promise rejected?}
+	REJECT -->|yes| ABORT{Abort?}
+	ABORT -->|yes| CANCEL[Cancellation policy]
+	ABORT -->|no| NETWORK[Network/transport error]
+	REJECT -->|no| STATUS{response.ok?}
+	STATUS -->|no| PARSE[Parse safe problem response]
+	PARSE --> NORMALIZE[Normalize status/code/correlation]
+	STATUS -->|yes| SUCCESS[Parse and validate success contract]
+```
+
+## Axios Normalization
+
+Axios distinguishes `error.response`, `error.request`, and setup errors.
+
+```js
+function normalizeAxiosError(error) {
+	if (axios.isCancel(error)) {
+		return { kind: "cancelled", cause: error };
+	}
+
+	if (error.response) {
+		return normalizeApiFailure(
+			error.response.status,
+			error.response.data,
+			error.response.headers["x-correlation-id"],
+		);
+	}
+
+	if (error.request) {
+		return new ApiError("Unable to reach the service.", {
+			kind: "network",
+			retryable: true,
+			cause: error,
+		});
+	}
+
+	return new ApiError("The request could not be created.", {
+		kind: "unexpected",
+		cause: error,
+	});
+}
+```
+
+Interceptors should normalize transport concerns without swallowing errors or retrying every request indiscriminately.
+
+## Runtime Schema Validation
+
+Static TypeScript types do not validate network data.
+
+```ts
+const orderSchema = z.object({
+	id: z.string().min(1),
+	status: z.enum(["draft", "submitted", "shipped"]),
+	total: z.number().nonnegative(),
+});
+
+function parseOrder(payload: unknown) {
+	const result = orderSchema.safeParse(payload);
+	if (!result.success) {
+		throw new ApiError("The service returned an invalid response.", {
+			kind: "unexpected",
+			code: "INVALID_RESPONSE_CONTRACT",
+			cause: result.error,
+		});
+	}
+	return result.data;
+}
+```
+
+Report contract failures with endpoint/version context but do not log sensitive payloads. Validate at trust boundaries according to risk and performance needs.
+
+## Validation Errors
+
+Client validation improves feedback; server validation remains authoritative.
+
+```mermaid
+flowchart LR
+	INPUT[User input] --> CLIENT[Client validation]
+	CLIENT -->|invalid| FIELDS[Accessible field messages]
+	CLIENT -->|valid| SERVER[Submit to server]
+	SERVER -->|domain invalid| MAP[Map stable field/global codes]
+	MAP --> FIELDS
+	SERVER -->|accepted| SUCCESS[Continue workflow]
+```
+
+Associate errors with controls using semantic labels and `aria-describedby`. Move focus to a summary or first invalid field when appropriate. Preserve entered values unless security policy requires clearing them.
+
+Never map arbitrary server keys directly into object paths without validation; prototype pollution and UI corruption are possible in poorly designed mappers.
+
+## Optimistic Concurrency
+
+Conflicts are expected when multiple actors edit the same resource.
+
+```mermaid
+sequenceDiagram
+	participant A as User A
+	participant B as User B
+	participant API as API
+	A->>API: Read version 7
+	B->>API: Read version 7
+	A->>API: Update with If-Match version 7
+	API-->>A: Success, version 8
+	B->>API: Update with If-Match version 7
+	API-->>B: 412 Precondition Failed
+	B->>API: Reload current version
+	API-->>B: Version 8 for merge/review
+```
+
+Do not overwrite silently. Offer reload, compare/merge, or reapply changes according to domain risk.
+
+## Retry Policy
+
+Retries are safe only when the failure is transient and the operation is replayable.
+
+```mermaid
+flowchart TD
+	FAIL[Operation failed] --> TRANSIENT{Transient class/status?}
+	TRANSIENT -->|no| STOP[Return normalized failure]
+	TRANSIENT -->|yes| SAFE{Idempotent or protected by idempotency key?}
+	SAFE -->|no| STOP
+	SAFE -->|yes| LIMIT{Attempts/time budget remaining?}
+	LIMIT -->|no| STOP
+	LIMIT -->|yes| WAIT[Backoff plus jitter or Retry-After]
+	WAIT --> TRY[Retry]
+	TRY --> FAIL
+```
+
+Good candidates include selected `GET` requests and idempotent operations. Do not automatically retry validation failures, authentication failures, most `4xx` responses, or unprotected financial mutations.
+
+## Exponential Backoff and Jitter
+
+A capped exponential schedule can be represented as:
+
+$$
+d_n = \min(d_{\max}, d_0 \cdot 2^n)
+$$
+
+Full jitter chooses a random delay:
+
+$$
+w_n \sim U(0, d_n)
+$$
+
+```js
+function retryDelay(attempt, baseMs = 250, capMs = 8_000) {
+	const maximum = Math.min(capMs, baseMs * 2 ** attempt);
+	return Math.floor(Math.random() * maximum);
+}
+```
+
+Honor a valid server `Retry-After` policy, cap attempts and total duration, and cancel backoff when the user navigates away. Jitter reduces synchronized retry storms.
+
+## Idempotency
+
+An idempotent operation can be repeated without creating additional effects. HTTP method names help but do not prove implementation behavior.
+
+For retriable creation/payment workflows, the client can send a unique idempotency key that the server persists with the operation result.
+
+```http
+POST /payments
+Idempotency-Key: 8afac1c2-...
+Content-Type: application/json
+```
+
+```mermaid
+sequenceDiagram
+	participant C as Client
+	participant API as API
+	participant DB as Idempotency store
+	C->>API: POST payment with key K
+	API->>DB: Reserve K and execute once
+	API--xC: Response lost
+	C->>API: Retry same request with K
+	API->>DB: Lookup K
+	DB-->>API: Existing result
+	API-->>C: Return original result without duplicate charge
+```
+
+The server defines key scope, expiry, payload consistency, concurrency, and response replay. A frontend-generated key alone cannot guarantee idempotency.
+
+## Timeouts
+
+Every remote operation needs an appropriate time budget. Browser `fetch` has no universal application timeout by default.
+
+```js
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10_000) {
+	const timeoutController = new AbortController();
+	const timeoutId = setTimeout(() => timeoutController.abort("timeout"), timeoutMs);
+	const signal = options.signal
+		? AbortSignal.any([options.signal, timeoutController.signal])
+		: timeoutController.signal;
+
+	try {
+		return await fetch(url, { ...options, signal });
+	} catch (error) {
+		if (timeoutController.signal.aborted && !options.signal?.aborted) {
+			throw new ApiError("The request took too long.", {
+				kind: "timeout",
+				retryable: true,
+				cause: error,
+			});
+		}
+		throw error;
+	} finally {
+		clearTimeout(timeoutId);
+	}
+}
+```
+
+Check target browser support for `AbortSignal.any` or compose signals with a compatible helper. Separate connection/API deadlines from long-running job workflows.
+
+## Rate Limiting
+
+On `429 Too Many Requests`:
+
+- Respect a valid `Retry-After` header.
+- Disable or slow automated polling.
+- Avoid per-component independent retries.
+- Explain when the user can try again.
+- Preserve entered data.
+- Do not reveal internal rate-limit dimensions.
+
+Authentication and abuse-sensitive endpoints may intentionally return generic messages. Rate limits must be server-enforced.
+
+## Offline and Connectivity
+
+`navigator.onLine` is a hint, not proof that the API is reachable.
+
+```mermaid
+stateDiagram-v2
+	[*] --> online
+	online --> degraded: API timeout/5xx
+	online --> offline: browser network event/request failure
+	offline --> reconnecting: online event/manual retry
+	degraded --> reconnecting: retry window
+	reconnecting --> online: health/operation succeeds
+	reconnecting --> offline: network unavailable
+	reconnecting --> degraded: service unavailable
+```
+
+Design separate UI for offline, service unavailable, and authorization failure. Queue offline mutations only when conflict, ordering, encryption, expiry, and duplicate handling are explicitly designed.
+
+## Optimistic UI Rollback
+
+Optimistic updates improve perceived speed but require compensation.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant UI as React state/cache
+	participant API as API
+	U->>UI: Perform action
+	UI->>UI: Snapshot and apply optimistic result
+	UI->>API: Send mutation
+	alt success
+		API-->>UI: Confirm canonical result
+		UI->>UI: Reconcile server state
+	else failure
+		API-->>UI: Conflict/error
+		UI->>UI: Roll back or show resolution state
+	end
+```
+
+Avoid optimistic behavior for irreversible or high-risk operations unless the UI wording clearly distinguishes pending from completed.
+
+## Data Query Libraries
+
+React Query, RTK Query, and similar libraries centralize pending/error/cache/retry behavior. Configure policies by operation rather than accepting broad defaults blindly.
+
+Consider:
+
+- Which status codes are retryable.
+- Query versus mutation behavior.
+- Stale data display during refresh failure.
+- Error reset boundaries.
+- Cache clearing on logout/tenant change.
+- Request cancellation.
+- Focus/reconnect refetch storms.
+- Redaction before devtools/telemetry.
+
+Server state libraries reduce repetition but do not define domain-safe messages or idempotency.
+
+## Graceful Degradation
+
+Not every dependency failure should block the complete screen.
+
+```mermaid
+flowchart TB
+	PAGE[Dashboard] --> CORE[Core account data]
+	PAGE --> CHART[Analytics chart]
+	PAGE --> REC[Recommendations]
+	CORE -->|fails| PAGEFAIL[Route-level failure]
+	CHART -->|fails| CHARTFAIL[Chart unavailable panel]
+	REC -->|fails| HIDE[Hide optional recommendations]
+```
+
+Classify dependencies as critical, important, or optional. A failed marketing recommendation should not block checkout; a failed price validation should.
+
+## Circuit Breakers and Load Shedding
+
+Circuit breakers are generally server/gateway responsibilities because browsers are distributed and untrusted. A frontend can temporarily suppress repeated optional calls after failures, but it cannot protect infrastructure globally.
+
+```mermaid
+stateDiagram-v2
+	[*] --> closed
+	closed --> open: failure threshold exceeded
+	open --> halfOpen: cooldown elapsed
+	halfOpen --> closed: probe succeeds
+	halfOpen --> open: probe fails
+```
+
+Use frontend suppression for UX/network efficiency, not as the sole resilience control. Server-side breakers, quotas, queues, and load shedding remain authoritative.
+
+## WebSocket and Streaming Errors
+
+Long-lived connections need lifecycle-specific policies:
+
+- Distinguish clean close, authentication expiry, network loss, and protocol error.
+- Reconnect with capped backoff and jitter.
+- Stop reconnecting after logout or fatal policy close.
+- Resume from an event cursor when supported.
+- Deduplicate replayed messages.
+- Revalidate state after gaps.
+- Surface degraded real-time status.
+
+```mermaid
+stateDiagram-v2
+	[*] --> connecting
+	connecting --> open: connected/authenticated
+	connecting --> backoff: transient failure
+	open --> backoff: unexpected close
+	open --> closed: logout/fatal close
+	backoff --> connecting: delay elapsed and still relevant
+	backoff --> closed: cancelled/attempt budget exhausted
+```
+
+Do not reconnect in a tight loop or retain stale subscriptions across user/tenant changes.
+
+## Chunk Load Errors
+
+Lazy chunks can fail because of offline conditions, wrong base paths, CDN issues, or version skew after deployment.
+
+```mermaid
+flowchart TD
+	LAZY[Dynamic import fails] --> ONLINE{Network available?}
+	ONLINE -->|no| OFFLINE[Offer retry when connected]
+	ONLINE -->|yes| SKEW{Likely stale release/chunk 404?}
+	SKEW -->|yes| ONCE[Controlled one-time page refresh]
+	SKEW -->|no| REPORT[Report asset URL/release/status safely]
+	ONCE --> AGAIN{Already refreshed for this release?}
+	AGAIN -->|yes| FALLBACK[Show recovery page]
+	AGAIN -->|no| RELOAD[Reload current HTML]
+```
+
+Prevent refresh loops with a session marker. Retain prior hashed assets during deployments so open tabs continue working.
+
+## Resource Loading Errors
+
+Images, fonts, scripts, and workers fail outside normal API handling.
+
+```jsx
+function ProductImage({ src, alt }) {
+	const [failed, setFailed] = useState(false);
+
+	if (failed) return <ImagePlaceholder label={alt} />;
+
+	return <img src={src} alt={alt} onError={() => setFailed(true)} />;
+}
+```
+
+Do not retry missing images indefinitely. Use meaningful fallbacks and monitor systemic CDN failures with sampling rather than one event per decorative asset.
+
+## Storage Errors
+
+Browser storage can fail because it is unavailable, blocked, full, corrupted, or accessed in unsupported contexts.
+
+```js
+export function writeJson(storage, key, value) {
+	try {
+		storage.setItem(key, JSON.stringify(value));
+		return { ok: true };
+	} catch (error) {
+		return { ok: false, error: normalizeStorageError(error) };
+	}
+}
+```
+
+Treat persistence as fallible. Validate data after reading, version schemas, recover from corruption, and never persist secrets merely because handling errors is convenient.
+
+## Web Worker Errors
+
+```js
+worker.addEventListener("error", (event) => {
+	monitoring.captureMessage("Worker failed", {
+		filename: sanitizeAssetUrl(event.filename),
+		line: event.lineno,
+	});
+	showWorkerFallback();
+});
+
+worker.addEventListener("messageerror", () => {
+	showInvalidWorkerMessageFallback();
+});
+```
+
+Define message schemas, terminate failed workers, and decide whether work can fall back to the main thread without freezing the UI.
+
+## Global Error Handlers
+
+Global handlers capture failures that escaped local ownership.
+
+```js
+window.addEventListener("error", (event) => {
+	monitoring.captureGlobalError(event.error ?? event.message, {
+		source: sanitizeAssetUrl(event.filename),
+		line: event.lineno,
+		column: event.colno,
+	});
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+	monitoring.captureUnhandledRejection(event.reason);
+});
+```
+
+```mermaid
+flowchart TD
+	LOCAL[Local boundary/operation] -->|handled| RECOVERY[Feature recovery]
+	LOCAL -->|escapes| GLOBAL[Global error/rejection listener]
+	GLOBAL --> TELEMETRY[Last-resort telemetry]
+	GLOBAL --> EXISTING[Existing browser/runtime behavior]
+```
+
+Do not use global listeners to resume corrupted workflows or suppress all console/browser behavior. Their presence is not permission to leave promises unowned.
+
+## Logging Levels and Severity
+
+| Severity | Example |
+|---|---|
+| Debug | Local diagnostic detail, normally disabled in production |
+| Info | Expected lifecycle event such as recovery completion |
+| Warning | Degraded optional dependency or approaching limit |
+| Error | User operation failed or contained route crash |
+| Fatal | Application cannot start or trusted state may be compromised |
+
+Severity should reflect user and system impact, not merely exception type. A handled `404` is usually not an error event; a silent data-loss fallback may be fatal.
+
+## Structured Telemetry
+
+Capture structured context:
+
+```js
+monitoring.captureException(error, {
+	level: "error",
+	tags: {
+		feature: "checkout",
+		operation: "submit-order",
+		release: config.release,
+		environment: config.environment,
+	},
+	extra: {
+		correlationId: normalized.correlationId,
+		attempt: retryAttempt,
+	},
+});
+```
+
+Useful fields include release, environment, route pattern, feature, operation, browser, correlation/trace ID, retry count, and boundary name. Avoid full URLs containing user data, raw request bodies, headers, tokens, cookies, and complete API responses.
+
+## Redaction and Privacy
+
+```mermaid
+flowchart LR
+	RAW[Raw failure/context] --> ALLOW[Allowlist diagnostic fields]
+	ALLOW --> REDACT[Remove tokens, cookies, PII, payloads]
+	REDACT --> SAMPLE[Apply sampling/deduplication]
+	SAMPLE --> SEND[Send over protected telemetry channel]
+	SEND --> RETAIN[Apply access and retention policy]
+```
+
+Redact at collection time, not only in dashboards. Query strings, DOM text, Redux state, breadcrumbs, screenshots, and console capture can contain sensitive data. Configure monitoring integrations intentionally.
+
+## Correlation and Distributed Tracing
+
+Propagate a server-generated or accepted correlation identifier through services and return it safely to the client.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant G as API gateway
+	participant O as Orders service
+	participant P as Payment service
+	B->>G: Request with trace context where allowed
+	G->>O: Propagate trace/correlation
+	O->>P: Propagate context
+	P-->>O: Failure
+	O-->>G: Problem response plus correlation ID
+	G-->>B: Safe error plus correlation ID
+	B->>B: Display support reference and log release/operation
+```
+
+Trace identifiers are diagnostic references, not secrets or authorization credentials. Follow organizational tracing standards and do not allow arbitrary user-controlled values to poison logs.
+
+## Source Maps and Symbolication
+
+Production stack traces point to minified assets. Source maps translate generated positions back to authored source.
+
+```mermaid
+flowchart LR
+	ERROR[Production stack plus release] --> ARTIFACT[Identify exact hashed asset]
+	ARTIFACT --> MAP[Load matching private source map]
+	MAP --> SYMBOL[Symbolicate frames]
+	SYMBOL --> GROUP[Group by stable fingerprint]
+	GROUP --> TRIAGE[Assign actionable issue]
+```
+
+Upload maps before releasing matching assets, associate them with an immutable release, and control public exposure. Never embed source credentials. A source map from a different build produces misleading stacks.
+
+## Error Grouping and Sampling
+
+Monitoring systems can become unusable when one failure emits millions of events.
+
+Use:
+
+- Stable fingerprints based on normalized stack/type/code.
+- Rate limits and event sampling.
+- Higher sampling for new releases and severe errors.
+- Aggregated metrics for repeated expected failures.
+- Deduplication for repeated resource failures.
+- Session context without sensitive replay data.
+
+Do not group solely by message when messages contain IDs. Do not sample away every fatal or security-relevant event.
+
+## Alerting
+
+Alert on user-impact signals rather than individual exceptions:
+
+- Error-rate or failed-journey increase.
+- New fatal error after release.
+- Authentication callback failure rate.
+- Checkout/payment submission failure.
+- Chunk-load failures by release.
+- API availability/latency threshold.
+- Error budget burn rate.
+
+Route alerts to owners with runbooks, release context, dashboards, and rollback instructions.
+
+## User-Facing Error UX
+
+A useful error state explains:
+
+1. What could not be completed.
+2. Whether user input/work is preserved.
+3. What the user can do next.
+4. Whether retry is safe.
+5. A support reference when escalation is useful.
+
+Avoid messages such as "Something went wrong" when a more precise safe message is possible. Avoid raw technical messages even when they appear harmless.
+
+```mermaid
+flowchart TD
+	ERROR[Normalized error] --> ACTION{Can user correct input?}
+	ACTION -->|yes| FIELD[Inline guidance and preserved values]
+	ACTION -->|no| RETRY{Safe transient retry?}
+	RETRY -->|yes| BUTTON[Retry with progress and bounded attempts]
+	RETRY -->|no| ALTERNATIVE{Alternative path/degraded view?}
+	ALTERNATIVE -->|yes| DEGRADE[Continue with reduced capability]
+	ALTERNATIVE -->|no| SUPPORT[Escalation/reference/navigation]
+```
+
+## Accessibility
+
+Error experiences must be perceivable and operable:
+
+- Associate field messages with inputs.
+- Use an error summary for long forms.
+- Move focus intentionally after failed navigation or submission.
+- Use `role="alert"` or live regions selectively for new messages.
+- Do not communicate errors through color alone.
+- Keep retry controls keyboard accessible.
+- Announce loading-to-error transitions.
+- Preserve user-entered values.
+- Avoid repeatedly stealing focus during automatic retries.
+
+```jsx
+function FieldError({ id, children }) {
+	return (
+		<p id={id} role="alert" className="field-error">
+			{children}
+		</p>
+	);
+}
+```
+
+Too many simultaneous live-region announcements can be as inaccessible as none. Prefer one coherent summary for broad failures.
+
+## Error State Design
+
+Different surfaces need different containment:
+
+| Surface | Appropriate fallback |
+|---|---|
+| Inline field | Specific correction next to input |
+| Mutation form | Preserve form, show summary/field errors |
+| Widget | Local unavailable state |
+| Route | Route-level retry/back navigation |
+| Application bootstrap | Full-page configuration/service failure |
+| Background refresh | Keep stale data with non-blocking warning |
+| Destructive action | Confirm uncertain outcome before retry |
+
+Never replace valid stale data with a blank screen solely because background refresh failed.
+
+## Unknown Mutation Outcomes
+
+If a connection fails after sending a mutation, the client may not know whether the server committed it.
+
+```mermaid
+sequenceDiagram
+	participant C as Client
+	participant S as Server
+	C->>S: Submit non-idempotent operation
+	S->>S: Commit operation
+	S--xC: Response lost
+	C->>C: Outcome is unknown
+	C->>S: Query operation status/idempotency result
+	S-->>C: Confirm committed outcome
+```
+
+Do not tell the user the operation failed definitively or retry blindly. Use idempotency keys, operation-status endpoints, or reconciliation workflows.
+
+## State Machines for Complex Workflows
+
+Explicit states prevent impossible combinations such as `loading=true`, `success=true`, and an error simultaneously.
+
+```mermaid
+stateDiagram-v2
+	[*] --> idle
+	idle --> submitting: submit
+	submitting --> succeeded: confirmed
+	submitting --> failed: definitive failure
+	submitting --> unknown: response lost after send
+	failed --> submitting: safe retry
+	unknown --> reconciling: check status
+	reconciling --> succeeded: found committed
+	reconciling --> failed: found rejected/not committed
+```
+
+Reducers or state-machine libraries are useful when workflows include retries, cancellation, compensation, and uncertain outcomes.
+
+## SSR Errors
+
+Server rendering introduces additional boundaries:
+
+- Loader/data failure before render.
+- Render exception.
+- Streaming failure after headers or partial HTML.
+- Hydration mismatch.
+- Per-request context failure.
+
+```mermaid
+flowchart TD
+	REQ[SSR request] --> LOAD[Load route data]
+	LOAD -->|expected 404/redirect| RESPONSE[Typed HTTP response]
+	LOAD -->|unexpected| SERVERERR[Server error page plus telemetry]
+	LOAD --> RENDER[Render/stream]
+	RENDER -->|before headers| SERVERERR
+	RENDER -->|after stream starts| ABORT[Abort stream and client recovery policy]
+	RENDER --> HTML[HTML plus release context]
+	HTML --> HYDRATE[Client hydration boundary]
+```
+
+Never share error/user state across requests. Redact server stacks from HTML and prevent personalized error pages from being publicly cached.
+
+## Service Workers
+
+Service workers can produce stale assets, failed cache reads, offline responses, and version conflicts.
+
+Professional controls include:
+
+- Versioned caches.
+- Atomic activation strategy.
+- Network/cache timeout policy.
+- Validation of cached response types.
+- Update UX that avoids interrupting critical forms.
+- Recovery from corrupted caches.
+- Telemetry that identifies service-worker version.
+
+Do not cache API errors as successful content or let stale HTML reference deleted chunks.
+
+## Security Boundaries
+
+Error handling must fail securely.
+
+```mermaid
+flowchart TD
+	FAIL[Failure] --> SAFE[Apply safe default]
+	SAFE --> AUTH{Authorization/authentication uncertain?}
+	AUTH -->|yes| DENY[Deny protected operation]
+	AUTH -->|no| DEGRADE[Use approved degraded behavior]
+	FAIL --> REDACT[Redact internal details]
+	REDACT --> LOG[Protected diagnostic telemetry]
+	DENY --> USER[Safe user message]
+	DEGRADE --> USER
+```
+
+Never:
+
+- Grant access because a permission service failed.
+- Show stack traces or SQL/internal errors.
+- Log tokens, cookies, passwords, or sensitive payloads.
+- Retry authentication indefinitely.
+- Trust server error HTML as application markup.
+- Use error messages as authorization signals.
+- Expose whether concealed resources exist.
+
+## Testing Error Paths
+
+Test failures deliberately rather than waiting for production.
+
+### Unit Tests
+
+- Normalization for statuses and transport errors.
+- Retry eligibility and delay calculation.
+- Reducer/state-machine transitions.
+- Redaction helpers.
+- Safe error-message mapping.
+
+### Component/Integration Tests
+
+- Render boundary fallback and reset.
+- Form validation and focus behavior.
+- API `401`, `403`, `404`, `409`, `422`, `429`, and `5xx` states.
+- Cancellation without error toast.
+- Stale data preserved during refresh failure.
+- Optimistic rollback.
+
+### End-to-End Tests
+
+- Offline and slow network.
+- API outage and partial dependency failure.
+- Chunk-load failure/version skew.
+- Expired authentication.
+- Direct route loader failure.
+- Unknown mutation outcome reconciliation.
+- Production source-map/release correlation.
+
+```mermaid
+flowchart LR
+	INJECT[Inject controlled failure] --> ASSERT[Assert containment and UX]
+	ASSERT --> TELEMETRY[Assert redacted event/correlation]
+	TELEMETRY --> RECOVER[Assert retry/reset/rollback]
+	RECOVER --> CLEAN[Assert no leaked pending state/resources]
+```
+
+Mock at the network boundary when testing API behavior, but keep production-like browser tests for caching, chunks, workers, CSP, and service workers.
+
+## Error Boundary Test
+
+```jsx
+function BrokenWidget() {
+	throw new Error("test render failure");
+}
+
+test("contains a widget render failure", () => {
+	render(
+		<ErrorBoundary name="test-widget">
+			<BrokenWidget />
+		</ErrorBoundary>,
+	);
+
+	expect(screen.getByRole("heading", { name: /could not load/i })).toBeVisible();
+	expect(monitoring.captureException).toHaveBeenCalled();
+});
+```
+
+Suppress expected console noise only within the test and restore it afterward.
+
+## Retry Test
+
+Use fake timers or an injected scheduler/random source so backoff tests remain deterministic.
+
+```js
+test("does not retry a validation failure", async () => {
+	const operation = vi.fn().mockRejectedValue(
+		new ApiError("Invalid input", {
+			kind: "validation",
+			status: 422,
+			retryable: false,
+		}),
+	);
+
+	await expect(runWithRetry(operation)).rejects.toMatchObject({
+		kind: "validation",
+	});
+	expect(operation).toHaveBeenCalledTimes(1);
+});
+```
+
+## Chaos and Resilience Testing
+
+For critical systems, inject latency, selected status codes, malformed payloads, dropped connections, and dependency outages in controlled environments.
+
+```mermaid
+flowchart TD
+	STEADY[Define expected steady-state behavior] --> INJECT[Inject bounded failure]
+	INJECT --> OBSERVE[Observe UX, telemetry, retries, backend load]
+	OBSERVE --> LIMIT{Safety limit exceeded?}
+	LIMIT -->|yes| STOP[Stop experiment]
+	LIMIT -->|no| RECOVER[Remove fault and verify recovery]
+	RECOVER --> LEARN[Record and remediate findings]
+```
+
+Do not run uncontrolled fault injection against production. Establish approvals, blast-radius limits, rollback, and monitoring first.
+
+## Incident Response
+
+When an error spike occurs:
+
+1. Confirm user impact and affected journeys.
+2. Identify release, environment, route, browser, and dependency scope.
+3. Compare deployment and feature-flag changes.
+4. Mitigate through rollback, disablement, traffic shift, or dependency isolation.
+5. Preserve evidence without exposing user data.
+6. Communicate status and workarounds.
+7. Repair and verify through production-like tests.
+8. Write a blameless post-incident review with owned actions.
+
+```mermaid
+flowchart LR
+	ALERT[Impact alert] --> TRIAGE[Validate and classify]
+	TRIAGE --> MITIGATE[Rollback/disable/degrade]
+	MITIGATE --> VERIFY[Verify user recovery]
+	VERIFY --> ROOT[Root-cause analysis]
+	ROOT --> FIX[Permanent fix and regression tests]
+	FIX --> REVIEW[Post-incident learning]
+```
+
+## Error Budgets
+
+An error budget translates an availability objective into allowable failure over a period.
+
+If the service-level objective is $S$ and there are $N$ eligible events, the approximate allowed failures are:
+
+$$
+B = N(1-S)
+$$
+
+Use error-budget burn to balance feature delivery and reliability work. Define eligible events and good outcomes from the user's perspective, not merely HTTP `200` counts.
+
+## Common Mistakes
+
+| Mistake | Consequence | Professional correction |
+|---|---|---|
+| Empty `catch` block | Failure disappears and state corrupts | Normalize, recover, and report appropriately |
+| One root error boundary only | Small widget blanks whole app | Add route/widget boundaries by recovery unit |
+| Boundary expected to catch event errors | Rejection escapes | Handle at async/event owner |
+| Loading spinner with no rejection path | Endless pending UI | Model timeout/error/retry states |
+| Raw backend message shown | Security/privacy leakage and poor UX | Map stable codes to controlled messages |
+| Every error logged as fatal | Alert fatigue | Classify severity and expected outcomes |
+| Every request retried | Duplicate writes and retry storms | Retry transient replay-safe operations only |
+| No jitter | Clients synchronize retries | Add capped randomized backoff |
+| Mutation retried without idempotency | Duplicate order/payment | Use server idempotency/reconciliation |
+| Network failure treated as definite failure | Unknown committed outcome mishandled | Reconcile operation status |
+| Abort displayed as an error | Noisy/confusing UX | Treat intentional cancellation separately |
+| `navigator.onLine` trusted | False connectivity conclusions | Confirm through operation/health behavior |
+| `fetch` assumed to reject on `500` | HTTP failures treated as success | Check `response.ok`/status |
+| `401` and `403` treated alike | Refresh loops/logout errors | Apply distinct auth policies |
+| Stale data removed on refresh failure | Users lose useful context | Keep stale data with warning |
+| Automatic boundary reset loop | Repeated crashes/telemetry flood | User-driven bounded reset |
+| Global handlers used as recovery | Corrupted state continues | Use as last-resort telemetry only |
+| Full Redux/request payload logged | PII/token leakage | Allowlist and redact at capture |
+| Source maps mismatch release | Wrong diagnostics | Upload exact maps with release |
+| Correlation ID accepted blindly | Log injection/poisoning | Validate format and generate server-side |
+| Optional dependency blocks core flow | Excessive blast radius | Degrade by dependency criticality |
+| Tests cover only success | Production failures are improvised | Inject expected and unexpected failures |
+
+## Production Checklist
+
+1. Define a shared error taxonomy and normalized application model.
+2. Distinguish expected domain outcomes, operational failures, and defects.
+3. Assign ownership at transport, domain, feature, route, and global boundaries.
+4. Place React boundaries around routes and independently recoverable widgets.
+5. Handle events and asynchronous work at their initiating operation.
+6. Ensure every promise has an explicit owner.
+7. Treat cancellation separately from timeout and failure.
+8. Use stable API error codes and safe Problem Details contracts.
+9. Validate untrusted response schemas where risk justifies it.
+10. Map field errors accessibly without exposing server internals.
+11. Distinguish authentication, authorization, conflict, rate-limit, and outage states.
+12. Retry only transient, replay-safe operations.
+13. Use capped exponential backoff, jitter, and total attempt budgets.
+14. Honor `Retry-After` according to policy.
+15. Use server-supported idempotency for retriable mutations.
+16. Reconcile uncertain mutation outcomes before retrying.
+17. Set operation-specific timeouts and propagate cancellation.
+18. Preserve valid stale data during background refresh failures.
+19. Roll back or reconcile optimistic updates.
+20. Degrade optional dependencies without blocking core workflows.
+21. Bound WebSocket/stream reconnect behavior.
+22. Handle chunk version skew without reload loops.
+23. Treat storage, workers, service workers, and assets as fallible.
+24. Use global handlers only for last-resort telemetry.
+25. Capture structured release, route, feature, and correlation context.
+26. Redact tokens, cookies, PII, request bodies, and sensitive DOM/state.
+27. Upload exact production source maps under controlled access.
+28. Group, sample, and alert according to user impact.
+29. Provide actionable, accessible, work-preserving error UX.
+30. Fail securely when authentication or authorization is uncertain.
+31. Test render, API, offline, timeout, conflict, and deployment failures.
+32. Maintain incident runbooks, rollback, and post-incident learning.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Preserve carts and checkout input, use idempotency keys for order/payment submission, reconcile uncertain outcomes, isolate recommendations from checkout, and provide order correlation references without exposing internal details.
+
+### Banking
+
+Fail closed on authorization uncertainty, distinguish pending from completed transactions, require idempotent transfer submission/reconciliation, redact financial data, use step-up recovery paths, and audit server decisions.
+
+### Enterprise CRM
+
+Preserve long-form drafts, resolve optimistic concurrency conflicts, keep stale customer data visible during refresh outages where policy permits, isolate chart/export widgets, and correlate frontend failures with backend traces.
+
+### Multi-Tenant SaaS
+
+Never reveal cross-tenant resource existence through errors, clear tenant-specific caches on context changes, validate server error payloads, and include tenant-safe diagnostic context without logging sensitive identifiers.
+
+### Real-Time Dashboard
+
+Show connection health, reconnect with bounded jitter, resume from event cursors, deduplicate messages, revalidate after gaps, and keep historical data visible while clearly marking it stale.
+
+### Offline Field Application
+
+Model offline, queued, synchronized, conflicted, and rejected states explicitly. Encrypt sensitive local data, preserve operation IDs, reconcile on reconnect, and give users control over unresolved conflicts.
+
+A professional error system makes failures explicit, bounded, secure, diagnosable, and recoverable. It does not promise that nothing will fail; it ensures failures do not become silent data loss, security bypasses, or unexplained dead ends.
 
 ---
 
