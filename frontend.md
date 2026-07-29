@@ -54,20 +54,57 @@ This handbook assumes knowledge of JavaScript functions, objects, arrays, promis
 
 ## Introduction
 
-React is a declarative library for describing UI as a function of state. Facebook open-sourced it in 2013 after using its ideas in production. It addressed increasingly stateful pages where direct DOM commands created hidden dependencies. React brought components, one-way data flow, and reconciliation; Hooks arrived in 16.8 and React 18 added automatic batching and the concurrent-rendering foundation.
+React is an open-source JavaScript library for building user interfaces from reusable components. A useful mental model is:
+
+> **UI = f(state)**
+
+For the same props, state, and context, a pure component should describe the same UI. Developers declare the desired result; React coordinates when components run and how their output reaches the browser DOM.
+
+React is a **library**, not a complete framework. It owns component rendering and related APIs, but it does not prescribe one router, HTTP client, global store, folder structure, or deployment platform. This focused scope is an advantage when a team needs flexibility and a disadvantage when a team needs a single prescribed architecture.
+
+### Why React Exists
+
+Before component-oriented libraries became common, large interfaces often mixed DOM queries, event listeners, data mutation, and manual element updates. As state grew, developers had to remember every DOM location affected by each change. React changed the question from "Which DOM commands should run?" to "What should the interface look like for this state?"
+
+Facebook open-sourced React in 2013 after using its ideas internally. Important milestones include:
+
+| Period | Milestone | Why it mattered |
+|---|---|---|
+| 2013 | Public React release | Popularized declarative components and one-way data flow |
+| 2015 | React Native | Applied the component model beyond browser DOM rendering |
+| 2017 | Fiber architecture in React 16 | Enabled incremental work, priorities, and modern error boundaries |
+| 2019 | Hooks in React 16.8 | Let function components compose stateful behavior |
+| 2022 | React 18 | Added `createRoot`, automatic batching, transitions, and concurrent foundations |
+
+### Industry Usage
+
+React is commonly used for product interfaces that contain many interacting states: e-commerce catalogs, banking workspaces, CRM pipelines, administrative dashboards, HR systems, chat clients, social feeds, and internal enterprise tools. Its ecosystem, hiring market, testing support, and long-term adoption make it a common organizational choice, but popularity alone is not an architecture decision.
 
 | Decision | Guidance |
 |---|---|
-| Advantages | Composition, predictable data flow, ecosystem, tooling, broad industry use |
-| Disadvantages | Not a complete framework; effects/state can be misused; client JavaScript has a cost |
-| Use it | Interactive commerce, CRM, banking, HRMS, dashboards, chat, social feeds |
-| Avoid it | Tiny static documents or environments where client JavaScript is inappropriate |
+| Advantages | Composition, declarative updates, predictable data flow, mature ecosystem, strong tooling, broad industry use |
+| Disadvantages | Not a complete framework; state/effects can be misused; ecosystem choices add governance cost; client JavaScript has loading and runtime costs |
+| Use it | Interactive products with reusable screens, evolving state, complex workflows, or long-term team ownership |
+| Avoid it | Tiny static documents, content requiring almost no interaction, or environments where shipping client JavaScript is inappropriate |
 
-An SPA keeps one document/runtime while a client router changes views. An MPA requests a document per navigation. React supports either; SSR frameworks can combine server documents with client hydration.
+### SPA vs MPA
+
+An SPA keeps one document and JavaScript runtime while a client router changes views. An MPA requests another document for navigation. React can support either model; server-rendering frameworks can return route-specific documents and then hydrate React on the client.
+
+| Concern | SPA | MPA or server-rendered navigation |
+|---|---|---|
+| First request | Often loads an application shell and JavaScript | Returns route-specific document content |
+| Later navigation | Client router can update quickly | Browser requests another document |
+| State continuity | Naturally remains in one runtime | Must be persisted or transferred |
+| Failure isolation | One runtime may affect many screens | Document navigations create stronger isolation |
+| SEO and previews | Requires correct rendering strategy | Content exists naturally in returned documents |
+| Best fit | Highly interactive application-like products | Content-heavy or document-oriented experiences |
 
 ## Internal and Step-by-Step Working
 
-JSX compiles to instructions that create immutable React element descriptions. Elements are not DOM nodes. `createRoot(...).render(<App />)` schedules work; React calls components, updates a Fiber tree, reconciles type/position/key, commits necessary DOM mutations, and lets the browser perform style calculation, layout, paint, and compositing.
+JSX compiles to instructions that create immutable React element descriptions. An element is a small JavaScript description containing a type, props, and optional key. It is not a browser node and has no methods such as `focus()` or `appendChild()`.
+
+React associates component state with a Fiber's identity and position in the rendered tree. Calling a state setter enqueues an update; it does not mutate the value captured by the currently running function. React later renders with a new state snapshot. If the resulting host output differs, the commit phase updates the DOM. The browser then performs any required style calculation, layout, paint, and compositing.
 
 ```mermaid
 flowchart LR
@@ -80,9 +117,48 @@ flowchart LR
  G --> H[Passive effects]
 ```
 
-The arrows show causality: a trigger queues work; render is calculation and may restart; commit applies a finished tree; browser work creates pixels; passive effects synchronize afterward.
+The arrows show causality:
 
-## Setup and Structures
+1. An event, timer, request completion, context change, or external-store notification triggers an update.
+2. React puts the update into an internal queue and assigns scheduling priority.
+3. The render phase calls components and reconciles their new element output with previous Fibers.
+4. Render must be pure because React may pause, restart, or discard uncommitted work.
+5. The commit phase applies a completed set of DOM mutations and updates refs.
+6. The browser converts changed DOM and styles into pixels.
+7. Passive effects synchronize subscriptions, analytics, or other external systems after commit.
+
+### Initial Render Execution Trace
+
+```jsx
+// src/main.jsx
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App.jsx";
+
+const container = document.getElementById("root");
+const root = createRoot(container);
+
+root.render(
+	<StrictMode>
+		<App />
+	</StrictMode>,
+);
+```
+
+Line by line:
+
+1. `StrictMode` enables additional development checks without adding visible DOM.
+2. `createRoot` creates a React 18 root attached to the existing container.
+3. `<App />` creates an element describing the root component.
+4. `root.render` schedules initial rendering; it does not append a prebuilt `App` DOM node.
+5. React calls `App` and descendants, commits their host output, and the browser paints it.
+
+> [!NOTE]
+> Development Strict Mode can call render logic more than once and test effect cleanup. This behavior exposes impurities; it does not mean production commits duplicate UI.
+
+## Installation and Tooling
+
+### Vite Setup (Recommended)
 
 ```bash
 npm create vite@latest storefront -- --template react
@@ -91,7 +167,24 @@ npm install
 npm run dev
 ```
 
-CRA is maintained for existing applications but is not the recommended new-app scaffold. A practical small structure is:
+The scaffold creates a package manifest, Vite configuration defaults, an HTML entry, and a React source entry. `npm install` resolves dependencies from the package manifest and lockfile. `npm run dev` starts Vite's development server with on-demand module transforms and hot updates.
+
+Useful generated commands normally include:
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Start the local development server |
+| `npm run build` | Create optimized production assets in `dist/` |
+| `npm run preview` | Inspect the production build locally; not a production server |
+| `npm run lint` | Run the scaffold's lint configuration when included |
+
+### Create React App
+
+CRA and `react-scripts` remain relevant in existing applications but are not the recommended starting point for a new client application. CRA hides Webpack/Babel configuration and uses `REACT_APP_*` environment variables. A migration to Vite commonly requires moving `index.html`, changing environment access to `import.meta.env.VITE_*`, translating proxy and asset behavior, and replacing CRA-specific test assumptions.
+
+### Project Structure
+
+A small application can remain simple:
 
 ```text
 src/
@@ -102,11 +195,146 @@ src/
 `-- main.jsx
 ```
 
-## JSX, Elements, Components, Props, State, and Events
+| Path | Responsibility |
+|---|---|
+| `app/` | Composition root: providers, router, store, global error boundaries |
+| `features/` | Business capabilities such as products, cart, students, or reports |
+| `shared/` | Domain-neutral UI, hooks, and utilities used by multiple features |
+| `App.jsx` | Top-level application composition |
+| `main.jsx` | Browser bootstrap and root creation |
+
+Do not create every possible folder on day one. Introduce a boundary when it expresses real ownership, removes harmful coupling, or supports multiple consumers.
+
+## JSX and React Elements
+
+JSX is syntax embedded in JavaScript. It resembles HTML, but expressions follow JavaScript rules and attributes often use DOM-property names such as `className` and `htmlFor`. JSX must produce one root expression; a fragment (`<>...</>`) groups siblings without creating a wrapper DOM element.
+
+```jsx
+function ProductHeading({ product, featured }) {
+	const availability = product.stock > 0 ? "In stock" : "Unavailable";
+
+	return (
+		<>
+			<h2>{featured ? "Featured: " : ""}{product.name}</h2>
+			<p>{availability}</p>
+		</>
+	);
+}
+```
+
+- Curly braces evaluate JavaScript expressions.
+- `null`, `undefined`, and booleans render no text; numbers and strings do.
+- React escapes string values before inserting them, reducing accidental markup injection.
+- `dangerouslySetInnerHTML` bypasses this protection and requires trusted, sanitized content.
+
+Conceptually, `<ProductHeading product={item} />` becomes an element-creation instruction. React does not call the component until rendering that element.
+
+## Components
+
+A component is a reusable rendering unit. Good components have a focused responsibility, explicit inputs, semantic output, and a name based on domain intent rather than visual accident.
+
+### Function Components
+
+Function components are the standard for new React code. React calls them with props. They may use hooks and must remain pure during render.
+
+```jsx
+function Price({ amount, currency = "USD" }) {
+	const formatted = new Intl.NumberFormat("en-US", {
+		style: "currency",
+		currency,
+	}).format(amount);
+
+	return <strong>{formatted}</strong>;
+}
+```
+
+For `amount={49.99}`, the expected output is `$49.99`. Formatting runs whenever `Price` renders. React can preserve the existing `strong` DOM node when its type and position remain the same.
+
+### Class Components
+
+Class components remain supported and common in legacy systems and error boundaries:
+
+```jsx
+import { Component } from "react";
+
+class LegacyCounter extends Component {
+	state = { count: 0 };
+
+	render() {
+		return (
+			<button onClick={() => this.setState(({ count }) => ({ count: count + 1 }))}>
+				Count: {this.state.count}
+			</button>
+		);
+	}
+}
+```
+
+Class state lives on the component instance. Function-component state is tracked by React through the Fiber/hook structure. Prefer functions for new feature code; learn classes to maintain existing applications and understand lifecycle/error-boundary APIs.
+
+## Props and Component Contracts
+
+Props are read-only inputs supplied by a parent. They may contain primitives, objects, arrays, elements, or callback functions. A child must never mutate a prop object because the parent owns it.
+
+```jsx
+function ProductCard({ product, onAddToCart, children }) {
+	return (
+		<article>
+			<h2>{product.name}</h2>
+			<Price amount={product.price} />
+			{children}
+			<button type="button" onClick={() => onAddToCart(product.id)}>
+				Add to cart
+			</button>
+		</article>
+	);
+}
+```
+
+`children` is ordinary composition data. The card controls structure while its caller can provide badges or supporting content. In production, TypeScript or runtime validation can document and enforce component contracts.
+
+## State, Snapshots, and Updates
+
+State represents information that changes over time and affects visible output. Store only the minimum source of truth. Values calculable from props/state should normally be derived during render.
 
 ```jsx
 import { useState } from "react";
-import { createRoot } from "react-dom/client";
+
+function Counter() {
+	const [count, setCount] = useState(0);
+
+	function addThree() {
+		setCount((current) => current + 1);
+		setCount((current) => current + 1);
+		setCount((current) => current + 1);
+	}
+
+	return <button onClick={addThree}>Count: {count}</button>;
+}
+```
+
+Each functional updater receives the pending result of the previous update, so one click moves from `0` to `3`. With three `setCount(count + 1)` calls, each expression uses the same captured snapshot and typically requests the same replacement value.
+
+### Object and Array State
+
+```jsx
+// Wrong: mutates the existing object and preserves its identity.
+profile.name = "Asha";
+setProfile(profile);
+
+// Correct: create a replacement while preserving unchanged fields.
+setProfile((current) => ({ ...current, name: "Asha" }));
+
+// Correct array insertion.
+setItems((current) => [...current, newItem]);
+```
+
+React compares state with `Object.is`. Immutable replacement makes changed identity explicit and allows memoization, selectors, and debugging tools to reason about transitions.
+
+## Events and One-Way Data Flow
+
+```jsx
+import { useState } from "react";
 
 function Quantity({ value, onChange }) {
 	return (
@@ -123,13 +351,42 @@ function App() {
 	const [quantity, setQuantity] = useState(1);
 	return <Quantity value={quantity} onChange={setQuantity} />;
 }
-
-createRoot(document.getElementById("root")).render(<App />);
 ```
 
-`App` owns state; `Quantity` receives read-only props and reports intent. A click queues a new snapshot and renders both components; commit changes only affected DOM. State is associated with component type, key, and tree position, not stored in the function.
+`App` owns state; `Quantity` receives the value and reports user intent through a callback. A click runs the handler, queues state, renders `App` and `Quantity`, and commits only changed host output. This parent-to-child data and child-to-parent event flow keeps ownership explicit.
 
-### Lists, Keys, Conditions, and Forms
+React uses synthetic event objects with browser-like APIs. Use `preventDefault()` to stop a form's default navigation when managing submission in React. Use `stopPropagation()` sparingly because it changes ancestor event behavior and can make component composition surprising.
+
+```jsx
+// Wrong: save runs while rendering.
+<button onClick={save()}>Save</button>
+
+// Correct: React receives a function to call after the click.
+<button onClick={save}>Save</button>
+```
+
+## Conditional Rendering
+
+React uses JavaScript control flow to choose elements:
+
+```jsx
+function AccountPanel({ status, account }) {
+	if (status === "loading") return <p>Loading account...</p>;
+	if (status === "failed") return <p role="alert">Account unavailable.</p>;
+	if (!account) return null;
+
+	return (
+		<section>
+			<h2>{account.name}</h2>
+			{account.overdrawn && <strong>Action required</strong>}
+		</section>
+	);
+}
+```
+
+Prefer explicit early returns for substantially different states. Be careful with `count && <Badge />`: when `count` is `0`, React renders `0`. Use `count > 0 && ...` when zero should render nothing.
+
+## Lists and Keys
 
 ```jsx
 function Orders({ orders }) {
@@ -143,30 +400,179 @@ items.map((item) => <Row key={Math.random()} item={item} />);
 items.map((item) => <Row key={item.id} item={item} />);
 ```
 
-A controlled input uses React state as its source of truth; an uncontrolled input keeps its current value in the DOM and is read with a ref or `FormData`. Keep rapidly changing input state near the field. CSS Modules scope generated names at build time; Styled Components generates runtime styles; Tailwind generates styles from detected utility classes. These are integrations, not React features.
+Keys identify siblings, not global records. React uses type and key to match old and new children. Stable data IDs preserve row state during reordering. Array indexes are acceptable only when a list is static and cannot be reordered, filtered, inserted into, or deleted from.
 
-Class components remain supported for maintenance and error boundaries. Function components are preferred because hooks compose behavior without splitting one concern across lifecycle methods.
+### Rendering and Memory Behavior
+
+Mapping creates new element descriptions in JavaScript memory. React reconciles them against existing child Fibers. Matching rows can preserve component state and DOM; removed rows unmount and become garbage-collection candidates after references and cleanup are released.
+
+## Forms: Controlled and Uncontrolled
+
+### Controlled Example
+
+```jsx
+function SearchForm({ onSearch }) {
+	const [query, setQuery] = useState("");
+
+	function submit(event) {
+		event.preventDefault();
+		const normalized = query.trim();
+		if (normalized) onSearch(normalized);
+	}
+
+	return (
+		<form onSubmit={submit}>
+			<label>
+				Search products
+				<input value={query} onChange={(event) => setQuery(event.target.value)} />
+			</label>
+			<button disabled={!query.trim()}>Search</button>
+		</form>
+	);
+}
+```
+
+Every change updates state and renders `SearchForm`. This enables immediate validation and dependent UI. Keep this state near the input so the entire page does not render on every keystroke.
+
+### Uncontrolled Example
+
+```jsx
+function NewsletterForm({ subscribe }) {
+	function submit(event) {
+		event.preventDefault();
+		const data = new FormData(event.currentTarget);
+		subscribe(data.get("email"));
+	}
+
+	return (
+		<form onSubmit={submit}>
+			<label>Email <input name="email" type="email" required /></label>
+			<button>Subscribe</button>
+		</form>
+	);
+}
+```
+
+The browser owns the current input value. React does not render per keystroke unless another update occurs. This approach suits simple forms and libraries such as React Hook Form.
+
+## Styling React Applications
+
+React does not require one styling solution:
+
+| Approach | Strength | Tradeoff |
+|---|---|---|
+| Plain stylesheet | Simple, cacheable, platform-native | Naming and global cascade need discipline |
+| CSS Modules | Build-time local class names | Requires build-tool integration |
+| Styled Components | Props can drive colocated runtime styles | Runtime work, SSR configuration, library dependency |
+| Tailwind CSS | Fast utility composition and constrained tokens | Long class lists and build/content configuration |
+
+```jsx
+// CSS Module integration
+import styles from "./Button.module.css";
+
+function Button({ variant = "primary", children, ...buttonProps }) {
+	return (
+		<button className={`${styles.button} ${styles[variant]}`} {...buttonProps}>
+			{children}
+		</button>
+	);
+}
+```
+
+Choose a styling approach at the team/design-system level. Preserve semantic elements and accessibility regardless of visual implementation. Styling choices can affect bundle size, runtime memory, server rendering, and cache behavior.
+
+## Complete Real-Project Example
+
+```jsx
+function ProductCatalog({ products, onAddToCart }) {
+	const [query, setQuery] = useState("");
+	const [inStockOnly, setInStockOnly] = useState(false);
+
+	const normalizedQuery = query.trim().toLowerCase();
+	const visibleProducts = products.filter((product) => {
+		const matchesName = product.name.toLowerCase().includes(normalizedQuery);
+		const matchesStock = !inStockOnly || product.stock > 0;
+		return matchesName && matchesStock;
+	});
+
+	return (
+		<section aria-labelledby="catalog-title">
+			<h1 id="catalog-title">Product catalog</h1>
+			<input
+				aria-label="Search products"
+				value={query}
+				onChange={(event) => setQuery(event.target.value)}
+			/>
+			<label>
+				<input
+					type="checkbox"
+					checked={inStockOnly}
+					onChange={(event) => setInStockOnly(event.target.checked)}
+				/>
+				In stock only
+			</label>
+
+			{visibleProducts.length ? (
+				<ul>
+					{visibleProducts.map((product) => (
+						<li key={product.id}>
+							<ProductCard product={product} onAddToCart={onAddToCart} />
+						</li>
+					))}
+				</ul>
+			) : <p>No matching products.</p>}
+		</section>
+	);
+}
+```
+
+Important behavior:
+
+1. The component stores only user-controlled filters.
+2. `visibleProducts` is derived during render, avoiding duplicated state and synchronization effects.
+3. Typing or checking the box renders the catalog with a new snapshot.
+4. Stable product IDs preserve card identity.
+5. Memoization is unnecessary until profiling proves filtering or child rendering is expensive.
+6. For a very large catalog, server filtering, deferred rendering, pagination, or virtualization may be better than `useMemo` alone.
+
+## Real-World Applications
+
+| Domain | Fundamentals in practice |
+|---|---|
+| E-commerce | Product props, cart state, keyed results, controlled checkout fields |
+| Student management | Student rows, enrollment conditions, shared filters |
+| Banking | Account summaries, transfer-state validation, explicit status UI |
+| CRM | Lead cards, pipeline lists, callback-driven actions |
+| Dashboard | Composed widgets with isolated loading and error states |
+| HRMS | Controlled leave requests and conditional approval actions |
+| Food ordering | Menu options, quantity state, derived basket totals |
+| Chat | Message keys, draft state, event-driven sending |
+| Social media | Feed items, reaction events, optimistic visible state |
+
+The patterns remain the same across domains: identify state ownership, pass data down, report events up, derive output, preserve identity, and synchronize external systems outside render.
 
 ## Mistakes, Best Practices, and Performance
 
-- Never mutate props/state or perform side effects during render.
-- Pass a handler (`onClick={save}`), do not invoke it during render (`onClick={save()}`).
-- Store minimal state; derive totals and flags during render.
-- Use stable keys; change a key intentionally when a subtree must reset.
-- Colocate transient state and profile before adding memoization.
-- Browser code and environment values are observable by users.
+| Level | Common mistake | Production correction |
+|---|---|---|
+| Beginner | Mutating props or state | Create replacement objects/arrays and preserve ownership |
+| Beginner | Invoking handlers during render | Pass a function reference or wrapper |
+| Beginner | Missing/stable key problems | Use a persistent data ID among siblings |
+| Intermediate | Copying props into state | Derive values unless an independent editable draft is required |
+| Intermediate | Storing every calculated value | Keep minimal state and calculate pure output during render |
+| Intermediate | Lifting input state too high | Colocate rapidly changing state with its narrow consumer |
+| Senior | Memoizing every component | Profile production behavior and optimize measured hot paths |
+| Senior | Treating React as the entire architecture | Define routing, data, security, testing, and deployment boundaries |
 
-## Summary, Practice, and Interview Preparation
+Performance guidance:
 
-React converts declarative element trees into focused host updates. Props are inputs, state is a render snapshot, events express intent, and keys define sibling identity.
-
-**10 beginner prompts:** element vs component; JSX; props; state; event; controlled field; key; conditional output; root; pure render.  
-**10 intermediate prompts:** snapshots; batching; derived state; uncontrolled forms; state reset; SPA/MPA; class/function; key reorder; Strict Mode; styling tradeoffs.  
-**10 advanced prompts:** Fiber/element/DOM identity; hydration; browser pipeline; state ownership; transition priority; runtime styling cost; accessibility; remounts; profiling; architecture boundaries.
-
-**Coding:** quantity picker (easy), filterable keyed order table (medium), optimistic cart editor with rollback (hard). **Mini project:** inventory dashboard with forms, filters, empty/error states, and feature folders.
-
-**Interview answer - why does state not change inside the current handler?** The handler closes over one render snapshot. A setter queues later work; a functional updater receives the pending queue value when next state depends on previous state.
+- A component render costs JavaScript even if React commits no DOM change.
+- DOM changes may trigger browser style, layout, and paint work.
+- Keep rendering pure and inexpensive; move external synchronization to events, effects, or data layers.
+- Split components by responsibility, not solely to reduce line count.
+- Use route/feature lazy loading for meaningful bundle boundaries.
+- Avoid memoization until repeated expensive work and stable inputs are demonstrated.
+- Test production builds because development checks and source tooling change performance.
 
 ---
 
@@ -206,12 +612,6 @@ Strict Mode performs development-only checks, including repeated render calculat
 ## Performance and Memory
 
 Rendering costs JavaScript even when no DOM changes result. Commit can trigger style/layout/paint. Long main-thread tasks delay input. Retained timers, subscriptions, detached DOM, caches, and closures can prevent garbage collection. Keep render pure, cancel obsolete work, virtualize large lists, avoid layout read/write thrashing, and use transitions only where stale content is acceptable.
-
-## Summary and Review
-
-Fiber represents schedulable work; reconciliation preserves identity; commit changes the host; the browser creates pixels.
-
-**Questions:** DOM vs element vs Fiber; render vs commit; diff heuristics; key reset; batching; lanes; concurrent interruption; Strict Mode; garbage collection; forced layout. **Assignment:** profile a 20,000-row search, then add deferred rendering and virtualization. **Interview diagnosis:** duplicate network calls from render indicate an impure component; move work to an event, effect with cleanup, or data layer.
 
 ---
 
@@ -1131,6 +1531,81 @@ CI/CD overview: install from lockfile, static checks, tests, build, vulnerabilit
 # Final Interview Handbook
 
 [Previous: Deployment](#module-19-build-process-and-deployment) | [Back to Top](#top)
+
+## Consolidated Summary, Practice, and Interview Preparation
+
+This end-of-book section centralizes review material so the teaching modules can remain focused on concepts, execution, and production implementation.
+
+### React Fundamentals Summary
+
+React converts declarative element descriptions into focused host updates. Components define reusable boundaries, props provide read-only inputs, state represents changing source data, events express user intent, and keys preserve sibling identity. Correct state ownership and pure rendering are more important than premature optimization.
+
+### React Internals Summary
+
+Fiber represents schedulable work; reconciliation preserves identity through type, position, and key; commit changes the host DOM; and the browser turns those changes into pixels. Render work may be restarted, so it must remain pure.
+
+### Beginner Questions
+
+1. **What is React?** A declarative UI library based on components and one-way data flow.
+2. **What is JSX?** Syntax transformed into React element-creation instructions.
+3. **Element vs component?** An element describes desired output; a component is code React calls to produce elements.
+4. **What are props?** Read-only inputs owned by the caller.
+5. **What is state?** React-managed data whose update schedules rendering.
+6. **What is a controlled input?** A form control whose value comes from React state.
+7. **Why use keys?** To match sibling identity across renders.
+8. **How are events passed?** As callback functions such as `onClick={save}`.
+9. **What does `createRoot` do?** It creates a React 18 root associated with a host container.
+10. **Why must render be pure?** React may invoke or restart render work without committing it.
+
+### Intermediate Questions
+
+1. Explain state as a snapshot and why logs show an old value after a setter.
+2. Compare controlled and uncontrolled forms by ownership and rendering cost.
+3. Explain why copied or derived state can become inconsistent.
+4. Describe how stable keys preserve state during list reordering.
+5. Compare SPA and MPA navigation and failure boundaries.
+6. Explain why changing a component key resets state.
+7. Compare class-instance state with function-component hook state.
+8. Explain React's role versus the browser's layout and paint work.
+9. Describe the purpose of development Strict Mode.
+10. Compare CSS Modules, runtime CSS-in-JS, and utility-generated CSS.
+
+### Advanced Questions
+
+1. How do element type, key, Fiber, and DOM identity relate?
+2. Where should state live in a multi-step checkout and why?
+3. How can hydration fail when server and client output differ?
+4. When does component composition produce a better API than configuration props?
+5. How would you measure whether filtering needs memoization?
+6. What memory remains while a component is mounted?
+7. How can unstable object props defeat memoized children?
+8. Which UI states should live in the URL instead of local state?
+9. What accessibility responsibilities remain when using reusable components?
+10. How would you migrate a CRA application to Vite safely?
+
+### Coding Problems and Assignments
+
+- **Easy:** Build a controlled quantity picker with minimum and maximum limits.
+- **Medium:** Build a searchable, sortable order table using stable keys and an explicit empty state.
+- **Hard:** Build an optimistic cart editor with rollback after simulated server rejection.
+- **Internals assignment:** Profile a 20,000-row search, then add deferred rendering and virtualization.
+- **Mini assignment:** Convert a class counter to a function component and compare where state is retained.
+- **Mini assignment:** Fix a list that uses index or random keys and demonstrate preserved input state.
+- **Mini project:** Build an inventory dashboard with product filters, create/edit forms, conditional status UI, reusable components, and feature-based folders.
+
+### Detailed Interview Answers
+
+**Why does state not change inside the current handler?** The handler closes over one render snapshot. A setter queues later work; a functional updater receives the pending queue value when next state depends on previous state.
+
+**Why should props not be mutated?** The parent owns the value and other consumers may share its reference. Mutation hides the transition from React and breaks one-way reasoning, memoization, and debugging. Report an event to the owner or create a local editable copy for a deliberate draft.
+
+**A reordered list moves typed input to another row. What is wrong?** The rows likely use array indexes as keys. React preserved state by position rather than record identity. Use a stable record ID so state follows the corresponding item.
+
+**Does React update the entire DOM after every render?** No. React may call many components during render, then reconciliation identifies host differences. Commit applies necessary DOM changes. Rendering and DOM mutation are separate costs.
+
+**When should state be lifted?** Lift state to the nearest common owner when multiple descendants need one synchronized source of truth. Do not automatically move transient state to the application root; broader ownership broadens update and coordination costs.
+
+**A render sends duplicate network requests. What is the likely defect?** Network work is occurring during impure render logic. Move it to an event, an effect with cancellation and cleanup, or a dedicated data layer such as RTK Query.
 
 ## High-Value Theory Questions
 
