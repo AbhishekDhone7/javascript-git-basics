@@ -18504,6 +18504,304 @@ Fiber represents schedulable work; reconciliation preserves identity through typ
 
 **A render sends duplicate network requests. What is the likely defect?** Network work is occurring during impure render logic. Move it to an event, an effect with cancellation and cleanup, or a dedicated data layer such as RTK Query.
 
+## Comprehensive Module Question Bank
+
+The following questions cover all 19 modules. Strong answers should define the concept, trace its runtime behavior, identify failure modes, and defend an implementation choice with evidence.
+
+### Module 1: React Fundamentals
+
+**1. What problem does declarative rendering solve?** It lets developers describe the UI for the current state instead of manually coordinating every DOM mutation. React reconciles successive descriptions and commits the necessary host changes.
+
+**2. What is the difference between a React element, component, and DOM node?** An element is an immutable JavaScript description, a component is a function or class that produces elements, and a DOM node is a browser-managed host object created or updated during commit.
+
+**3. Why should state be treated as immutable?** React uses replacement and identity to reason about changes. Mutation can alter previous snapshots, hide transitions from memoization, and make concurrent rendering or debugging inconsistent.
+
+**4. When is derived state legitimate?** Store it only when it must evolve independently from its source, represents a deliberate editable draft, or is expensive and needs evidence-based caching. Otherwise calculate it during render.
+
+**5. Why is an array index often a poor key?** Insertions, deletions, and sorting change positions, causing React to associate component state and DOM identity with the wrong records. Use a stable domain identifier.
+
+### Module 2: React Internals
+
+**6. What does reconciliation do?** It compares the previous and candidate element/Fiber trees, matches identity by type and key, and determines which host updates and effects a completed tree requires.
+
+**7. Can React render without changing the DOM?** Yes. Parent work may call a child whose host output is unchanged, or a render may be interrupted and discarded before commit.
+
+**8. What is Fiber?** Fiber is React's persistent work-unit and tree structure. It stores component identity, state, update queues, child/sibling relationships, lanes, and effect metadata.
+
+**9. What is the purpose of lanes?** Lanes classify pending work by priority and allow React to coordinate, interrupt, combine, or defer updates while preserving correctness.
+
+**10. Why can concurrent rendering expose bugs in impure components?** React may start, pause, restart, or discard render work. A side effect during render can therefore execute without a corresponding commit or execute more than once.
+
+### Module 3: Lifecycle and Effects
+
+**11. How does an effect lifecycle differ from a component lifecycle?** An effect is one synchronization process: setup runs after a commit, cleanup runs before replacement or unmount, and dependencies determine when that process must resynchronize.
+
+**12. Why does React run an effect cleanup before its next setup?** The old synchronization must be detached before a new one is established, preventing duplicate subscriptions, stale connections, and resource leaks.
+
+**13. When should `useLayoutEffect` be preferred over `useEffect`?** Use it for DOM measurement or synchronous visual correction that must occur after DOM mutation but before paint. Prefer passive effects for nonvisual synchronization because layout effects block painting.
+
+**14. What does development Strict Mode reveal?** It intentionally probes render purity and effect cleanup by repeating selected development operations. It reveals missing cleanup and assumptions that setup runs only once.
+
+**15. How do you prevent a stale request from updating state?** Abort obsolete work and ensure completion belongs to the current request or subscription. Cleanup should invalidate or cancel the prior operation.
+
+### Module 4: Hooks
+
+**16. Why must hooks be called in a stable order?** React associates hook state with call position on a Fiber. Conditional or reordered calls shift those positions and attach state/effects to the wrong hook.
+
+**17. When is `useReducer` better than multiple `useState` calls?** It is useful when transitions are related, state has invariants, events need explicit names, or one transition updates several fields atomically.
+
+**18. Why is `useMemo` not a semantic guarantee?** It is a performance cache React may discard. Correctness must not depend on its value retaining identity forever.
+
+**19. What problem does `useSyncExternalStore` solve?** It provides a consistent subscription contract for external mutable stores, including snapshot comparison and server snapshots, while avoiding tearing across concurrent renders.
+
+**20. How do `useTransition` and `useDeferredValue` differ?** A transition marks updates you initiate as non-urgent. A deferred value lets a consumer lag behind an already-received value when rendering its dependent work is expensive.
+
+### Module 5: Component Communication
+
+**21. When is prop drilling acceptable?** Passing data through a few explicit layers is often clear and keeps dependencies visible. It becomes problematic when many unrelated intermediaries forward frequently changing values.
+
+**22. What makes a component API composable?** It exposes stable responsibilities, supports natural composition through children/slots, avoids coupled boolean combinations, and separates controlled state from rendering policy.
+
+**23. Controlled versus uncontrolled component?** A controlled component receives current value and change intent from its owner. An uncontrolled component keeps its own state and may expose an initial value or imperative access.
+
+**24. Why can a single broad context hurt performance and ownership?** Every consumer of the value can rerender when its identity changes, while unrelated responsibilities become globally coupled. Split by concern and update frequency.
+
+**25. When is an imperative ref API appropriate?** For focused operations such as focus, selection, scrolling, or integration with an imperative library. It should not become a hidden state-management channel.
+
+### Module 6: React Router
+
+**26. Why should shareable filter state live in the URL?** The URL supports refresh, history, links, bookmarks, collaboration, and server/loader access. Local state loses those navigation semantics.
+
+**27. Why is a route guard not an authorization boundary?** Browser code can be modified or bypassed. The server must authenticate and authorize every protected resource and operation.
+
+**28. What advantage do route loaders provide?** They start data work at the routing boundary, support redirects/errors before rendering, and coordinate pending UI without request logic being scattered through components.
+
+**29. How should route-level errors be isolated?** Place route error boundaries at useful layout/feature boundaries so one failing branch can show recovery while persistent navigation and unrelated routes remain usable.
+
+**30. What causes a nested-route refresh to return `404` in production?** A static host attempts to find a physical file. Navigational requests need an SPA fallback to `index.html`, while real missing assets and APIs must retain correct responses.
+
+### Module 7: Forms
+
+**31. When should a form be controlled?** When React must validate, transform, conditionally render from, or synchronize each current value. Large forms can also use field-level or uncontrolled strategies to reduce render reach.
+
+**32. Why is client-side validation insufficient?** Client code is bypassable and may be stale. The server must validate authorization, invariants, types, ranges, and business rules.
+
+**33. How should server validation errors map to fields?** Return stable machine-readable field paths/codes and a form-level error channel. Preserve user input, focus the first relevant field, and expose accessible error relationships.
+
+**34. How do you prevent duplicate form submissions?** Model pending state, disable or guard repeated intent where appropriate, and use server idempotency keys for operations whose duplicate execution is harmful.
+
+**35. What accessibility behavior should an invalid form provide?** Associate labels and error descriptions, set invalid state, announce a summary or status, preserve entered values, and move focus deliberately without trapping the user.
+
+### Module 8: Axios and HTTP
+
+**36. Why use one configured Axios client instead of global defaults?** A scoped instance makes base URL, timeout, headers, interceptors, cancellation, and tests explicit without mutating behavior for unrelated requests.
+
+**37. How should errors be normalized?** Convert transport, timeout, cancellation, protocol, validation, and application failures into a stable domain shape while preserving safe status, code, correlation, and retry metadata.
+
+**38. What is a single-flight token refresh?** Concurrent `401` responses share one refresh promise. Successful refresh replays eligible requests once; failure clears the session without creating a refresh storm or loop.
+
+**39. Which requests are safe to retry?** Retry transient failures only when the operation is idempotent or protected by an idempotency key. Use bounded attempts, exponential backoff, jitter, cancellation, and server guidance such as `Retry-After`.
+
+**40. Why does debouncing not solve request races?** It reduces starts but an earlier request can still finish after a later one. Cancel stale requests or verify request identity before accepting results.
+
+### Module 9: Context API
+
+**41. What is Context designed for?** It transports a value through a subtree without explicit props at each level. It does not automatically provide reducers, selectors, persistence, caching, or high-frequency optimization.
+
+**42. Why does a provider's object literal trigger consumers?** A new object identity is created on each provider render. Consumers observe the changed context value even when its fields are logically equal.
+
+**43. When should contexts be split?** Split values with different responsibilities, owners, security boundaries, or update frequencies so consumers subscribe only to what they need.
+
+**44. Why should a custom context hook reject a missing provider?** Failing immediately with a meaningful error prevents undefined behavior and documents the provider requirement.
+
+**45. When should Context be replaced by a selector-based store?** When state changes frequently, many consumers need small slices, update tracing matters, or domain events and middleware are required.
+
+### Module 10: Redux Toolkit and RTK Query
+
+**46. What does `createSlice` provide?** It co-locates reducer logic and generated action creators, uses Immer for draft-style immutable updates, and standardizes action naming.
+
+**47. Why keep Redux state serializable?** Serializable state/actions support predictable persistence, replay, DevTools inspection, middleware checks, and transport. Keep DOM nodes, promises, and mutable class instances outside.
+
+**48. When should data be normalized?** Normalize shared entities referenced in several places or updated individually. Keep simple isolated response shapes when normalization adds no useful access/update behavior.
+
+**49. What is RTK Query tag invalidation?** Queries declare tags they provide; mutations invalidate affected tags; active subscriptions can refetch. Tag specificity controls correctness and network cost.
+
+**50. How should overlapping optimistic mutations be handled?** Define ordering/conflict policy, patch the exact cache key, retain inverse patches, and invalidate/refetch when independent rollback can no longer guarantee correctness.
+
+### Module 11: Performance
+
+**51. What should be measured before optimizing?** User-visible latency, React commit duration, render causes, main-thread tasks, network waterfalls, transferred bytes, memory, and business-journey completion under representative production conditions.
+
+**52. Why can memoization make performance worse?** Dependency comparison, cache storage, retained objects, and complexity have costs. Cheap calculations or frequently invalidated caches may cost more than recomputation.
+
+**53. When is virtualization useful?** When a large collection creates excessive DOM, layout, paint, or memory work. It needs stable dimensions, keyboard/accessibility planning, and measured overscan.
+
+**54. How does code splitting improve and harm performance?** It reduces initial work by loading routes/features on demand, but too many small chunks add waterfalls, overhead, and failure/version-skew points.
+
+**55. What does the React Profiler tell you?** It shows which components committed, approximate render duration, interactions, and often why work occurred. Pair it with browser traces for layout, paint, network, and long tasks.
+
+### Module 12: Environment Configuration
+
+**56. Why are `VITE_*` and `REACT_APP_*` values not secrets?** Build tools embed them in browser-delivered files. Any user can inspect the bundle, runtime memory, or requests.
+
+**57. Build-time versus runtime configuration?** Build-time values produce environment-specific artifacts. Runtime public configuration can support build-once/promote-many but adds bootstrap, validation, availability, and cache/version concerns.
+
+**58. Why validate configuration at application startup?** Failing early with a precise message is safer than allowing malformed URLs or missing identifiers to cause scattered runtime failures.
+
+**59. How should tests control environment configuration?** Inject or mock a typed configuration boundary instead of depending implicitly on a developer's machine environment.
+
+**60. Where should privileged credentials live?** In a trusted server runtime or secret manager, accessed through least-privileged identity. The frontend calls a server capability rather than receiving the credential.
+
+### Module 13: Webpack
+
+**61. What is the difference between a loader and a plugin?** A loader transforms matching modules as they enter the graph. A plugin hooks into the broader compiler lifecycle to influence chunks, assets, HTML, optimization, or reporting.
+
+**62. What determines Webpack's dependency graph?** Entry points and statically/dynamically analyzable imports produce modules and edges. Resolution, aliases, package metadata, and loaders influence what enters the graph.
+
+**63. Why use content hashes in output filenames?** Unchanged content retains its URL and cache; changed content gets a new URL. Runtime/module ID stability affects whether unrelated chunks change.
+
+**64. What does `splitChunks` solve?** It extracts shared or vendor modules according to policy to reduce duplication and improve caching, while requiring care to avoid excessive requests and unstable chunking.
+
+**65. How would you investigate a large Webpack bundle?** Generate production stats, inspect them with an analyzer, identify duplicated/heavy modules and side effects, then verify changes with compressed route budgets and user metrics.
+
+### Module 14: Vite
+
+**66. Why is Vite development startup fast?** It serves application modules through native ESM on demand and pre-bundles selected dependencies instead of eagerly bundling the whole application graph.
+
+**67. What happens during dependency optimization?** Vite uses esbuild to pre-bundle dependencies, improve CommonJS/ESM interoperability, and reduce many internal module requests. The cache is invalidated when relevant inputs change.
+
+**68. How does Vite HMR update a module?** The module graph identifies affected boundaries; accepted updates can replace modules without full reload while framework plugins preserve compatible component state.
+
+**69. Why can development and production differ in Vite?** Development uses an ESM dev server and transforms on demand; production uses Rollup-oriented bundling and optimization. Production artifacts require separate tests.
+
+**70. What must a CRA-to-Vite migration verify?** Environment prefixes, HTML entry, asset paths, aliases, SVG/CSS behavior, test setup, browser targets, service workers, proxying, public directory semantics, and production hosting.
+
+### Module 15: Tree Shaking
+
+**71. Why does tree shaking depend on ESM?** Static `import` and `export` syntax lets bundlers analyze bindings without executing modules. Dynamic CommonJS patterns are harder to prove unused.
+
+**72. What does `sideEffects` package metadata mean?** It tells bundlers which files can be removed when their exports are unused. Incorrect `false` metadata can delete required CSS registration or initialization.
+
+**73. Why can a barrel file damage tree shaking?** Re-exporting modules may pull in side effects, obscure boundaries, or cause tools to traverse a broad graph. Measure emitted output rather than assuming named exports guarantee elimination.
+
+**74. How do you prove code was tree-shaken?** Build in production mode, inspect bundle stats/source maps, search emitted chunks, and compare size and runtime behavior with a controlled import change.
+
+**75. Tree shaking versus code splitting?** Tree shaking removes unreachable exports at build time. Code splitting divides retained code into chunks loaded at different times.
+
+### Module 16: Authentication
+
+**76. Authentication versus authorization?** Authentication establishes identity; authorization decides whether that identity may perform a specific operation on a resource. APIs must enforce both where required.
+
+**77. Why is Authorization Code with PKCE preferred for public browser clients?** The authorization code avoids exposing tokens in the front channel, while PKCE binds redemption to the initiating client without relying on a client secret the browser cannot protect.
+
+**78. What does a BFF change?** A trusted backend handles OAuth tokens and exposes a cookie-backed application session, reducing token exposure to browser JavaScript while requiring CSRF, cookie, session, and deployment design.
+
+**79. Why rotate refresh tokens?** Rotation limits reuse: each successful refresh retires the previous token. Replay detection can revoke the token family or session according to policy.
+
+**80. How should logout work across tabs?** Invalidate the server session/token where possible, clear local cached private data, broadcast session change, stop subscriptions, and redirect without trusting client cleanup as revocation.
+
+### Module 17: Error Handling
+
+**81. What should an error boundary catch?** Errors thrown during descendant render, constructors, and lifecycle work. It does not catch arbitrary event handlers, detached async callbacks, server errors, or errors inside the boundary itself.
+
+**82. Why normalize operational errors?** Components need stable categories and recovery behavior independent of transport/library details. Preserve safe diagnostics and correlation separately from user-facing messages.
+
+**83. When should the UI retry automatically?** Only for likely transient failures, bounded attempts, safe/idempotent operations, and when cancellation/user intent are respected. Do not retry validation or permission failures blindly.
+
+**84. What is graceful degradation?** Preserve unaffected capabilities and communicate reduced functionality when one dependency fails, rather than replacing the entire application with one generic error screen.
+
+**85. What should client error telemetry contain?** Error category, safe stack/symbolication, release, route, browser/device class, correlation ID, and relevant feature state without tokens, personal data, or unrestricted form content.
+
+### Module 18: Project Architecture
+
+**86. What is a good frontend module boundary?** It aligns with a stable business capability or platform responsibility, exposes a deliberate public API, owns related behavior, and has enforceable dependency direction.
+
+**87. Why organize large products by feature?** Components, state, API adapters, tests, and rules that change together remain cohesive. Technical folders alone scatter one business change across the repository.
+
+**88. What is a composition root?** It is the controlled location where providers, routes, stores, clients, configuration, and feature modules are assembled, keeping construction dependencies out of domain code.
+
+**89. When are micro-frontends justified?** When independent team ownership and deployment provide measurable organizational value that exceeds runtime duplication, consistency, performance, testing, and governance costs.
+
+**90. What is an architecture fitness function?** An automated or repeatable check that enforces an architectural property, such as dependency direction, bundle budget, public API use, accessibility, or forbidden imports.
+
+### Module 19: Build and Deployment
+
+**91. Why build once and promote the same artifact?** Rebuilding changes inputs or output and invalidates staging evidence. An immutable artifact preserves provenance and makes rollback deterministic.
+
+**92. Why should HTML and hashed assets have different cache policies?** HTML must discover new asset hashes and should revalidate quickly. Content-hashed assets never change at the same URL and can be cached immutably.
+
+**93. What makes a frontend deployment atomic?** New hashed assets become available before HTML or manifests reference them, and prior assets remain during the overlap window for active tabs and stale caches.
+
+**94. What should a post-deployment smoke test verify?** Root and nested routes, current chunks and MIME types, runtime configuration, safe API/auth connectivity, security/cache headers, release metadata, and a critical user outcome.
+
+**95. When is roll forward safer than rollback?** When new data/schema writes are incompatible with the old version, rollback would restore a severe vulnerability, or a small isolated correction can be released faster and more safely.
+
+## Architecture and System Design Questions
+
+**96. Design a product-search frontend for millions of products.** Put query, sort, filters, and pagination in the URL; use a server-data cache keyed by canonical parameters; cancel stale requests; virtualize only when rendered result counts justify it; code-split routes; provide loading, empty, error, and offline states; measure input latency, result latency, and conversion.
+
+**97. Design a multi-step checkout.** Keep durable workflow state in one explicit owner/state machine, validate each transition, persist only appropriate drafts, treat pricing/inventory as server authority, use idempotency for order creation, prevent duplicate submission, isolate payment SDKs, preserve accessibility, and instrument abandonment and errors.
+
+**98. Design a real-time notification center.** Bootstrap through HTTP, subscribe through WebSocket/SSE, deduplicate by event ID, model reconnect/backoff/resume tokens, normalize entities, cap memory, coordinate tabs, expose connection state, and authorize every subscription server-side.
+
+**99. Design an enterprise dashboard with independently owned widgets.** Establish a shared shell, design system, routing and auth contracts; isolate widget data/error boundaries; define performance budgets; use package/module boundaries before independent deployments; and add observability by widget and release.
+
+**100. Design offline field data capture.** Persist versioned drafts locally, queue operations with stable IDs, encrypt according to threat model, model synchronization/conflict states, use idempotent server APIs, support schema migration, and make recovery visible rather than implying all work is synchronized.
+
+**101. How would you migrate a legacy monolith without a rewrite freeze?** Characterize behavior with tests/telemetry, establish module boundaries around active change, introduce adapters and a composition root, migrate route by route, preserve contracts, measure each increment, and remove old paths only after verified traffic retirement.
+
+**102. How do you choose between local state, URL, Context, Redux, and RTK Query?** Choose by ownership and semantics: transient component interaction locally, shareable navigation in the URL, stable subtree dependencies in Context, cross-feature client workflows in Redux, and remote cached resources in RTK Query.
+
+**103. How would you support white-label tenants?** Treat tenant identity as trusted session/server context, load validated public theme/config separately from private data, use design tokens, isolate tenant caches, constrain extension points, test contrast/accessibility, and clear state safely when switching tenant.
+
+**104. Design feature-flag delivery.** Define typed flags, server-controlled targeting, safe defaults, exposure telemetry, authorization-independent behavior, deterministic cohorts, kill switches, owner/expiry metadata, and removal after rollout.
+
+**105. How would you make a frontend observable?** Propagate correlation IDs, attach release/route/cohort metadata, collect privacy-safe errors and web vitals, instrument critical journeys, combine synthetic and real-user monitoring, define SLOs, and link alerts to runbooks and rollback.
+
+## Testing and Quality Questions
+
+**106. What should a component test assert?** User-visible behavior, accessible roles/names, state transitions, and external contracts rather than implementation details such as hook order or private state.
+
+**107. Unit, integration, and E2E tests: how do they differ?** Unit tests isolate small logic; integration tests verify cooperating modules and boundaries; E2E tests exercise deployed user journeys through browser, network, and backend. Use each for the risks it can falsify cheaply.
+
+**108. What should be mocked?** Mock unstable or expensive external boundaries such as network, time, identity, and browser APIs while retaining realistic contracts. Excessive internal mocking tests wiring rather than behavior.
+
+**109. How do you test race conditions?** Control promise completion order, timers, cancellation, and repeated intent. Assert stale responses cannot overwrite current state and cleanup prevents updates after ownership ends.
+
+**110. How should accessibility be tested?** Combine semantic component tests, automated scanning, keyboard workflows, zoom/reflow, contrast review, and screen-reader testing for critical journeys. Automation alone detects only part of accessibility behavior.
+
+**111. How do you test an error boundary?** Make a descendant throw during render, suppress expected test-console noise, assert fallback and recovery/reset behavior, and verify reporting receives safe context once.
+
+**112. How do you test protected routes?** Test anonymous, loading, authenticated, expired, and insufficient-permission states; direct deep links; redirect preservation; and server rejection. Do not interpret UI hiding as authorization coverage.
+
+**113. What makes a visual regression test useful?** Stable fixtures, controlled viewport/fonts/time, focused snapshots, reviewed thresholds, and ownership. It complements behavior and accessibility tests rather than replacing them.
+
+**114. How do contract tests help frontend teams?** They verify client assumptions about schema, status codes, errors, and compatibility against a provider contract or realistic service, reducing integration surprises without requiring every test to hit production systems.
+
+**115. What belongs in a deployment test?** Effective routing, chunks, MIME types, cache/security headers, configuration, API/auth connectivity, release metadata, and safe critical journeys on the deployed URL.
+
+## Engineering Leadership Questions
+
+**116. How do you review a performance optimization proposal?** Ask for the user-visible problem, baseline evidence, hypothesis, expected effect, complexity/cost, representative measurement, and regression guardrail.
+
+**117. How do you decide whether to introduce a dependency?** Compare capability fit, maintenance, security, size, API stability, accessibility, ecosystem health, lock-in, and implementation/exit cost against existing platform or local code.
+
+**118. How do you handle a disagreement over architecture?** Clarify constraints and decision ownership, write alternatives and measurable tradeoffs, run a focused experiment where uncertainty matters, document the decision, and set a review trigger.
+
+**119. What makes technical debt actionable?** Connect it to delivery risk or measurable cost, define scope and desired invariant, prioritize with product work, add an owner, and prevent recurrence through tests or fitness functions.
+
+**120. How do you lead a production incident?** Stabilize user impact, assign clear roles, preserve evidence, communicate facts and uncertainty, use tested rollback/mitigation, avoid speculative changes, and follow with a blameless corrective-action review.
+
+**121. How would you onboard engineers to a large frontend?** Provide runnable setup, architecture map, composition root, critical flows, coding/testing conventions, observability access, safe starter changes, and documented decision/risk ownership.
+
+**122. How do you assess frontend code quality?** Evaluate correctness, accessibility, security, ownership, testability, operability, performance evidence, API clarity, change isolation, and production outcomes rather than style alone.
+
+**123. When should a team standardize a pattern?** When repeated decisions create defects, integration cost, or cognitive load and one pattern fits most cases. Document escape criteria instead of forcing uniformity where constraints differ.
+
+**124. How do you communicate a risky migration?** State current risk, target outcome, compatibility strategy, phased milestones, success/rollback metrics, owners, user impact, and unresolved decisions in language appropriate to each stakeholder.
+
+**125. What distinguishes a senior frontend answer?** It identifies boundaries and tradeoffs, traces runtime behavior, covers failure and recovery, uses evidence, considers users and operations, and avoids presenting one library technique as a universal solution.
+
 ## High-Value Theory Questions
 
 ### React and Rendering
