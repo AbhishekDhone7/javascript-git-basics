@@ -9583,37 +9583,802 @@ A professional performance program optimizes the user journey across network, Ja
 
 [Previous: Performance](#module-11-performance-optimization) | [Next: Webpack](#module-13-webpack)
 
-Frontend environment variables are build-time configuration replacements. Vite exposes only `VITE_*` through `import.meta.env`; CRA exposes `REACT_APP_*` through `process.env`. Mode files commonly load with precedence such as `.env`, `.env.local`, `.env.development`, and `.env.production` (tool-specific rules apply).
+## Introduction
+
+Frontend configuration defines how one application build connects to its deployment environment: API origins, public telemetry identifiers, release metadata, feature rollout settings, and other non-secret behavior.
+
+The term "environment variable" can be misleading in browser applications. A browser cannot read the operating system environment of the build server or container. Build tools usually read variables during compilation and replace references with literal values that become part of downloadable JavaScript.
 
 ```mermaid
 flowchart LR
- E[Mode env files + process env] --> T[Build tool load/expand]
- T --> R[Static replacements]
- R --> B[Browser bundle]
- B --> U[User can inspect values]
+	OS[Shell, CI, or .env values] --> BUILD[Build tool]
+	BUILD --> REP[Static replacement and optimization]
+	REP --> JS[Browser JavaScript bundle]
+	JS --> DEV[User and DevTools can inspect values]
 ```
+
+The central security rule is simple: **anything delivered to a browser is public to the user controlling that browser**.
+
+## Terminology
+
+| Term | Meaning |
+|---|---|
+| Environment | Deployment context such as local, test, staging, or production |
+| Mode | Build-tool behavior selection such as development or production |
+| Configuration | Non-secret values that change application behavior |
+| Secret | A credential whose disclosure grants unauthorized capability |
+| Build-time configuration | Values embedded while creating assets |
+| Runtime configuration | Values loaded when deployed assets start in the browser |
+| Feature flag | Controlled behavior decision, not an authorization mechanism |
+| Release metadata | Version, commit, build number, and deployment identifiers |
+
+Environment and mode are not necessarily the same. A production-optimized build can target a staging environment. Avoid using `NODE_ENV` as the only application-environment identifier.
+
+## Configuration Classification
+
+Classify every proposed value before adding it.
+
+```mermaid
+flowchart TD
+	V[Candidate configuration value] --> S{Would disclosure grant capability or access?}
+	S -->|yes| SECRET[Secret: keep on trusted server/secret manager]
+	S -->|no| P{Must browser behavior know it?}
+	P -->|no| SERVER[Keep server-side]
+	P -->|yes| F{Must change without rebuilding?}
+	F -->|no| BUILD[Build-time public configuration]
+	F -->|yes| RUN[Validated runtime public configuration]
+```
+
+Examples:
+
+| Value | Browser-safe? | Reason |
+|---|---:|---|
+| Public API origin | Yes | Browser must know destination; API still authenticates |
+| Public analytics project ID | Often | Identifies destination but should not grant privileged access |
+| Release/version string | Yes | Useful for diagnostics |
+| Feature display flag | Yes | Controls UI only; server policy stays authoritative |
+| Database password | No | Grants database access |
+| Private signing key | No | Enables trusted signatures/impersonation |
+| Privileged third-party API key | No | Grants billable or protected service access |
+| OAuth client secret | No for public SPA | Browser cannot maintain confidentiality |
+| User access token | Runtime credential, not build config | Must follow secure session architecture |
+
+Prefixes such as `VITE_` and `REACT_APP_` are exposure allowlists, not encryption or access control.
+
+## Build-Time Replacement
+
+Build tools statically replace recognized expressions so optimizers can eliminate unreachable branches.
+
+```jsx
+if (import.meta.env.DEV) {
+	installDevelopmentDiagnostics();
+}
+```
+
+A production build can replace `import.meta.env.DEV` with `false`, allowing minification and dead-code elimination to remove the branch when its imports are also optimizable.
+
+```mermaid
+flowchart LR
+	SRC[Source uses import.meta.env.DEV] --> LOAD[Tool loads mode/config]
+	LOAD --> REPLACE[Replace expression with false]
+	REPLACE --> DCE[Dead-code elimination]
+	DCE --> OUT[Production asset excludes dev branch]
+```
+
+Static replacement is why dynamic access can fail:
+
+```jsx
+// Avoid: a build tool may not statically transform arbitrary dynamic keys.
+const value = import.meta.env[requestedKey];
+
+// Prefer: enumerate the supported contract explicitly.
+const publicConfig = {
+	apiUrl: import.meta.env.VITE_API_URL,
+	release: import.meta.env.VITE_RELEASE,
+};
+```
+
+## Vite Environment Variables
+
+Vite exposes selected variables on `import.meta.env`. Only variables with the configured exposure prefix are available to client source; the default prefix is `VITE_`.
+
+Built-in values include:
+
+| Expression | Meaning |
+|---|---|
+| `import.meta.env.MODE` | Current Vite mode string |
+| `import.meta.env.BASE_URL` | Base public path |
+| `import.meta.env.PROD` | Production mode boolean |
+| `import.meta.env.DEV` | Development mode boolean |
+| `import.meta.env.SSR` | Whether code is running in Vite SSR context |
 
 ```env
 # .env.development
 VITE_API_URL=http://localhost:8080/api
-VITE_APP_ENV=development
+VITE_APP_ENV=local
+VITE_ENABLE_MOCKS=true
+VITE_REQUEST_TIMEOUT_MS=10000
 ```
 
+```jsx
+console.log(import.meta.env.VITE_API_URL);
+console.log(import.meta.env.MODE);
+console.log(import.meta.env.DEV);
+```
+
+All custom environment values arrive as strings. Vite's built-in booleans are tool-provided exceptions.
+
+## Vite File Loading and Precedence
+
+Vite commonly considers these files:
+
+```text
+.env
+.env.local
+.env.[mode]
+.env.[mode].local
+```
+
+Mode-specific files override generic files. Variables already present in the process environment when Vite starts have higher priority and are not overwritten by `.env` files. Exact expansion behavior can depend on Vite and dotenv tooling versions, so use the installed tool's documentation as authority.
+
+```mermaid
+flowchart BT
+	GEN[.env generic defaults] --> MERGE[Merged build environment]
+	LOCAL[.env.local machine overrides] --> MERGE
+	MODE[.env.mode mode values] --> MERGE
+	MLOCAL[.env.mode.local local mode overrides] --> MERGE
+	PROC[Existing shell or CI variables: highest priority] --> MERGE
+```
+
+Do not rely on a complicated web of overrides. Keep defaults minimal, inject deployment-critical values explicitly in CI, and validate the resolved contract.
+
+### Vite Modes
+
+```bash
+vite --mode development
+vite build --mode staging
+vite build --mode production
+```
+
+Mode selects which mode files Vite loads. `vite build --mode staging` still produces an optimized build, but `import.meta.env.MODE` becomes `staging`. Model application environment explicitly rather than inferring every behavior from optimization mode.
+
+## Create React App Variables
+
+Create React App exposes variables prefixed with `REACT_APP_` through `process.env` references transformed during the build.
+
+```env
+REACT_APP_API_URL=https://api.example.test
+REACT_APP_RELEASE=2026.07.29
+```
+
+```jsx
+const apiUrl = process.env.REACT_APP_API_URL;
+const productionBuild = process.env.NODE_ENV === "production";
+```
+
+CRA controls `NODE_ENV` according to the command and does not support overriding it casually. CRA is relevant to existing applications but is deprecated for new React application setup. During migration to Vite, update prefixes, access syntax, HTML interpolation, proxy behavior, and tests.
+
+```mermaid
+flowchart LR
+	CRA[CRA source process.env.REACT_APP_API_URL] --> MIG[Migrate build tooling]
+	MIG --> VITE[Vite source import.meta.env.VITE_API_URL]
+	MIG --> HTML[Review index.html substitutions]
+	MIG --> TEST[Update test environment mocks]
+	MIG --> DEPLOY[Verify CI variables and public paths]
+```
+
+## Webpack Configuration Injection
+
+Webpack commonly uses `DefinePlugin` for compile-time replacement.
+
 ```js
-const required = ["VITE_API_URL", "VITE_APP_ENV"];
-for (const key of required) {
-	if (!import.meta.env[key]) throw new Error(`Missing environment variable: ${key}`);
+const webpack = require("webpack");
+
+module.exports = {
+	plugins: [
+		new webpack.DefinePlugin({
+			"process.env.PUBLIC_API_URL": JSON.stringify(process.env.PUBLIC_API_URL),
+			"process.env.APP_RELEASE": JSON.stringify(process.env.APP_RELEASE),
+		}),
+	],
+};
+```
+
+`DefinePlugin` performs code replacement; `JSON.stringify` ensures string literal syntax. Never pass the entire server environment object into client code. Module 13 covers Webpack in depth.
+
+## Parsing String Values Safely
+
+The string `"false"` is truthy in JavaScript. Parse each value according to a strict contract.
+
+```jsx
+function requireString(name, value) {
+	const normalized = value?.trim();
+	if (!normalized) throw new Error(`${name} is required`);
+	return normalized;
 }
+
+function parseBoolean(name, value, defaultValue) {
+	if (value === undefined || value === "") return defaultValue;
+	if (value === "true") return true;
+	if (value === "false") return false;
+	throw new Error(`${name} must be "true" or "false"`);
+}
+
+function parseInteger(name, value, { min, max }) {
+	if (!/^\d+$/.test(value ?? "")) {
+		throw new Error(`${name} must be an integer`);
+	}
+	const parsed = Number(value);
+	if (!Number.isSafeInteger(parsed) || parsed < min || parsed > max) {
+		throw new Error(`${name} must be between ${min} and ${max}`);
+	}
+	return parsed;
+}
+
+function parseUrl(name, value, allowedProtocols = ["https:"]) {
+	const parsed = new URL(requireString(name, value));
+	if (!allowedProtocols.includes(parsed.protocol)) {
+		throw new Error(`${name} uses an unsupported protocol`);
+	}
+	return parsed.toString().replace(/\/$/, "");
+}
+```
+
+Do not coerce with `Boolean(value)` or silently convert malformed numbers. Fail with a precise startup error before partial application behavior reaches users.
+
+## Centralized Configuration Module
+
+Read raw tool variables in one module, validate them once, and expose a normalized immutable contract.
+
+```jsx
+// src/config.js
+const environmentValues = ["local", "test", "staging", "production"];
+
+function parseEnvironment(value) {
+	if (!environmentValues.includes(value)) {
+		throw new Error(
+			`VITE_APP_ENV must be one of: ${environmentValues.join(", ")}`,
+		);
+	}
+	return value;
+}
+
 export const config = Object.freeze({
-	apiUrl: import.meta.env.VITE_API_URL,
-	environment: import.meta.env.VITE_APP_ENV,
-	production: import.meta.env.PROD,
+	environment: parseEnvironment(import.meta.env.VITE_APP_ENV),
+	apiUrl: parseUrl(
+		"VITE_API_URL",
+		import.meta.env.VITE_API_URL,
+		import.meta.env.DEV ? ["http:", "https:"] : ["https:"],
+	),
+	release: requireString("VITE_RELEASE", import.meta.env.VITE_RELEASE),
+	requestTimeoutMs: parseInteger(
+		"VITE_REQUEST_TIMEOUT_MS",
+		import.meta.env.VITE_REQUEST_TIMEOUT_MS,
+		{ min: 1_000, max: 120_000 },
+	),
+	enableMocks: parseBoolean(
+		"VITE_ENABLE_MOCKS",
+		import.meta.env.VITE_ENABLE_MOCKS,
+		false,
+	),
+	productionBuild: import.meta.env.PROD,
 });
 ```
 
-Values are strings unless the tool provides built-ins; parse and validate them. Never store private keys, database credentials, signing secrets, or privileged tokens. Public API origins and public telemetry identifiers are configuration, not secrets. Build once per environment when values are embedded, or intentionally load a validated runtime config file before boot if one artifact must deploy everywhere.
+Application modules import `config`, not `import.meta.env` directly. This creates one contract, one validation point, and one test boundary.
 
-**Mistakes:** committing `.env.local`, assuming prefixes secure values, boolean string errors (`"false"` is truthy), reading dynamic property names that cannot be statically replaced, and mixing environments in one build. **Assignment:** typed config validation with clear startup failure and deployment injection.
+```mermaid
+flowchart LR
+	RAW[Raw build-tool strings] --> PARSE[Parse and validate]
+	PARSE -->|invalid| FAIL[Fail startup/build clearly]
+	PARSE -->|valid| CFG[Frozen normalized config]
+	CFG --> HTTP[HTTP client]
+	CFG --> TEL[Telemetry]
+	CFG --> FLAGS[Feature setup]
+	CFG --> UI[Application]
+```
+
+## Schema Validation
+
+For larger contracts, use a maintained schema library already adopted by the project. The principle remains the same: parse unknown strings into a validated application type.
+
+```jsx
+import { z } from "zod";
+
+const environmentSchema = z.object({
+	VITE_APP_ENV: z.enum(["local", "test", "staging", "production"]),
+	VITE_API_URL: z.string().url(),
+	VITE_RELEASE: z.string().min(1),
+	VITE_ENABLE_MOCKS: z.enum(["true", "false"]).transform((value) => value === "true"),
+	VITE_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000),
+});
+
+const parsed = environmentSchema.parse(import.meta.env);
+```
+
+Do not add a schema dependency solely for three simple values when focused native parsing is clearer. Validation complexity should match the contract.
+
+## Build-Time Configuration Strategy
+
+With build-time configuration, each target environment receives a separately built asset set.
+
+```mermaid
+flowchart TB
+	SRC[One source commit] --> BS[Build staging with staging values]
+	SRC --> BP[Build production with production values]
+	BS --> AS[Staging artifact]
+	BP --> AP[Production artifact]
+	AS --> DS[Deploy staging]
+	AP --> DP[Deploy production]
+```
+
+Advantages:
+
+- Simple application startup.
+- Static replacement enables dead-code elimination.
+- No extra runtime configuration request.
+- Configuration is tied to immutable asset hashes.
+
+Tradeoffs:
+
+- Artifact differs by environment.
+- Promotion requires rebuilding or maintaining multiple artifacts.
+- A wrong environment value requires a new build.
+- Build provenance must clearly identify target configuration.
+
+Use this strategy when environment-specific builds are acceptable and configuration changes follow normal release cadence.
+
+## Runtime Configuration Strategy
+
+Runtime configuration allows one immutable application artifact to be promoted across environments while deployment injects a separate public config resource.
+
+```mermaid
+flowchart TB
+	SRC[Source commit] --> BUILD[Build once]
+	BUILD --> ART[Immutable app artifact]
+	ART --> DEV[Deploy development]
+	ART --> STG[Promote same artifact to staging]
+	ART --> PROD[Promote same artifact to production]
+	CD1[Environment runtime config] --> DEV
+	CD2[Environment runtime config] --> STG
+	CD3[Environment runtime config] --> PROD
+```
+
+### JSON Bootstrap Pattern
+
+```json
+{
+  "environment": "production",
+  "apiUrl": "https://api.example.com",
+  "release": "2026.07.29.1",
+  "telemetryProjectId": "frontend-prod"
+}
+```
+
+```jsx
+async function loadRuntimeConfig() {
+	const response = await fetch("/runtime-config.json", {
+		cache: "no-store",
+		headers: { Accept: "application/json" },
+	});
+
+	if (!response.ok) {
+		throw new Error(`Runtime configuration failed: HTTP ${response.status}`);
+	}
+
+	return validateRuntimeConfig(await response.json());
+}
+
+async function bootstrap() {
+	try {
+		const config = await loadRuntimeConfig();
+		const root = createRoot(document.getElementById("root"));
+		root.render(<Application config={config} />);
+	} catch (error) {
+		reportBootstrapFailure(error);
+		renderConfigurationFailure();
+	}
+}
+
+bootstrap();
+```
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant H as Static application assets
+	participant C as Runtime config endpoint
+	participant V as Validator
+	participant A as React application
+	B->>H: Load HTML and bootstrap JS
+	B->>C: Request runtime-config.json
+	C-->>B: Public environment values
+	B->>V: Validate complete contract
+	alt valid
+		V->>A: Start application with config
+	else invalid or unavailable
+		V-->>B: Render controlled startup failure
+	end
+```
+
+Runtime configuration adds startup dependency, caching policy, validation, failure UI, and integrity considerations. Keep it small, public, same-origin when possible, and unavailable to service-worker stale caching unless intentionally versioned.
+
+### Script Bootstrap Pattern
+
+The server can generate a non-module script loaded before the application:
+
+```html
+<script src="/runtime-config.js"></script>
+<script type="module" src="/src/main.jsx"></script>
+```
+
+```js
+window.__PUBLIC_CONFIG__ = Object.freeze({
+	environment: "production",
+	apiUrl: "https://api.example.com"
+});
+```
+
+Validate `window.__PUBLIC_CONFIG__` before use. Apply a strict Content Security Policy and avoid inserting unescaped arbitrary values into JavaScript; JSON with controlled parsing is often safer to generate.
+
+## Choosing Build-Time or Runtime Configuration
+
+| Requirement | Build-time | Runtime |
+|---|---:|---:|
+| One artifact promoted across environments | No | Yes |
+| Dead-code elimination by flag | Strong | Not automatic |
+| No startup config request | Yes | No |
+| Change config without rebuilding JS | No | Yes |
+| Simplest static hosting | Strong | Requires generated/static config resource |
+| Config tied to asset hash | Yes | Separate version/lifecycle |
+
+Hybrid designs are common: compile stable build behavior and release metadata, then load deployment endpoints and rollout settings at runtime. Document which owner controls each value.
+
+## CI/CD Injection
+
+CI should inject validated public values explicitly, record provenance, and fail before deployment when the contract is incomplete.
+
+```yaml
+# Illustrative GitHub Actions fragment
+- name: Build frontend
+  env:
+    VITE_APP_ENV: production
+    VITE_API_URL: https://api.example.com
+    VITE_RELEASE: ${{ github.sha }}
+    VITE_REQUEST_TIMEOUT_MS: "15000"
+    VITE_ENABLE_MOCKS: "false"
+  run: npm run build
+```
+
+Do not inject secret-manager contents into `VITE_*` variables. CI masking only hides logs; it does not remove values embedded in built assets.
+
+```mermaid
+flowchart LR
+	CI[CI job] --> IN[Inject allowlisted public values]
+	IN --> VALID[Run config validation/build]
+	VALID -->|failure| STOP[Stop pipeline]
+	VALID -->|success| ART[Create versioned artifact]
+	ART --> SCAN[Inspect assets/config provenance]
+	SCAN --> DEPLOY[Deploy or promote]
+```
+
+Store a non-sensitive manifest containing commit, build timestamp, dependency lock hash, and target environment where useful for diagnosis.
+
+## Containers and Orchestration
+
+Static frontend containers frequently serve prebuilt assets through Nginx or another web server. Container environment variables do not automatically alter JavaScript already compiled into those assets.
+
+```mermaid
+flowchart TD
+	IMG[Container image with prebuilt JS] --> START[Container starts with env vars]
+	START --> Q{Startup script generates runtime config?}
+	Q -->|no| SAME[Compiled JS values remain unchanged]
+	Q -->|yes| GEN[Generate validated public config file]
+	GEN --> SERVE[Web server serves assets plus config]
+```
+
+If using startup substitution:
+
+- Allowlist exact variable names.
+- Escape output safely.
+- Validate values before starting the server.
+- Write atomically.
+- Avoid replacing arbitrary strings inside minified bundles.
+- Keep privileged container secrets out of the generated file.
+
+Generating a small runtime JSON file is safer and more observable than running `envsubst` across every JavaScript asset.
+
+## Server Rendering Boundaries
+
+SSR applications execute some code on a trusted server and some in the browser. Keep server-only configuration in server-only modules and expose only an explicit public subset.
+
+```mermaid
+flowchart TB
+	SEC[Server secret environment] --> SERVER[Server-only code]
+	PUB[Public server configuration] --> RENDER[SSR render]
+	SERVER --> API[Trusted database/service calls]
+	RENDER --> HTML[HTML plus allowlisted bootstrap data]
+	HTML --> BROWSER[Browser hydration]
+	SEC -. never serialized .-> BROWSER
+```
+
+Avoid importing a server configuration module into a client bundle boundary. Frameworks provide conventions for private and public variables; follow them precisely. Create request-scoped state to prevent cross-user leakage.
+
+## Feature Flags
+
+Feature flags control rollout and experimentation but do not grant authorization.
+
+```jsx
+if (config.features.newInvoiceEditor) {
+	return <NewInvoiceEditor />;
+}
+
+return <LegacyInvoiceEditor />;
+```
+
+Flag design should define:
+
+- Owner and purpose.
+- Default and failure behavior.
+- Evaluation location: build, startup, server, or user request.
+- Targeting privacy.
+- Expiration/removal date.
+- Metrics and rollback plan.
+- Server behavior compatibility.
+
+```mermaid
+flowchart TD
+	FLAG[Feature flag] --> EVAL[Evaluate for current context]
+	EVAL --> OLD[Established implementation]
+	EVAL --> NEW[New implementation]
+	NEW --> METRIC[Observe outcome]
+	METRIC --> DECIDE{Promote, rollback, or continue?}
+	DECIDE --> CLEAN[Remove stale branch and flag]
+```
+
+Client flags are visible and mutable by users. APIs must enforce permissions and support only valid server operations independently.
+
+## API Origins, CORS, and Proxies
+
+Configuring `VITE_API_URL` does not configure CORS. Browser cross-origin requests succeed only when the API returns an appropriate CORS policy.
+
+Development proxies can provide convenient relative `/api` requests:
+
+```jsx
+// vite.config.js
+export default defineConfig({
+	server: {
+		proxy: {
+			"/api": {
+				target: "http://localhost:8080",
+				changeOrigin: true,
+			},
+		},
+	},
+});
+```
+
+The Vite development proxy does not exist in a production static build. Configure the production reverse proxy/API origin separately and test credentials, cookies, SameSite, CSRF, and allowed origins.
+
+Prefer same-origin relative API paths when deployment architecture supports them; this can simplify cookies, CORS, and environment configuration.
+
+## Release and Observability Metadata
+
+Include public release metadata so client errors and performance metrics can correlate with deployed artifacts.
+
+```jsx
+export const releaseInfo = Object.freeze({
+	release: config.release,
+	environment: config.environment,
+	buildTime: import.meta.env.VITE_BUILD_TIME,
+});
+```
+
+Do not include developer usernames, internal file paths, repository credentials, private ticket details, or secret CI metadata. Upload source maps to monitoring securely and control whether browsers can discover them.
+
+## `.env` File Policy
+
+Suggested policy:
+
+```gitignore
+.env.local
+.env.*.local
+```
+
+Repository-safe examples can document the contract:
+
+```env
+# .env.example - no secrets or real privileged credentials
+VITE_APP_ENV=local
+VITE_API_URL=http://localhost:8080/api
+VITE_RELEASE=local
+VITE_REQUEST_TIMEOUT_MS=10000
+VITE_ENABLE_MOCKS=false
+```
+
+Whether generic `.env` and mode files are committed is a team decision. Commit only non-sensitive defaults and never assume `.gitignore` removes a secret already committed to history. If a secret was exposed, rotate/revoke it and audit use; deleting the line is insufficient.
+
+## TypeScript Declarations
+
+In Vite TypeScript projects, declare supported client variables for editor/type checking.
+
+```ts
+interface ImportMetaEnv {
+	readonly VITE_APP_ENV: "local" | "test" | "staging" | "production";
+	readonly VITE_API_URL: string;
+	readonly VITE_RELEASE: string;
+	readonly VITE_REQUEST_TIMEOUT_MS: string;
+	readonly VITE_ENABLE_MOCKS: "true" | "false";
+}
+
+interface ImportMeta {
+	readonly env: ImportMetaEnv;
+}
+```
+
+Declarations do not validate runtime values. Keep runtime parsing even when static types exist.
+
+## Testing Configuration
+
+Test parsing as pure behavior and test application startup with valid and invalid contracts.
+
+```jsx
+test("rejects a non-HTTPS production API URL", () => {
+	expect(() => parsePublicConfig({
+		appEnvironment: "production",
+		apiUrl: "http://api.example.com",
+		release: "test-release",
+		requestTimeoutMs: "10000",
+		enableMocks: "false",
+	})).toThrow(/unsupported protocol/i);
+});
+
+test("parses false as a boolean false", () => {
+	const config = parsePublicConfig(validRawConfig({
+		enableMocks: "false",
+	}));
+	expect(config.enableMocks).toBe(false);
+});
+```
+
+Test matrix:
+
+- Every required value missing individually.
+- Empty and whitespace-only values.
+- Malformed URL/protocol/origin.
+- Boolean variants such as `false`, `FALSE`, `0`, and empty.
+- Numeric lower/upper bounds.
+- Unsupported environment enum.
+- Runtime config 404, timeout, malformed JSON, and stale cache.
+- CI build with production-like variables.
+- Deployed asset inspection for accidental secret patterns.
+
+Avoid allowing process-wide environment mutation to leak between parallel tests. Isolate parser inputs or reset module state deliberately.
+
+```mermaid
+flowchart LR
+	RAW[Test raw config cases] --> PARSER[Pure parser]
+	PARSER --> OK[Normalized valid object]
+	PARSER --> ERR[Precise validation error]
+	OK --> BOOT[Application bootstrap test]
+	ERR --> FAILUI[Controlled startup failure test]
+```
+
+## Startup Failure Design
+
+Invalid configuration should fail early and visibly rather than produce an endless spinner or requests to `undefined/products`.
+
+```jsx
+function renderConfigurationFailure() {
+	const root = document.getElementById("root");
+	root.replaceChildren();
+
+	const heading = document.createElement("h1");
+	heading.textContent = "Application configuration error";
+
+	const message = document.createElement("p");
+	message.textContent = "The application cannot start. Contact support with the displayed release identifier.";
+
+	root.append(heading, message);
+}
+```
+
+Do not display secret values or full internal error objects. Report a redacted startup event through an independent safe channel if telemetry configuration is available.
+
+## Security Threat Model
+
+```mermaid
+flowchart TD
+	B[Browser bundle/config] --> USER[User can inspect and modify locally]
+	USER --> API[Calls backend directly]
+	API --> AUTH[Server authenticates]
+	AUTH --> AUTHZ[Server authorizes operation]
+	AUTHZ --> VALID[Server validates data]
+	VALID --> RESULT[Protected result]
+	SECRET[Server secrets] --> API
+	SECRET -. never shipped .-> B
+```
+
+Frontend configuration must never be the only control for:
+
+- Roles and permissions.
+- Paid-plan access.
+- Tenant boundaries.
+- Pricing and discounts.
+- Rate limits.
+- Feature entitlements.
+- Data filtering.
+- Signature verification.
+
+The client can hide or present UI based on public configuration, but the server remains authoritative.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Secret stored in `VITE_*`/`REACT_APP_*` | Credential shipped to every user | Rotate and move privileged operation server-side |
+| Prefix assumed to secure value | False sense of confidentiality | Treat all client-exposed values as public |
+| `Boolean("false")` used | Feature unexpectedly enabled | Parse exact accepted strings |
+| Number parsed without bounds | `NaN`, zero, or extreme runtime behavior | Validate syntax and range |
+| Raw `import.meta.env` read everywhere | Inconsistent parsing and hidden dependencies | Centralize config module |
+| Dynamic environment key access | Build replacement may fail | Use statically explicit keys |
+| `NODE_ENV` used as deployment environment | Staging/production concepts blur | Add explicit application environment |
+| Development proxy assumed in production | API requests fail after deployment | Configure production origin/reverse proxy |
+| Container env expected to change built JS | Runtime value has no effect | Generate runtime config or rebuild |
+| Search-and-replace inside minified bundles | Corrupted assets and hashes | Use dedicated runtime config resource |
+| Runtime config cached indefinitely | Deployment reads stale endpoints/flags | Define no-store/versioned policy |
+| Runtime config failure ignored | App boots partially and fails later | Validate before rendering |
+| Feature flag used as authorization | Users bypass UI restriction | Enforce policy server-side |
+| `.env.local` committed | Local values or secrets leak | Ignore local files and rotate exposure |
+| Secret removed from latest commit only | Remains valid/in history | Revoke, rotate, and audit |
+| Server env module imported into client | Secrets may enter bundle | Enforce server/client boundaries |
+| One SSR store/config singleton per process | Cross-request leakage | Create request-scoped state |
+| Configuration contents logged | Public values may still contain sensitive metadata | Log only allowlisted/redacted fields |
+
+## Production Checklist
+
+1. Classify each value as secret, server-only, or browser-public.
+2. Define environment, build mode, and release as separate concepts.
+3. Choose build-time, runtime, or hybrid configuration intentionally.
+4. Use tool exposure prefixes only for public values.
+5. Centralize raw variable access in one configuration module.
+6. Parse strings into strict booleans, numbers, URLs, and enums.
+7. Fail startup or build clearly when required values are invalid.
+8. Keep a sanitized `.env.example` contract up to date.
+9. Inject deployment values explicitly in CI and record provenance.
+10. Promote one artifact only when runtime configuration is designed for it.
+11. Configure API origin, CORS, cookies, and reverse proxies together.
+12. Keep feature flags independent from authorization.
+13. Prevent secrets from entering bundles, HTML, source maps, logs, or runtime config.
+14. Create request-scoped server configuration/state for SSR.
+15. Test parser boundaries, startup failures, and deployed artifacts.
+16. Monitor configuration failures by release without logging raw values.
+17. Rotate and audit immediately after any credential exposure.
+18. Review stale variables and feature flags during regular maintenance.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Expose public API/CDN origins, release metadata, locale defaults, and public payment-provider identifiers only when designed for browser use. Keep pricing rules, inventory authority, payment secrets, and promotion enforcement on trusted servers.
+
+### Banking
+
+Minimize browser configuration, require HTTPS origins, keep signing keys and service credentials server-side, validate runtime config before login, redact diagnostics, and treat every client flag or role as presentation-only.
+
+### CRM
+
+Use runtime config when one artifact is promoted through tenant-neutral environments, keep tenant identity derived from authenticated server context, version public API contracts, and remove stale rollout flags after completion.
+
+### Multi-Tenant SaaS
+
+Avoid embedding one tenant's private data in shared static assets. Load allowlisted public branding/config after resolving the tenant safely, validate custom origins and assets, and enforce tenant isolation on every server request.
+
+### Static SPA Deployment
+
+Use build-time values for simple environment-specific artifacts or generate a small validated runtime JSON file at container/CDN deployment. Configure deep-link rewrites, cache hashed assets immutably, and give runtime config a separate freshness policy.
+
+A professional configuration system makes public behavior explicit, validates every boundary, supports repeatable promotion, and never confuses browser-visible settings with secrets or server authorization.
 
 ---
 
