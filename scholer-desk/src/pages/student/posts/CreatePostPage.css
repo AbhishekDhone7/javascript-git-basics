@@ -1,0 +1,12 @@
+.create-post-page { display:grid; grid-template-columns:1fr 390px; gap:16px; }
+.editor-zone { display:grid; gap:16px; }
+.editor-body { overflow:hidden; padding:0; }
+.toolbar { background:#eaf1ff; padding:14px 18px; border-bottom:1px solid var(--border); font-weight:600; color:#30466d; }
+.canvas { min-height:420px; padding:18px; color:#8a95ad; }
+.post-side { padding:20px; display:grid; gap:12px; align-content:start; }
+.upload-box { border:2px dashed var(--border); border-radius:14px; padding:34px 16px; text-align:center; color:#6d7891; background:#f4f8ff; }
+.post-side select { height:58px; border:1px solid var(--border); border-radius:14px; padding:0 12px; background:#f4f8ff; }
+.chip-wrap { display:flex; gap:8px; flex-wrap:wrap; }
+.chip-wrap span { background:#dbe8ff; padding:8px 12px; border-radius:999px; }
+.side-actions { display:grid; gap:10px; margin-top:8px; }
+@media (max-width: 900px) { .create-post-page { grid-template-columns:1fr; } }

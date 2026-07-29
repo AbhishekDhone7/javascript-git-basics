@@ -1,0 +1,122 @@
+[
+    {
+        "id":  "report-001",
+        "postId":  "post-098",
+        "reportedBy":  "user-003",
+        "reason":  "Duplicate Content",
+        "status":  "under-review",
+        "createdAt":  "2026-05-26T10:49:23Z"
+    },
+    {
+        "id":  "report-002",
+        "postId":  "post-063",
+        "reportedBy":  "user-008",
+        "reason":  "Inappropriate Language",
+        "status":  "open",
+        "createdAt":  "2026-05-20T10:49:23Z"
+    },
+    {
+        "id":  "report-003",
+        "postId":  "post-058",
+        "reportedBy":  "user-008",
+        "reason":  "Spam",
+        "status":  "under-review",
+        "createdAt":  "2026-07-05T10:49:23Z"
+    },
+    {
+        "id":  "report-004",
+        "postId":  "post-060",
+        "reportedBy":  "user-009",
+        "reason":  "Duplicate Content",
+        "status":  "resolved",
+        "createdAt":  "2026-06-27T10:49:23Z"
+    },
+    {
+        "id":  "report-005",
+        "postId":  "post-058",
+        "reportedBy":  "user-005",
+        "reason":  "Spam",
+        "status":  "under-review",
+        "createdAt":  "2026-05-07T10:49:23Z"
+    },
+    {
+        "id":  "report-006",
+        "postId":  "post-053",
+        "reportedBy":  "user-008",
+        "reason":  "Misinformation",
+        "status":  "open",
+        "createdAt":  "2026-07-27T10:49:23Z"
+    },
+    {
+        "id":  "report-007",
+        "postId":  "post-032",
+        "reportedBy":  "user-005",
+        "reason":  "Inappropriate Language",
+        "status":  "open",
+        "createdAt":  "2026-06-13T10:49:23Z"
+    },
+    {
+        "id":  "report-008",
+        "postId":  "post-045",
+        "reportedBy":  "user-003",
+        "reason":  "Duplicate Content",
+        "status":  "under-review",
+        "createdAt":  "2026-05-18T10:49:23Z"
+    },
+    {
+        "id":  "report-009",
+        "postId":  "post-062",
+        "reportedBy":  "user-009",
+        "reason":  "Duplicate Content",
+        "status":  "open",
+        "createdAt":  "2026-07-01T10:49:23Z"
+    },
+    {
+        "id":  "report-010",
+        "postId":  "post-045",
+        "reportedBy":  "user-006",
+        "reason":  "Misinformation",
+        "status":  "open",
+        "createdAt":  "2026-06-27T10:49:23Z"
+    },
+    {
+        "id":  "report-011",
+        "postId":  "post-048",
+        "reportedBy":  "user-008",
+        "reason":  "Misinformation",
+        "status":  "resolved",
+        "createdAt":  "2026-07-03T10:49:23Z"
+    },
+    {
+        "id":  "report-012",
+        "postId":  "post-082",
+        "reportedBy":  "user-010",
+        "reason":  "Inappropriate Language",
+        "status":  "under-review",
+        "createdAt":  "2026-05-20T10:49:23Z"
+    },
+    {
+        "id":  "report-013",
+        "postId":  "post-077",
+        "reportedBy":  "user-001",
+        "reason":  "Inappropriate Language",
+        "status":  "under-review",
+        "createdAt":  "2026-05-26T10:49:23Z"
+    },
+    {
+        "id":  "report-014",
+        "postId":  "post-012",
+        "reportedBy":  "user-004",
+        "reason":  "Harassment",
+        "status":  "resolved",
+        "createdAt":  "2026-05-13T10:49:23Z"
+    },
+    {
+        "id":  "report-015",
+        "postId":  "post-062",
+        "reportedBy":  "user-001",
+        "reason":  "Duplicate Content",
+        "status":  "open",
+        "createdAt":  "2026-06-02T10:49:23Z"
+    }
+]

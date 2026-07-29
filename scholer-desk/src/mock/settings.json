@@ -1,0 +1,15 @@
+{
+    "theme":  "light",
+    "language":  "en",
+    "notifications":  {
+                          "push":  true,
+                          "email":  true,
+                          "inApp":  true
+                      },
+    "privacy":  {
+                    "profileVisibility":  "campus-only",
+                    "showEmail":  false,
+                    "showMobile":  false
+                },
+    "maintenanceMode":  false
+}

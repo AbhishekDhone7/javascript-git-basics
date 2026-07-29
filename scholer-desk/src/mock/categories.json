@@ -1,0 +1,62 @@
+[
+    {
+        "status":  "active",
+        "description":  "React concepts, hooks, and architecture",
+        "name":  "React",
+        "id":  "cat-01"
+    },
+    {
+        "status":  "active",
+        "description":  "Language fundamentals and advanced patterns",
+        "name":  "JavaScript",
+        "id":  "cat-02"
+    },
+    {
+        "status":  "active",
+        "description":  "Backend and server-side JavaScript topics",
+        "name":  "Node.js",
+        "id":  "cat-03"
+    },
+    {
+        "status":  "active",
+        "description":  "Styling, layouts, and responsive design",
+        "name":  "CSS",
+        "id":  "cat-04"
+    },
+    {
+        "status":  "active",
+        "description":  "Semantic markup and accessibility basics",
+        "name":  "HTML",
+        "id":  "cat-05"
+    },
+    {
+        "status":  "active",
+        "description":  "Version control and collaboration workflows",
+        "name":  "Git",
+        "id":  "cat-06"
+    },
+    {
+        "status":  "active",
+        "description":  "Career growth and opportunities",
+        "name":  "Career",
+        "id":  "cat-07"
+    },
+    {
+        "status":  "active",
+        "description":  "Interview prep and coding strategies",
+        "name":  "Interview",
+        "id":  "cat-08"
+    },
+    {
+        "status":  "active",
+        "description":  "Campus life and academic tips",
+        "name":  "College",
+        "id":  "cat-09"
+    },
+    {
+        "status":  "active",
+        "description":  "Hackathons, workshops, and meetups",
+        "name":  "Events",
+        "id":  "cat-10"
+    }
+]

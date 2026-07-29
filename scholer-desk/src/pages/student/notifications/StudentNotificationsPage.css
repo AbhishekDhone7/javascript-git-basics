@@ -1,0 +1,8 @@
+.notify-page .mark { float:right; margin-top:-32px; color:var(--primary); }
+.notify-page .list { display:grid; gap:12px; margin-top:16px; }
+.notify-page article { padding:18px; display:grid; grid-template-columns:72px 1fr auto; gap:14px; align-items:start; border-left:4px solid var(--primary); }
+.notify-page .icon { width:56px; height:56px; border-radius:50%; background:#d8e8ff; display:grid; place-items:center; font-size:1.5rem; }
+.notify-page h3 { margin:0 0 6px; font-size:2rem; }
+.notify-page .actions { margin-top:10px; display:flex; gap:8px; }
+.notify-page small { color:var(--text-500); }
+@media (max-width: 900px){ .notify-page article { grid-template-columns:56px 1fr; } .notify-page small { grid-column:2; } }

@@ -1,0 +1,6 @@
+.feed-filters { margin: 18px 0; display:flex; gap:10px; flex-wrap:wrap; }
+.feed-filters button { border:1px solid transparent; background:#d6e6ff; color:#3d4d69; padding:11px 20px; border-radius:999px; font-size:1rem; }
+.feed-filters button.active { background:var(--primary); color:#fff; }
+.feed-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; }
+@media (max-width: 1200px) { .feed-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 900px) { .feed-grid { grid-template-columns: 1fr; } }

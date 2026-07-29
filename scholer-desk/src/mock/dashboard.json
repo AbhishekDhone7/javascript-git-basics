@@ -1,0 +1,33 @@
+{
+    "todaysPosts":  0,
+    "weeklyPosts":  2,
+    "monthlyPosts":  10,
+    "newUsers":  0,
+    "topContributors":  [
+                            {
+                                "id":  "user-007",
+                                "name":  "Kabir Verma",
+                                "posts":  0
+                            },
+                            {
+                                "id":  "user-006",
+                                "name":  "Ananya Mehta",
+                                "posts":  0
+                            },
+                            {
+                                "id":  "user-008",
+                                "name":  "Riya Iyer",
+                                "posts":  0
+                            },
+                            {
+                                "id":  "user-010",
+                                "name":  "Neha Singh",
+                                "posts":  0
+                            },
+                            {
+                                "id":  "user-009",
+                                "name":  "Arjun Kapoor",
+                                "posts":  0
+                            }
+                        ]
+}

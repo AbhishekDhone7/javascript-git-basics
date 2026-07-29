@@ -1,0 +1,38 @@
+.sd-topbar {
+  height: 86px;
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: auto auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  padding: 0 30px;
+  background: #f9fbff;
+}
+.sd-topbar .topbar-brand { color: var(--primary); font-size: 2rem; font-weight: 700; }
+.sd-topbar nav { display: flex; gap: 28px; }
+.sd-topbar nav a { color: var(--text-700); font-size: 1.2rem; }
+.sd-topbar .search-wrap { display: flex; justify-content: center; }
+.sd-topbar input {
+  width: min(560px, 100%);
+  height: 58px;
+  border-radius: 30px;
+  border: 1px solid var(--border);
+  background: #edf2ff;
+  padding: 0 20px;
+  font-size: 1.05rem;
+}
+.sd-topbar .actions { display: flex; align-items: center; gap: 18px; }
+.sd-topbar .actions span { font-size: 1.45rem; }
+.sd-topbar .actions img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+@media (max-width: 900px) {
+  .sd-topbar {
+    grid-template-columns: auto auto;
+    gap: 8px;
+    height: auto;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sd-topbar .logo { color: var(--primary); font-size: 2rem; font-weight: 700; }
+  .sd-topbar .search-wrap { grid-column: 1 / -1; }
+  .sd-topbar input { width: 100%; height: 52px; }
+}

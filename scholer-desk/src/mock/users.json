@@ -1,0 +1,222 @@
+[
+    {
+        "id":  "user-001",
+        "studentId":  "STU2026001",
+        "name":  "Aarav Sharma",
+        "email":  "aarav.sharma@campus.edu",
+        "mobile":  "9859761609",
+        "department":  "Civil",
+        "semester":  2,
+        "profileImage":  "https://i.pravatar.cc/300?img=11",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2025-07-20T10:49:21Z",
+        "followers":  472,
+        "following":  442,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-002",
+        "studentId":  "STU2026002",
+        "name":  "Vivaan Patel",
+        "email":  "vivaan.patel@campus.edu",
+        "mobile":  "9889587290",
+        "department":  "Computer Science",
+        "semester":  1,
+        "profileImage":  "https://i.pravatar.cc/300?img=12",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2025-12-29T10:49:21Z",
+        "followers":  186,
+        "following":  84,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-003",
+        "studentId":  "STU2026003",
+        "name":  "Aditya Reddy",
+        "email":  "aditya.reddy@campus.edu",
+        "mobile":  "9867256134",
+        "department":  "Artificial Intelligence",
+        "semester":  5,
+        "profileImage":  "https://i.pravatar.cc/300?img=13",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "inactive",
+        "joinedDate":  "2025-10-29T10:49:21Z",
+        "followers":  418,
+        "following":  425,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-004",
+        "studentId":  "STU2026004",
+        "name":  "Ishita Gupta",
+        "email":  "ishita.gupta@campus.edu",
+        "mobile":  "9883844754",
+        "department":  "Computer Science",
+        "semester":  6,
+        "profileImage":  "https://i.pravatar.cc/300?img=14",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "inactive",
+        "joinedDate":  "2024-08-30T10:49:21Z",
+        "followers":  193,
+        "following":  77,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-005",
+        "studentId":  "STU2026005",
+        "name":  "Saanvi Nair",
+        "email":  "saanvi.nair@campus.edu",
+        "mobile":  "9879755660",
+        "department":  "Civil",
+        "semester":  3,
+        "profileImage":  "https://i.pravatar.cc/300?img=15",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2024-09-27T10:49:21Z",
+        "followers":  459,
+        "following":  478,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-006",
+        "studentId":  "STU2026006",
+        "name":  "Ananya Mehta",
+        "email":  "ananya.mehta@campus.edu",
+        "mobile":  "9851133670",
+        "department":  "Artificial Intelligence",
+        "semester":  4,
+        "profileImage":  "https://i.pravatar.cc/300?img=16",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2024-04-24T10:49:21Z",
+        "followers":  522,
+        "following":  319,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-007",
+        "studentId":  "STU2026007",
+        "name":  "Kabir Verma",
+        "email":  "kabir.verma@campus.edu",
+        "mobile":  "9876391962",
+        "department":  "Computer Science",
+        "semester":  7,
+        "profileImage":  "https://i.pravatar.cc/300?img=17",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2026-03-25T10:49:21Z",
+        "followers":  492,
+        "following":  386,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-008",
+        "studentId":  "STU2026008",
+        "name":  "Riya Iyer",
+        "email":  "riya.iyer@campus.edu",
+        "mobile":  "9890996390",
+        "department":  "Electrical",
+        "semester":  2,
+        "profileImage":  "https://i.pravatar.cc/300?img=18",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2025-01-15T10:49:21Z",
+        "followers":  165,
+        "following":  202,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-009",
+        "studentId":  "STU2026009",
+        "name":  "Arjun Kapoor",
+        "email":  "arjun.kapoor@campus.edu",
+        "mobile":  "9894217063",
+        "department":  "Electrical",
+        "semester":  7,
+        "profileImage":  "https://i.pravatar.cc/300?img=19",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2026-03-02T10:49:21Z",
+        "followers":  349,
+        "following":  118,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    },
+    {
+        "id":  "user-010",
+        "studentId":  "STU2026010",
+        "name":  "Neha Singh",
+        "email":  "neha.singh@campus.edu",
+        "mobile":  "9817552096",
+        "department":  "Computer Science",
+        "semester":  2,
+        "profileImage":  "https://i.pravatar.cc/300?img=20",
+        "bio":  "Student interested in modern web development, campus activities, and peer learning.",
+        "role":  "Student",
+        "status":  "active",
+        "joinedDate":  "2025-03-08T10:49:21Z",
+        "followers":  618,
+        "following":  337,
+        "savedPosts":  [
+
+                       ],
+        "createdPosts":  [
+
+                         ]
+    }
+]

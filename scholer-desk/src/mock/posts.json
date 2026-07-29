@@ -1,0 +1,2302 @@
+[
+    {
+        "id":  "post-001",
+        "title":  "A quick guide to Interview for semester success",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 1 on Interview.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "redux",
+                     "css",
+                     "api"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-1/900/500",
+                       "https://picsum.photos/seed/post-1-alt/900/500"
+                   ],
+        "likes":  238,
+        "commentsCount":  4,
+        "views":  2200,
+        "status":  "published",
+        "createdAt":  "2026-01-15T10:28:21Z",
+        "updatedAt":  "2026-02-16T10:28:21Z"
+    },
+    {
+        "id":  "post-002",
+        "title":  "A quick guide to Events for semester success",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 2 on Events.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "web-security",
+                     "testing",
+                     "design-patterns"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-2/900/500",
+                       "https://picsum.photos/seed/post-2-alt/900/500"
+                   ],
+        "likes":  479,
+        "commentsCount":  2,
+        "views":  2089,
+        "status":  "published",
+        "createdAt":  "2026-03-08T02:40:21Z",
+        "updatedAt":  "2026-04-14T02:40:21Z"
+    },
+    {
+        "id":  "post-003",
+        "title":  "Beginner to intermediate roadmap for CSS",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 3 on CSS.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "responsive",
+                     "web-security",
+                     "css"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-3/900/500",
+                       "https://picsum.photos/seed/post-3-alt/900/500"
+                   ],
+        "likes":  311,
+        "commentsCount":  4,
+        "views":  4476,
+        "status":  "published",
+        "createdAt":  "2026-02-21T21:12:21Z",
+        "updatedAt":  "2026-03-28T21:12:21Z"
+    },
+    {
+        "id":  "post-004",
+        "title":  "Understanding React through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 4 on React.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "interview",
+                     "design-patterns",
+                     "responsive"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-4/900/500",
+                       "https://picsum.photos/seed/post-4-alt/900/500"
+                   ],
+        "likes":  379,
+        "commentsCount":  1,
+        "views":  3895,
+        "status":  "published",
+        "createdAt":  "2025-10-02T15:14:21Z",
+        "updatedAt":  "2025-10-15T15:14:21Z"
+    },
+    {
+        "id":  "post-005",
+        "title":  "A quick guide to React for semester success",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 5 on React.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "debugging",
+                     "github",
+                     "responsive"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-5/900/500",
+                       "https://picsum.photos/seed/post-5-alt/900/500"
+                   ],
+        "likes":  361,
+        "commentsCount":  2,
+        "views":  1013,
+        "status":  "published",
+        "createdAt":  "2026-02-19T03:01:21Z",
+        "updatedAt":  "2026-03-30T03:01:21Z"
+    },
+    {
+        "id":  "post-006",
+        "title":  "How I improved my workflow using Events",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 6 on Events.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "api",
+                     "responsive",
+                     "html"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-6/900/500",
+                       "https://picsum.photos/seed/post-6-alt/900/500"
+                   ],
+        "likes":  438,
+        "commentsCount":  1,
+        "views":  1668,
+        "status":  "draft",
+        "createdAt":  "2026-01-25T23:00:21Z",
+        "updatedAt":  "2026-02-09T23:00:21Z"
+    },
+    {
+        "id":  "post-007",
+        "title":  "Understanding Career through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 7 on Career.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "node",
+                     "context",
+                     "authentication"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-7/900/500",
+                       "https://picsum.photos/seed/post-7-alt/900/500"
+                   ],
+        "likes":  470,
+        "commentsCount":  4,
+        "views":  3672,
+        "status":  "published",
+        "createdAt":  "2025-09-26T08:12:21Z",
+        "updatedAt":  "2025-10-09T08:12:21Z"
+    },
+    {
+        "id":  "post-008",
+        "title":  "Top mistakes students make while learning Career",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 8 on Career.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "interview",
+                     "javascript",
+                     "css"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-8/900/500",
+                       "https://picsum.photos/seed/post-8-alt/900/500"
+                   ],
+        "likes":  375,
+        "commentsCount":  3,
+        "views":  2870,
+        "status":  "draft",
+        "createdAt":  "2026-01-09T15:31:21Z",
+        "updatedAt":  "2026-01-16T15:31:21Z"
+    },
+    {
+        "id":  "post-009",
+        "title":  "A quick guide to College for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 9 on College.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "axios",
+                     "redux",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-9/900/500",
+                       "https://picsum.photos/seed/post-9-alt/900/500"
+                   ],
+        "likes":  343,
+        "commentsCount":  1,
+        "views":  2070,
+        "status":  "published",
+        "createdAt":  "2025-12-28T16:11:21Z",
+        "updatedAt":  "2025-12-29T16:11:21Z"
+    },
+    {
+        "id":  "post-010",
+        "title":  "Understanding Git through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 10 on Git.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "async",
+                     "react",
+                     "axios"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-10/900/500",
+                       "https://picsum.photos/seed/post-10-alt/900/500"
+                   ],
+        "likes":  181,
+        "commentsCount":  4,
+        "views":  4785,
+        "status":  "draft",
+        "createdAt":  "2025-12-06T14:23:21Z",
+        "updatedAt":  "2026-01-02T14:23:21Z"
+    },
+    {
+        "id":  "post-011",
+        "title":  "How I improved my workflow using Interview",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 11 on Interview.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "react",
+                     "web-security",
+                     "context"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-11/900/500",
+                       "https://picsum.photos/seed/post-11-alt/900/500"
+                   ],
+        "likes":  97,
+        "commentsCount":  1,
+        "views":  3602,
+        "status":  "published",
+        "createdAt":  "2026-04-27T05:30:21Z",
+        "updatedAt":  "2026-06-02T05:30:21Z"
+    },
+    {
+        "id":  "post-012",
+        "title":  "Top mistakes students make while learning Events",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 12 on Events.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "performance",
+                     "async",
+                     "github"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-12/900/500",
+                       "https://picsum.photos/seed/post-12-alt/900/500"
+                   ],
+        "likes":  103,
+        "commentsCount":  3,
+        "views":  1527,
+        "status":  "published",
+        "createdAt":  "2025-08-28T15:09:21Z",
+        "updatedAt":  "2025-09-12T15:09:21Z"
+    },
+    {
+        "id":  "post-013",
+        "title":  "Understanding Git through practical campus projects",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 13 on Git.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "hooks",
+                     "state-management",
+                     "html"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-13/900/500",
+                       "https://picsum.photos/seed/post-13-alt/900/500"
+                   ],
+        "likes":  428,
+        "commentsCount":  3,
+        "views":  5027,
+        "status":  "draft",
+        "createdAt":  "2026-07-05T21:19:21Z",
+        "updatedAt":  "2026-07-06T21:19:21Z"
+    },
+    {
+        "id":  "post-014",
+        "title":  "Top mistakes students make while learning HTML",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 14 on HTML.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "html",
+                     "testing",
+                     "api"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-14/900/500",
+                       "https://picsum.photos/seed/post-14-alt/900/500"
+                   ],
+        "likes":  361,
+        "commentsCount":  1,
+        "views":  4599,
+        "status":  "published",
+        "createdAt":  "2025-10-14T16:55:21Z",
+        "updatedAt":  "2025-11-21T16:55:21Z"
+    },
+    {
+        "id":  "post-015",
+        "title":  "A quick guide to JavaScript for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 15 on JavaScript.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "responsive",
+                     "design-patterns",
+                     "css"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-15/900/500",
+                       "https://picsum.photos/seed/post-15-alt/900/500"
+                   ],
+        "likes":  352,
+        "commentsCount":  2,
+        "views":  4212,
+        "status":  "draft",
+        "createdAt":  "2026-06-01T20:39:21Z",
+        "updatedAt":  "2026-06-26T20:39:21Z"
+    },
+    {
+        "id":  "post-016",
+        "title":  "Beginner to intermediate roadmap for College",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 16 on College.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "events",
+                     "responsive",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-16/900/500",
+                       "https://picsum.photos/seed/post-16-alt/900/500"
+                   ],
+        "likes":  384,
+        "commentsCount":  2,
+        "views":  5799,
+        "status":  "published",
+        "createdAt":  "2026-04-29T16:04:21Z",
+        "updatedAt":  "2026-05-08T16:04:21Z"
+    },
+    {
+        "id":  "post-017",
+        "title":  "Top mistakes students make while learning Node.js",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 17 on Node.js.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "hooks",
+                     "api",
+                     "async"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-17/900/500",
+                       "https://picsum.photos/seed/post-17-alt/900/500"
+                   ],
+        "likes":  207,
+        "commentsCount":  2,
+        "views":  3595,
+        "status":  "published",
+        "createdAt":  "2026-07-13T15:50:21Z",
+        "updatedAt":  "2026-08-15T15:50:21Z"
+    },
+    {
+        "id":  "post-018",
+        "title":  "How I improved my workflow using HTML",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 18 on HTML.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "frontend",
+                     "events",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-18/900/500",
+                       "https://picsum.photos/seed/post-18-alt/900/500"
+                   ],
+        "likes":  452,
+        "commentsCount":  4,
+        "views":  4526,
+        "status":  "published",
+        "createdAt":  "2026-06-25T05:18:21Z",
+        "updatedAt":  "2026-07-24T05:18:21Z"
+    },
+    {
+        "id":  "post-019",
+        "title":  "Understanding Interview through practical campus projects",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 19 on Interview.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "responsive",
+                     "interview",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-19/900/500",
+                       "https://picsum.photos/seed/post-19-alt/900/500"
+                   ],
+        "likes":  316,
+        "commentsCount":  2,
+        "views":  378,
+        "status":  "published",
+        "createdAt":  "2026-04-26T16:30:21Z",
+        "updatedAt":  "2026-06-01T16:30:21Z"
+    },
+    {
+        "id":  "post-020",
+        "title":  "How I improved my workflow using Git",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 20 on Git.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "web-security",
+                     "github",
+                     "router"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-20/900/500",
+                       "https://picsum.photos/seed/post-20-alt/900/500"
+                   ],
+        "likes":  331,
+        "commentsCount":  2,
+        "views":  3645,
+        "status":  "published",
+        "createdAt":  "2026-07-09T22:58:21Z",
+        "updatedAt":  "2026-08-12T22:58:21Z"
+    },
+    {
+        "id":  "post-021",
+        "title":  "Beginner to intermediate roadmap for College",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 21 on College.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "async",
+                     "authentication",
+                     "backend"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-21/900/500",
+                       "https://picsum.photos/seed/post-21-alt/900/500"
+                   ],
+        "likes":  392,
+        "commentsCount":  2,
+        "views":  2816,
+        "status":  "published",
+        "createdAt":  "2025-10-27T12:27:21Z",
+        "updatedAt":  "2025-11-27T12:27:21Z"
+    },
+    {
+        "id":  "post-022",
+        "title":  "Top mistakes students make while learning Git",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 22 on Git.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "testing",
+                     "interview",
+                     "frontend"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-22/900/500",
+                       "https://picsum.photos/seed/post-22-alt/900/500"
+                   ],
+        "likes":  90,
+        "commentsCount":  2,
+        "views":  2393,
+        "status":  "published",
+        "createdAt":  "2026-06-18T20:13:21Z",
+        "updatedAt":  "2026-07-17T20:13:21Z"
+    },
+    {
+        "id":  "post-023",
+        "title":  "Top mistakes students make while learning React",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 23 on React.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "ui-ux",
+                     "css",
+                     "interview"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-23/900/500",
+                       "https://picsum.photos/seed/post-23-alt/900/500"
+                   ],
+        "likes":  452,
+        "commentsCount":  1,
+        "views":  1958,
+        "status":  "published",
+        "createdAt":  "2025-10-17T04:44:21Z",
+        "updatedAt":  "2025-10-23T04:44:21Z"
+    },
+    {
+        "id":  "post-024",
+        "title":  "Understanding JavaScript through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 24 on JavaScript.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "testing",
+                     "hooks",
+                     "backend"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-24/900/500",
+                       "https://picsum.photos/seed/post-24-alt/900/500"
+                   ],
+        "likes":  328,
+        "commentsCount":  1,
+        "views":  3187,
+        "status":  "draft",
+        "createdAt":  "2025-11-17T23:30:21Z",
+        "updatedAt":  "2025-11-25T23:30:21Z"
+    },
+    {
+        "id":  "post-025",
+        "title":  "How I improved my workflow using React",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 25 on React.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "web-security",
+                     "frontend",
+                     "javascript"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-25/900/500",
+                       "https://picsum.photos/seed/post-25-alt/900/500"
+                   ],
+        "likes":  110,
+        "commentsCount":  1,
+        "views":  1664,
+        "status":  "published",
+        "createdAt":  "2026-01-26T04:35:21Z",
+        "updatedAt":  "2026-03-04T04:35:21Z"
+    },
+    {
+        "id":  "post-026",
+        "title":  "How I improved my workflow using HTML",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 26 on HTML.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "backend",
+                     "career",
+                     "html"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-26/900/500",
+                       "https://picsum.photos/seed/post-26-alt/900/500"
+                   ],
+        "likes":  82,
+        "commentsCount":  4,
+        "views":  2659,
+        "status":  "published",
+        "createdAt":  "2026-03-18T22:04:21Z",
+        "updatedAt":  "2026-04-03T22:04:21Z"
+    },
+    {
+        "id":  "post-027",
+        "title":  "Beginner to intermediate roadmap for JavaScript",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 27 on JavaScript.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "testing",
+                     "career",
+                     "css"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-27/900/500",
+                       "https://picsum.photos/seed/post-27-alt/900/500"
+                   ],
+        "likes":  271,
+        "commentsCount":  4,
+        "views":  5850,
+        "status":  "published",
+        "createdAt":  "2026-07-16T08:54:21Z",
+        "updatedAt":  "2026-08-13T08:54:21Z"
+    },
+    {
+        "id":  "post-028",
+        "title":  "Top mistakes students make while learning Interview",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 28 on Interview.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "react",
+                     "design-patterns",
+                     "github"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-28/900/500",
+                       "https://picsum.photos/seed/post-28-alt/900/500"
+                   ],
+        "likes":  99,
+        "commentsCount":  2,
+        "views":  5719,
+        "status":  "draft",
+        "createdAt":  "2025-09-30T13:11:21Z",
+        "updatedAt":  "2025-10-31T13:11:21Z"
+    },
+    {
+        "id":  "post-029",
+        "title":  "How I improved my workflow using React",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 29 on React.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "ui-ux",
+                     "api",
+                     "responsive"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-29/900/500",
+                       "https://picsum.photos/seed/post-29-alt/900/500"
+                   ],
+        "likes":  411,
+        "commentsCount":  3,
+        "views":  3625,
+        "status":  "draft",
+        "createdAt":  "2025-12-29T15:22:21Z",
+        "updatedAt":  "2026-01-19T15:22:21Z"
+    },
+    {
+        "id":  "post-030",
+        "title":  "How I improved my workflow using College",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 30 on College.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "api",
+                     "git",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-30/900/500",
+                       "https://picsum.photos/seed/post-30-alt/900/500"
+                   ],
+        "likes":  196,
+        "commentsCount":  3,
+        "views":  5660,
+        "status":  "published",
+        "createdAt":  "2025-10-02T08:55:21Z",
+        "updatedAt":  "2025-11-07T08:55:21Z"
+    },
+    {
+        "id":  "post-031",
+        "title":  "Beginner to intermediate roadmap for Node.js",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 31 on Node.js.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "testing",
+                     "best-practices",
+                     "responsive"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-31/900/500",
+                       "https://picsum.photos/seed/post-31-alt/900/500"
+                   ],
+        "likes":  428,
+        "commentsCount":  2,
+        "views":  858,
+        "status":  "published",
+        "createdAt":  "2026-03-14T12:00:21Z",
+        "updatedAt":  "2026-03-26T12:00:21Z"
+    },
+    {
+        "id":  "post-032",
+        "title":  "How I improved my workflow using Events",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 32 on Events.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "async",
+                     "react",
+                     "router"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-32/900/500",
+                       "https://picsum.photos/seed/post-32-alt/900/500"
+                   ],
+        "likes":  498,
+        "commentsCount":  2,
+        "views":  2785,
+        "status":  "draft",
+        "createdAt":  "2026-05-26T13:39:21Z",
+        "updatedAt":  "2026-06-25T13:39:21Z"
+    },
+    {
+        "id":  "post-033",
+        "title":  "Beginner to intermediate roadmap for College",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 33 on College.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "html",
+                     "axios",
+                     "career"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-33/900/500",
+                       "https://picsum.photos/seed/post-33-alt/900/500"
+                   ],
+        "likes":  347,
+        "commentsCount":  2,
+        "views":  300,
+        "status":  "published",
+        "createdAt":  "2025-12-21T20:56:21Z",
+        "updatedAt":  "2026-01-29T20:56:21Z"
+    },
+    {
+        "id":  "post-034",
+        "title":  "Understanding College through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 34 on College.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "design-patterns",
+                     "javascript",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-34/900/500",
+                       "https://picsum.photos/seed/post-34-alt/900/500"
+                   ],
+        "likes":  88,
+        "commentsCount":  3,
+        "views":  4129,
+        "status":  "draft",
+        "createdAt":  "2025-11-26T22:12:21Z",
+        "updatedAt":  "2025-12-24T22:12:21Z"
+    },
+    {
+        "id":  "post-035",
+        "title":  "Top mistakes students make while learning React",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 35 on React.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "best-practices",
+                     "context",
+                     "hooks"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-35/900/500",
+                       "https://picsum.photos/seed/post-35-alt/900/500"
+                   ],
+        "likes":  388,
+        "commentsCount":  2,
+        "views":  5358,
+        "status":  "published",
+        "createdAt":  "2025-10-12T23:25:21Z",
+        "updatedAt":  "2025-11-01T23:25:21Z"
+    },
+    {
+        "id":  "post-036",
+        "title":  "Top mistakes students make while learning Career",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 36 on Career.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "axios",
+                     "performance",
+                     "ui-ux"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-36/900/500",
+                       "https://picsum.photos/seed/post-36-alt/900/500"
+                   ],
+        "likes":  118,
+        "commentsCount":  2,
+        "views":  5221,
+        "status":  "published",
+        "createdAt":  "2026-01-15T11:22:21Z",
+        "updatedAt":  "2026-01-29T11:22:21Z"
+    },
+    {
+        "id":  "post-037",
+        "title":  "Understanding Career through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 37 on Career.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "async",
+                     "debugging",
+                     "authentication"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-37/900/500",
+                       "https://picsum.photos/seed/post-37-alt/900/500"
+                   ],
+        "likes":  478,
+        "commentsCount":  5,
+        "views":  4701,
+        "status":  "published",
+        "createdAt":  "2026-06-02T14:05:21Z",
+        "updatedAt":  "2026-07-11T14:05:21Z"
+    },
+    {
+        "id":  "post-038",
+        "title":  "Understanding Git through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 38 on Git.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "authentication",
+                     "api",
+                     "state-management"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-38/900/500",
+                       "https://picsum.photos/seed/post-38-alt/900/500"
+                   ],
+        "likes":  337,
+        "commentsCount":  3,
+        "views":  582,
+        "status":  "draft",
+        "createdAt":  "2026-06-07T14:36:21Z",
+        "updatedAt":  "2026-06-30T14:36:21Z"
+    },
+    {
+        "id":  "post-039",
+        "title":  "How I improved my workflow using Events",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 39 on Events.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "router",
+                     "axios",
+                     "context"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-39/900/500",
+                       "https://picsum.photos/seed/post-39-alt/900/500"
+                   ],
+        "likes":  45,
+        "commentsCount":  1,
+        "views":  2994,
+        "status":  "published",
+        "createdAt":  "2025-11-21T22:13:21Z",
+        "updatedAt":  "2025-12-26T22:13:21Z"
+    },
+    {
+        "id":  "post-040",
+        "title":  "A quick guide to HTML for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 40 on HTML.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "async",
+                     "backend",
+                     "router"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-40/900/500",
+                       "https://picsum.photos/seed/post-40-alt/900/500"
+                   ],
+        "likes":  75,
+        "commentsCount":  3,
+        "views":  437,
+        "status":  "published",
+        "createdAt":  "2026-01-24T18:03:21Z",
+        "updatedAt":  "2026-01-29T18:03:21Z"
+    },
+    {
+        "id":  "post-041",
+        "title":  "How I improved my workflow using Events",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 41 on Events.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "state-management",
+                     "events",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-41/900/500",
+                       "https://picsum.photos/seed/post-41-alt/900/500"
+                   ],
+        "likes":  437,
+        "commentsCount":  3,
+        "views":  459,
+        "status":  "published",
+        "createdAt":  "2025-12-29T18:55:21Z",
+        "updatedAt":  "2026-01-25T18:55:21Z"
+    },
+    {
+        "id":  "post-042",
+        "title":  "A quick guide to College for semester success",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 42 on College.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "responsive",
+                     "node",
+                     "react"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-42/900/500",
+                       "https://picsum.photos/seed/post-42-alt/900/500"
+                   ],
+        "likes":  59,
+        "commentsCount":  4,
+        "views":  4202,
+        "status":  "published",
+        "createdAt":  "2026-05-04T17:59:21Z",
+        "updatedAt":  "2026-05-05T17:59:21Z"
+    },
+    {
+        "id":  "post-043",
+        "title":  "How I improved my workflow using Node.js",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 43 on Node.js.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "react",
+                     "hooks",
+                     "api"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-43/900/500",
+                       "https://picsum.photos/seed/post-43-alt/900/500"
+                   ],
+        "likes":  416,
+        "commentsCount":  3,
+        "views":  1711,
+        "status":  "published",
+        "createdAt":  "2026-01-08T17:07:21Z",
+        "updatedAt":  "2026-02-04T17:07:21Z"
+    },
+    {
+        "id":  "post-044",
+        "title":  "Understanding College through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 44 on College.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "github",
+                     "react",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-44/900/500",
+                       "https://picsum.photos/seed/post-44-alt/900/500"
+                   ],
+        "likes":  495,
+        "commentsCount":  1,
+        "views":  2727,
+        "status":  "published",
+        "createdAt":  "2026-02-10T05:01:21Z",
+        "updatedAt":  "2026-02-28T05:01:21Z"
+    },
+    {
+        "id":  "post-045",
+        "title":  "Beginner to intermediate roadmap for Events",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 45 on Events.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "state-management",
+                     "git",
+                     "career"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-45/900/500",
+                       "https://picsum.photos/seed/post-45-alt/900/500"
+                   ],
+        "likes":  356,
+        "commentsCount":  0,
+        "views":  5976,
+        "status":  "published",
+        "createdAt":  "2026-01-25T22:30:21Z",
+        "updatedAt":  "2026-02-23T22:30:21Z"
+    },
+    {
+        "id":  "post-046",
+        "title":  "How I improved my workflow using JavaScript",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 46 on JavaScript.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "career",
+                     "html",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-46/900/500",
+                       "https://picsum.photos/seed/post-46-alt/900/500"
+                   ],
+        "likes":  369,
+        "commentsCount":  3,
+        "views":  1752,
+        "status":  "published",
+        "createdAt":  "2026-06-30T12:40:21Z",
+        "updatedAt":  "2026-07-24T12:40:21Z"
+    },
+    {
+        "id":  "post-047",
+        "title":  "Understanding Interview through practical campus projects",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 47 on Interview.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "design-patterns",
+                     "context",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-47/900/500",
+                       "https://picsum.photos/seed/post-47-alt/900/500"
+                   ],
+        "likes":  414,
+        "commentsCount":  0,
+        "views":  5974,
+        "status":  "published",
+        "createdAt":  "2025-09-21T07:30:21Z",
+        "updatedAt":  "2025-10-20T07:30:21Z"
+    },
+    {
+        "id":  "post-048",
+        "title":  "How I improved my workflow using HTML",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 48 on HTML.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "html",
+                     "axios",
+                     "authentication"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-48/900/500",
+                       "https://picsum.photos/seed/post-48-alt/900/500"
+                   ],
+        "likes":  450,
+        "commentsCount":  4,
+        "views":  4071,
+        "status":  "published",
+        "createdAt":  "2026-06-06T14:14:21Z",
+        "updatedAt":  "2026-06-06T14:14:21Z"
+    },
+    {
+        "id":  "post-049",
+        "title":  "How I improved my workflow using Git",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 49 on Git.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "axios",
+                     "events",
+                     "github"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-49/900/500",
+                       "https://picsum.photos/seed/post-49-alt/900/500"
+                   ],
+        "likes":  272,
+        "commentsCount":  2,
+        "views":  5864,
+        "status":  "published",
+        "createdAt":  "2025-10-27T05:59:21Z",
+        "updatedAt":  "2025-11-06T05:59:21Z"
+    },
+    {
+        "id":  "post-050",
+        "title":  "Understanding Node.js through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 50 on Node.js.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "axios",
+                     "state-management",
+                     "career"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-50/900/500",
+                       "https://picsum.photos/seed/post-50-alt/900/500"
+                   ],
+        "likes":  205,
+        "commentsCount":  2,
+        "views":  3056,
+        "status":  "published",
+        "createdAt":  "2026-03-28T22:10:21Z",
+        "updatedAt":  "2026-04-11T22:10:21Z"
+    },
+    {
+        "id":  "post-051",
+        "title":  "Understanding HTML through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 51 on HTML.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "interview",
+                     "async",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-51/900/500",
+                       "https://picsum.photos/seed/post-51-alt/900/500"
+                   ],
+        "likes":  241,
+        "commentsCount":  1,
+        "views":  1969,
+        "status":  "published",
+        "createdAt":  "2026-07-18T09:29:21Z",
+        "updatedAt":  "2026-08-01T09:29:21Z"
+    },
+    {
+        "id":  "post-052",
+        "title":  "Beginner to intermediate roadmap for CSS",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 52 on CSS.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "javascript",
+                     "debugging",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-52/900/500",
+                       "https://picsum.photos/seed/post-52-alt/900/500"
+                   ],
+        "likes":  495,
+        "commentsCount":  2,
+        "views":  321,
+        "status":  "published",
+        "createdAt":  "2025-12-11T18:36:21Z",
+        "updatedAt":  "2025-12-14T18:36:21Z"
+    },
+    {
+        "id":  "post-053",
+        "title":  "Understanding Events through practical campus projects",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 53 on Events.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "backend",
+                     "authentication",
+                     "interview"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-53/900/500",
+                       "https://picsum.photos/seed/post-53-alt/900/500"
+                   ],
+        "likes":  468,
+        "commentsCount":  2,
+        "views":  3480,
+        "status":  "published",
+        "createdAt":  "2026-06-09T09:57:21Z",
+        "updatedAt":  "2026-07-07T09:57:21Z"
+    },
+    {
+        "id":  "post-054",
+        "title":  "How I improved my workflow using College",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 54 on College.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "design-patterns",
+                     "hooks",
+                     "backend"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-54/900/500",
+                       "https://picsum.photos/seed/post-54-alt/900/500"
+                   ],
+        "likes":  376,
+        "commentsCount":  2,
+        "views":  4204,
+        "status":  "draft",
+        "createdAt":  "2026-07-14T01:34:21Z",
+        "updatedAt":  "2026-08-16T01:34:21Z"
+    },
+    {
+        "id":  "post-055",
+        "title":  "Understanding HTML through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 55 on HTML.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "github",
+                     "events",
+                     "router"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-55/900/500",
+                       "https://picsum.photos/seed/post-55-alt/900/500"
+                   ],
+        "likes":  209,
+        "commentsCount":  2,
+        "views":  623,
+        "status":  "published",
+        "createdAt":  "2026-05-05T00:54:21Z",
+        "updatedAt":  "2026-05-24T00:54:21Z"
+    },
+    {
+        "id":  "post-056",
+        "title":  "Top mistakes students make while learning Events",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 56 on Events.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "career",
+                     "interview",
+                     "web-security"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-56/900/500",
+                       "https://picsum.photos/seed/post-56-alt/900/500"
+                   ],
+        "likes":  330,
+        "commentsCount":  4,
+        "views":  3726,
+        "status":  "published",
+        "createdAt":  "2025-08-20T04:28:21Z",
+        "updatedAt":  "2025-08-28T04:28:21Z"
+    },
+    {
+        "id":  "post-057",
+        "title":  "Understanding Node.js through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 57 on Node.js.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "web-security",
+                     "css",
+                     "router"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-57/900/500",
+                       "https://picsum.photos/seed/post-57-alt/900/500"
+                   ],
+        "likes":  78,
+        "commentsCount":  2,
+        "views":  3992,
+        "status":  "published",
+        "createdAt":  "2026-04-06T17:34:21Z",
+        "updatedAt":  "2026-04-28T17:34:21Z"
+    },
+    {
+        "id":  "post-058",
+        "title":  "How I improved my workflow using React",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 58 on React.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "testing",
+                     "backend",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-58/900/500",
+                       "https://picsum.photos/seed/post-58-alt/900/500"
+                   ],
+        "likes":  404,
+        "commentsCount":  3,
+        "views":  1712,
+        "status":  "published",
+        "createdAt":  "2026-06-07T22:37:21Z",
+        "updatedAt":  "2026-06-16T22:37:21Z"
+    },
+    {
+        "id":  "post-059",
+        "title":  "Top mistakes students make while learning Node.js",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 59 on Node.js.",
+        "authorId":  "user-002",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "career",
+                     "events",
+                     "web-security"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-59/900/500",
+                       "https://picsum.photos/seed/post-59-alt/900/500"
+                   ],
+        "likes":  157,
+        "commentsCount":  1,
+        "views":  2130,
+        "status":  "published",
+        "createdAt":  "2026-05-17T16:30:21Z",
+        "updatedAt":  "2026-05-19T16:30:21Z"
+    },
+    {
+        "id":  "post-060",
+        "title":  "Understanding Events through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 60 on Events.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "node",
+                     "css",
+                     "async"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-60/900/500",
+                       "https://picsum.photos/seed/post-60-alt/900/500"
+                   ],
+        "likes":  21,
+        "commentsCount":  0,
+        "views":  3425,
+        "status":  "published",
+        "createdAt":  "2025-08-12T20:01:21Z",
+        "updatedAt":  "2025-09-15T20:01:21Z"
+    },
+    {
+        "id":  "post-061",
+        "title":  "Top mistakes students make while learning Node.js",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 61 on Node.js.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "responsive",
+                     "async",
+                     "html"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-61/900/500",
+                       "https://picsum.photos/seed/post-61-alt/900/500"
+                   ],
+        "likes":  174,
+        "commentsCount":  0,
+        "views":  5564,
+        "status":  "published",
+        "createdAt":  "2025-12-11T03:19:21Z",
+        "updatedAt":  "2026-01-02T03:19:21Z"
+    },
+    {
+        "id":  "post-062",
+        "title":  "Understanding Node.js through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 62 on Node.js.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "git",
+                     "backend",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-62/900/500",
+                       "https://picsum.photos/seed/post-62-alt/900/500"
+                   ],
+        "likes":  38,
+        "commentsCount":  3,
+        "views":  2703,
+        "status":  "published",
+        "createdAt":  "2026-06-21T09:33:21Z",
+        "updatedAt":  "2026-07-26T09:33:21Z"
+    },
+    {
+        "id":  "post-063",
+        "title":  "A quick guide to CSS for semester success",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 63 on CSS.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "ui-ux",
+                     "interview",
+                     "git"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-63/900/500",
+                       "https://picsum.photos/seed/post-63-alt/900/500"
+                   ],
+        "likes":  411,
+        "commentsCount":  2,
+        "views":  4197,
+        "status":  "published",
+        "createdAt":  "2026-06-16T07:44:21Z",
+        "updatedAt":  "2026-07-06T07:44:21Z"
+    },
+    {
+        "id":  "post-064",
+        "title":  "Understanding Career through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 64 on Career.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "debugging",
+                     "college",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-64/900/500",
+                       "https://picsum.photos/seed/post-64-alt/900/500"
+                   ],
+        "likes":  181,
+        "commentsCount":  1,
+        "views":  1880,
+        "status":  "draft",
+        "createdAt":  "2025-08-17T17:39:21Z",
+        "updatedAt":  "2025-08-24T17:39:21Z"
+    },
+    {
+        "id":  "post-065",
+        "title":  "Understanding Events through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 65 on Events.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "career",
+                     "router",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-65/900/500",
+                       "https://picsum.photos/seed/post-65-alt/900/500"
+                   ],
+        "likes":  326,
+        "commentsCount":  2,
+        "views":  3573,
+        "status":  "published",
+        "createdAt":  "2025-08-14T15:31:21Z",
+        "updatedAt":  "2025-09-17T15:31:21Z"
+    },
+    {
+        "id":  "post-066",
+        "title":  "Top mistakes students make while learning Events",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 66 on Events.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "node",
+                     "router",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-66/900/500",
+                       "https://picsum.photos/seed/post-66-alt/900/500"
+                   ],
+        "likes":  17,
+        "commentsCount":  3,
+        "views":  2885,
+        "status":  "published",
+        "createdAt":  "2026-05-06T01:52:21Z",
+        "updatedAt":  "2026-05-25T01:52:21Z"
+    },
+    {
+        "id":  "post-067",
+        "title":  "Understanding CSS through practical campus projects",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 67 on CSS.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "career",
+                     "college",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-67/900/500",
+                       "https://picsum.photos/seed/post-67-alt/900/500"
+                   ],
+        "likes":  433,
+        "commentsCount":  2,
+        "views":  575,
+        "status":  "published",
+        "createdAt":  "2026-01-05T07:04:21Z",
+        "updatedAt":  "2026-02-10T07:04:21Z"
+    },
+    {
+        "id":  "post-068",
+        "title":  "Understanding College through practical campus projects",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 68 on College.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "css",
+                     "context",
+                     "redux"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-68/900/500",
+                       "https://picsum.photos/seed/post-68-alt/900/500"
+                   ],
+        "likes":  325,
+        "commentsCount":  5,
+        "views":  2813,
+        "status":  "published",
+        "createdAt":  "2026-07-27T07:38:21Z",
+        "updatedAt":  "2026-08-18T07:38:21Z"
+    },
+    {
+        "id":  "post-069",
+        "title":  "Beginner to intermediate roadmap for JavaScript",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 69 on JavaScript.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "react",
+                     "css",
+                     "github"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-69/900/500",
+                       "https://picsum.photos/seed/post-69-alt/900/500"
+                   ],
+        "likes":  219,
+        "commentsCount":  3,
+        "views":  651,
+        "status":  "published",
+        "createdAt":  "2025-08-19T17:49:21Z",
+        "updatedAt":  "2025-08-20T17:49:21Z"
+    },
+    {
+        "id":  "post-070",
+        "title":  "How I improved my workflow using HTML",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 70 on HTML.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "hooks",
+                     "css",
+                     "git"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-70/900/500",
+                       "https://picsum.photos/seed/post-70-alt/900/500"
+                   ],
+        "likes":  138,
+        "commentsCount":  2,
+        "views":  2654,
+        "status":  "published",
+        "createdAt":  "2025-08-17T07:32:21Z",
+        "updatedAt":  "2025-08-30T07:32:21Z"
+    },
+    {
+        "id":  "post-071",
+        "title":  "A quick guide to CSS for semester success",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 71 on CSS.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "context",
+                     "html",
+                     "javascript"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-71/900/500",
+                       "https://picsum.photos/seed/post-71-alt/900/500"
+                   ],
+        "likes":  345,
+        "commentsCount":  1,
+        "views":  3768,
+        "status":  "published",
+        "createdAt":  "2026-07-26T14:12:21Z",
+        "updatedAt":  "2026-08-20T14:12:21Z"
+    },
+    {
+        "id":  "post-072",
+        "title":  "How I improved my workflow using Career",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 72 on Career.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "javascript",
+                     "state-management",
+                     "axios"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-72/900/500",
+                       "https://picsum.photos/seed/post-72-alt/900/500"
+                   ],
+        "likes":  479,
+        "commentsCount":  2,
+        "views":  5123,
+        "status":  "published",
+        "createdAt":  "2025-10-04T11:04:21Z",
+        "updatedAt":  "2025-11-01T11:04:21Z"
+    },
+    {
+        "id":  "post-073",
+        "title":  "Top mistakes students make while learning Interview",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 73 on Interview.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-08",
+        "tags":  [
+                     "router",
+                     "async",
+                     "node"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-73/900/500",
+                       "https://picsum.photos/seed/post-73-alt/900/500"
+                   ],
+        "likes":  346,
+        "commentsCount":  2,
+        "views":  5462,
+        "status":  "published",
+        "createdAt":  "2026-05-22T07:04:21Z",
+        "updatedAt":  "2026-06-25T07:04:21Z"
+    },
+    {
+        "id":  "post-074",
+        "title":  "How I improved my workflow using React",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 74 on React.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "debugging",
+                     "css",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-74/900/500",
+                       "https://picsum.photos/seed/post-74-alt/900/500"
+                   ],
+        "likes":  78,
+        "commentsCount":  2,
+        "views":  994,
+        "status":  "published",
+        "createdAt":  "2026-01-17T05:32:21Z",
+        "updatedAt":  "2026-01-20T05:32:21Z"
+    },
+    {
+        "id":  "post-075",
+        "title":  "A quick guide to JavaScript for semester success",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 75 on JavaScript.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "authentication",
+                     "api",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-75/900/500",
+                       "https://picsum.photos/seed/post-75-alt/900/500"
+                   ],
+        "likes":  125,
+        "commentsCount":  1,
+        "views":  5393,
+        "status":  "published",
+        "createdAt":  "2025-12-15T23:23:21Z",
+        "updatedAt":  "2026-01-23T23:23:21Z"
+    },
+    {
+        "id":  "post-076",
+        "title":  "A quick guide to CSS for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 76 on CSS.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "javascript",
+                     "api",
+                     "css"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-76/900/500",
+                       "https://picsum.photos/seed/post-76-alt/900/500"
+                   ],
+        "likes":  494,
+        "commentsCount":  1,
+        "views":  461,
+        "status":  "published",
+        "createdAt":  "2026-01-31T03:23:21Z",
+        "updatedAt":  "2026-02-08T03:23:21Z"
+    },
+    {
+        "id":  "post-077",
+        "title":  "Top mistakes students make while learning Node.js",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 77 on Node.js.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-03",
+        "tags":  [
+                     "career",
+                     "git",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-77/900/500",
+                       "https://picsum.photos/seed/post-77-alt/900/500"
+                   ],
+        "likes":  358,
+        "commentsCount":  2,
+        "views":  4408,
+        "status":  "published",
+        "createdAt":  "2025-12-18T12:01:21Z",
+        "updatedAt":  "2026-01-26T12:01:21Z"
+    },
+    {
+        "id":  "post-078",
+        "title":  "Understanding CSS through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 78 on CSS.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "performance",
+                     "authentication",
+                     "axios"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-78/900/500",
+                       "https://picsum.photos/seed/post-78-alt/900/500"
+                   ],
+        "likes":  103,
+        "commentsCount":  1,
+        "views":  4580,
+        "status":  "published",
+        "createdAt":  "2026-05-20T09:47:21Z",
+        "updatedAt":  "2026-06-19T09:47:21Z"
+    },
+    {
+        "id":  "post-079",
+        "title":  "Beginner to intermediate roadmap for HTML",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 79 on HTML.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "redux",
+                     "html",
+                     "backend"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-79/900/500",
+                       "https://picsum.photos/seed/post-79-alt/900/500"
+                   ],
+        "likes":  424,
+        "commentsCount":  4,
+        "views":  4030,
+        "status":  "draft",
+        "createdAt":  "2025-12-03T16:54:21Z",
+        "updatedAt":  "2025-12-28T16:54:21Z"
+    },
+    {
+        "id":  "post-080",
+        "title":  "Understanding JavaScript through practical campus projects",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 80 on JavaScript.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "git",
+                     "css",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-80/900/500",
+                       "https://picsum.photos/seed/post-80-alt/900/500"
+                   ],
+        "likes":  350,
+        "commentsCount":  1,
+        "views":  4850,
+        "status":  "published",
+        "createdAt":  "2026-03-08T15:23:21Z",
+        "updatedAt":  "2026-03-30T15:23:21Z"
+    },
+    {
+        "id":  "post-081",
+        "title":  "Top mistakes students make while learning Career",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 81 on Career.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "best-practices",
+                     "web-security",
+                     "interview"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-81/900/500",
+                       "https://picsum.photos/seed/post-81-alt/900/500"
+                   ],
+        "likes":  135,
+        "commentsCount":  4,
+        "views":  2472,
+        "status":  "published",
+        "createdAt":  "2026-07-15T15:59:21Z",
+        "updatedAt":  "2026-07-25T15:59:21Z"
+    },
+    {
+        "id":  "post-082",
+        "title":  "How I improved my workflow using Git",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 82 on Git.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "router",
+                     "axios",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-82/900/500",
+                       "https://picsum.photos/seed/post-82-alt/900/500"
+                   ],
+        "likes":  202,
+        "commentsCount":  3,
+        "views":  2007,
+        "status":  "draft",
+        "createdAt":  "2026-05-08T18:25:21Z",
+        "updatedAt":  "2026-05-12T18:25:21Z"
+    },
+    {
+        "id":  "post-083",
+        "title":  "Beginner to intermediate roadmap for JavaScript",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 83 on JavaScript.",
+        "authorId":  "user-009",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "router",
+                     "events",
+                     "web-security"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-83/900/500",
+                       "https://picsum.photos/seed/post-83-alt/900/500"
+                   ],
+        "likes":  189,
+        "commentsCount":  0,
+        "views":  5334,
+        "status":  "published",
+        "createdAt":  "2025-11-06T14:53:21Z",
+        "updatedAt":  "2025-11-24T14:53:21Z"
+    },
+    {
+        "id":  "post-084",
+        "title":  "Beginner to intermediate roadmap for HTML",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 84 on HTML.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "git",
+                     "axios",
+                     "ui-ux"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-84/900/500",
+                       "https://picsum.photos/seed/post-84-alt/900/500"
+                   ],
+        "likes":  209,
+        "commentsCount":  5,
+        "views":  1404,
+        "status":  "draft",
+        "createdAt":  "2026-02-21T06:10:21Z",
+        "updatedAt":  "2026-03-04T06:10:21Z"
+    },
+    {
+        "id":  "post-085",
+        "title":  "How I improved my workflow using CSS",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 85 on CSS.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "html",
+                     "debugging",
+                     "context"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-85/900/500",
+                       "https://picsum.photos/seed/post-85-alt/900/500"
+                   ],
+        "likes":  178,
+        "commentsCount":  4,
+        "views":  5298,
+        "status":  "draft",
+        "createdAt":  "2025-08-01T10:01:21Z",
+        "updatedAt":  "2025-08-08T10:01:21Z"
+    },
+    {
+        "id":  "post-086",
+        "title":  "Top mistakes students make while learning HTML",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 86 on HTML.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "best-practices",
+                     "api",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-86/900/500",
+                       "https://picsum.photos/seed/post-86-alt/900/500"
+                   ],
+        "likes":  164,
+        "commentsCount":  2,
+        "views":  3902,
+        "status":  "published",
+        "createdAt":  "2025-09-18T08:47:21Z",
+        "updatedAt":  "2025-10-03T08:47:21Z"
+    },
+    {
+        "id":  "post-087",
+        "title":  "Understanding JavaScript through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 87 on JavaScript.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "testing",
+                     "debugging",
+                     "node"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-87/900/500",
+                       "https://picsum.photos/seed/post-87-alt/900/500"
+                   ],
+        "likes":  470,
+        "commentsCount":  4,
+        "views":  1904,
+        "status":  "draft",
+        "createdAt":  "2026-05-24T09:18:21Z",
+        "updatedAt":  "2026-06-04T09:18:21Z"
+    },
+    {
+        "id":  "post-088",
+        "title":  "A quick guide to React for semester success",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 88 on React.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "debugging",
+                     "ui-ux",
+                     "performance"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-88/900/500",
+                       "https://picsum.photos/seed/post-88-alt/900/500"
+                   ],
+        "likes":  203,
+        "commentsCount":  1,
+        "views":  3987,
+        "status":  "draft",
+        "createdAt":  "2025-11-16T22:06:21Z",
+        "updatedAt":  "2025-12-18T22:06:21Z"
+    },
+    {
+        "id":  "post-089",
+        "title":  "Top mistakes students make while learning College",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 89 on College.",
+        "authorId":  "user-006",
+        "categoryId":  "cat-09",
+        "tags":  [
+                     "node",
+                     "web-security",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-89/900/500",
+                       "https://picsum.photos/seed/post-89-alt/900/500"
+                   ],
+        "likes":  270,
+        "commentsCount":  1,
+        "views":  3593,
+        "status":  "published",
+        "createdAt":  "2026-02-06T16:44:21Z",
+        "updatedAt":  "2026-03-05T16:44:21Z"
+    },
+    {
+        "id":  "post-090",
+        "title":  "A quick guide to CSS for semester success",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 90 on CSS.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-04",
+        "tags":  [
+                     "frontend",
+                     "authentication",
+                     "node"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-90/900/500",
+                       "https://picsum.photos/seed/post-90-alt/900/500"
+                   ],
+        "likes":  414,
+        "commentsCount":  2,
+        "views":  4225,
+        "status":  "published",
+        "createdAt":  "2026-04-09T19:39:21Z",
+        "updatedAt":  "2026-04-22T19:39:21Z"
+    },
+    {
+        "id":  "post-091",
+        "title":  "Understanding HTML through practical campus projects",
+        "description":  "Useful notes and references collected during lab practice.",
+        "content":  "This is placeholder content for post 91 on HTML.",
+        "authorId":  "user-008",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "design-patterns",
+                     "debugging",
+                     "interview"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-91/900/500",
+                       "https://picsum.photos/seed/post-91-alt/900/500"
+                   ],
+        "likes":  280,
+        "commentsCount":  0,
+        "views":  1939,
+        "status":  "draft",
+        "createdAt":  "2026-02-23T09:01:21Z",
+        "updatedAt":  "2026-03-07T09:01:21Z"
+    },
+    {
+        "id":  "post-092",
+        "title":  "A quick guide to Career for semester success",
+        "description":  "Helpful cheat sheet for students preparing for projects and interviews.",
+        "content":  "This is placeholder content for post 92 on Career.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "html",
+                     "career",
+                     "events"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-92/900/500",
+                       "https://picsum.photos/seed/post-92-alt/900/500"
+                   ],
+        "likes":  489,
+        "commentsCount":  1,
+        "views":  5541,
+        "status":  "published",
+        "createdAt":  "2026-06-04T02:58:21Z",
+        "updatedAt":  "2026-06-18T02:58:21Z"
+    },
+    {
+        "id":  "post-093",
+        "title":  "Beginner to intermediate roadmap for HTML",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 93 on HTML.",
+        "authorId":  "user-007",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "node",
+                     "css",
+                     "career"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-93/900/500",
+                       "https://picsum.photos/seed/post-93-alt/900/500"
+                   ],
+        "likes":  22,
+        "commentsCount":  1,
+        "views":  728,
+        "status":  "published",
+        "createdAt":  "2025-11-17T15:33:21Z",
+        "updatedAt":  "2025-11-30T15:33:21Z"
+    },
+    {
+        "id":  "post-094",
+        "title":  "A quick guide to Events for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 94 on Events.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-10",
+        "tags":  [
+                     "authentication",
+                     "web-security",
+                     "github"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-94/900/500",
+                       "https://picsum.photos/seed/post-94-alt/900/500"
+                   ],
+        "likes":  265,
+        "commentsCount":  3,
+        "views":  3772,
+        "status":  "published",
+        "createdAt":  "2026-05-14T00:04:21Z",
+        "updatedAt":  "2026-06-08T00:04:21Z"
+    },
+    {
+        "id":  "post-095",
+        "title":  "Understanding HTML through practical campus projects",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 95 on HTML.",
+        "authorId":  "user-001",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "state-management",
+                     "redux",
+                     "testing"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-95/900/500",
+                       "https://picsum.photos/seed/post-95-alt/900/500"
+                   ],
+        "likes":  396,
+        "commentsCount":  1,
+        "views":  3004,
+        "status":  "published",
+        "createdAt":  "2026-01-28T02:20:21Z",
+        "updatedAt":  "2026-03-02T02:20:21Z"
+    },
+    {
+        "id":  "post-096",
+        "title":  "A quick guide to HTML for semester success",
+        "description":  "A concise write-up from recent class and club sessions.",
+        "content":  "This is placeholder content for post 96 on HTML.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-05",
+        "tags":  [
+                     "events",
+                     "hooks",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-96/900/500",
+                       "https://picsum.photos/seed/post-96-alt/900/500"
+                   ],
+        "likes":  72,
+        "commentsCount":  3,
+        "views":  5158,
+        "status":  "published",
+        "createdAt":  "2026-02-17T10:12:21Z",
+        "updatedAt":  "2026-03-19T10:12:21Z"
+    },
+    {
+        "id":  "post-097",
+        "title":  "A quick guide to React for semester success",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 97 on React.",
+        "authorId":  "user-010",
+        "categoryId":  "cat-01",
+        "tags":  [
+                     "performance",
+                     "events",
+                     "college"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-97/900/500",
+                       "https://picsum.photos/seed/post-97-alt/900/500"
+                   ],
+        "likes":  119,
+        "commentsCount":  1,
+        "views":  3738,
+        "status":  "published",
+        "createdAt":  "2025-07-31T20:49:21Z",
+        "updatedAt":  "2025-08-13T20:49:21Z"
+    },
+    {
+        "id":  "post-098",
+        "title":  "A quick guide to Career for semester success",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 98 on Career.",
+        "authorId":  "user-003",
+        "categoryId":  "cat-07",
+        "tags":  [
+                     "testing",
+                     "github",
+                     "api"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-98/900/500",
+                       "https://picsum.photos/seed/post-98-alt/900/500"
+                   ],
+        "likes":  68,
+        "commentsCount":  4,
+        "views":  5143,
+        "status":  "draft",
+        "createdAt":  "2025-09-27T06:08:21Z",
+        "updatedAt":  "2025-10-29T06:08:21Z"
+    },
+    {
+        "id":  "post-099",
+        "title":  "Understanding JavaScript through practical campus projects",
+        "description":  "Study-friendly summary with actionable next steps.",
+        "content":  "This is placeholder content for post 99 on JavaScript.",
+        "authorId":  "user-004",
+        "categoryId":  "cat-02",
+        "tags":  [
+                     "interview",
+                     "performance",
+                     "react"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-99/900/500",
+                       "https://picsum.photos/seed/post-99-alt/900/500"
+                   ],
+        "likes":  314,
+        "commentsCount":  1,
+        "views":  1169,
+        "status":  "draft",
+        "createdAt":  "2026-06-23T15:46:21Z",
+        "updatedAt":  "2026-06-24T15:46:21Z"
+    },
+    {
+        "id":  "post-100",
+        "title":  "Top mistakes students make while learning Git",
+        "description":  "Practical insights based on assignments and peer discussions.",
+        "content":  "This is placeholder content for post 100 on Git.",
+        "authorId":  "user-005",
+        "categoryId":  "cat-06",
+        "tags":  [
+                     "career",
+                     "router",
+                     "redux"
+                 ],
+        "images":  [
+                       "https://picsum.photos/seed/post-100/900/500",
+                       "https://picsum.photos/seed/post-100-alt/900/500"
+                   ],
+        "likes":  358,
+        "commentsCount":  2,
+        "views":  125,
+        "status":  "draft",
+        "createdAt":  "2026-04-21T09:08:21Z",
+        "updatedAt":  "2026-05-15T09:08:21Z"
+    }
+]

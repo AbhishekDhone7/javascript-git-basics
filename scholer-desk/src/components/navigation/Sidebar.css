@@ -1,0 +1,24 @@
+.sd-sidebar {
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  background: var(--bg-sidebar);
+  color: #d7e0f7;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  box-shadow: 8px 0 24px rgba(20, 35, 56, 0.22);
+}
+.sd-sidebar h2 { margin: 0; color: #fff; font-size: 2.7rem; }
+.sd-sidebar p { margin: 6px 0 0; color: #8ea0c3; }
+.sd-sidebar nav { display: grid; gap: 10px; }
+.sd-sidebar nav a {
+  color: #a9b7d4;
+  padding: 14px 18px;
+  border-radius: 14px;
+  font-size: 1.25rem;
+}
+.sd-sidebar nav a.active { background: linear-gradient(135deg, #2f66df, #3067d8); color: #fff; }
+.sidebar-bottom { margin-top: auto; }
+.sidebar-bottom .full { width: 100%; }

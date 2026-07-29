@@ -1,0 +1,66 @@
+[
+    {
+        "id":  "notif-001",
+        "userId":  "user-001",
+        "type":  "New Like",
+        "message":  "Your post received 5 new likes.",
+        "isRead":  false,
+        "createdAt":  "2026-07-29T08:49:22Z"
+    },
+    {
+        "id":  "notif-002",
+        "userId":  "user-002",
+        "type":  "New Comment",
+        "message":  "Someone commented on your JavaScript post.",
+        "isRead":  true,
+        "createdAt":  "2026-07-29T06:49:22Z"
+    },
+    {
+        "id":  "notif-003",
+        "userId":  "user-003",
+        "type":  "New Follower",
+        "message":  "You have a new follower from your department.",
+        "isRead":  false,
+        "createdAt":  "2026-07-29T04:49:22Z"
+    },
+    {
+        "id":  "notif-004",
+        "userId":  "user-004",
+        "type":  "Announcement",
+        "message":  "Web Dev Club meetup starts at 4 PM today.",
+        "isRead":  false,
+        "createdAt":  "2026-07-29T02:49:22Z"
+    },
+    {
+        "id":  "notif-005",
+        "userId":  "user-005",
+        "type":  "New Comment",
+        "message":  "Your interview post got a detailed reply.",
+        "isRead":  true,
+        "createdAt":  "2026-07-28T10:49:22Z"
+    },
+    {
+        "id":  "notif-006",
+        "userId":  "user-006",
+        "type":  "New Like",
+        "message":  "Your CSS tips post is trending this week.",
+        "isRead":  false,
+        "createdAt":  "2026-07-27T10:49:22Z"
+    },
+    {
+        "id":  "notif-007",
+        "userId":  "user-007",
+        "type":  "Announcement",
+        "message":  "Semester project showcase registration is open.",
+        "isRead":  false,
+        "createdAt":  "2026-07-26T10:49:22Z"
+    },
+    {
+        "id":  "notif-008",
+        "userId":  "user-008",
+        "type":  "New Follower",
+        "message":  "A senior student started following you.",
+        "isRead":  true,
+        "createdAt":  "2026-07-25T10:49:22Z"
+    }
+]

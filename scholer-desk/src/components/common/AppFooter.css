@@ -1,0 +1,20 @@
+.app-footer {
+  margin-top: 34px;
+  background: #cfe0ff;
+  border-top: 1px solid var(--border);
+  padding: 22px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.app-footer strong { font-size: 1.6rem; }
+.app-footer p { margin: 4px 0 0; font-size: 0.95rem; color: #42506d; }
+.app-footer nav { display: flex; gap: 24px; flex-wrap: wrap; }
+.app-footer nav a { color: #3c4b68; font-size: 1rem; }
+.app-footer.compact { background: transparent; border-top: none; justify-content: center; text-align: center; }
+.app-footer.compact nav { justify-content: center; }
+@media (max-width: 900px) {
+  .app-footer { padding: 18px 14px 96px; display: grid; }
+  .app-footer nav { gap: 14px; }
+}

@@ -1,0 +1,28 @@
+.mobile-bottom-nav {
+  display: none;
+}
+@media (max-width: 900px) {
+  .mobile-bottom-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #d5e3ff;
+    border-top: 1px solid var(--border);
+    padding: 10px 10px 14px;
+    z-index: 20;
+  }
+  .mobile-bottom-nav a {
+    text-align: center;
+    padding: 10px 8px;
+    color: #3f4d67;
+    border-radius: 14px;
+    font-size: 0.95rem;
+  }
+  .mobile-bottom-nav a.active {
+    background: var(--primary);
+    color: #fff;
+  }
+}
