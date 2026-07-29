@@ -1930,97 +1930,739 @@ Production guidance:
 
 [Previous: Lifecycle](#module-3-component-lifecycle) | [Next: Communication](#module-5-component-communication)
 
-Hooks are ordered cells on a component Fiber. Call them only at the top level of components/custom hooks. A conditional call shifts later positions and breaks state association.
+## Introduction
+
+Hooks are React functions that let function components use state, reducers, refs, context, effects, concurrent scheduling, and external-store integration. Hooks were introduced in React 16.8 to make stateful behavior composable without class instances, higher-order wrappers, or lifecycle logic split across unrelated methods.
+
+Hooks do not make functions stateful by storing values in local variables. React stores hook records on the component's preserved Fiber identity. Each render receives snapshots from those records and returns new element descriptions.
+
+### Why Hooks Exist
+
+Before hooks, reusable stateful behavior commonly required render props, higher-order components, mixins in older systems, or helper classes. Those patterns could create deep wrapper trees, prop collisions, and lifecycle fragmentation. Hooks let a custom hook colocate setup, cleanup, state, and reusable policy.
+
+| Advantage | Tradeoff |
+|---|---|
+| Composes stateful behavior through functions | Call order rules must be respected |
+| Keeps one synchronization concern together | Dependency mistakes create stale closures |
+| Removes most wrapper components | Hooks can hide expensive or surprising behavior if poorly named |
+| Works with concurrent rendering semantics | Render purity becomes non-negotiable |
+| Supports focused custom APIs | Custom hooks share logic, not state automatically |
+
+## Hook Storage and Internal Working
+
+React associates a linked sequence of hook records with each function-component Fiber. During rendering, React advances through those records in call order. Variables such as `count` or `theme` do not identify hook state; position does.
 
 ```mermaid
 flowchart LR
- F[Fiber] --> H1[1 state]
- H1 --> H2[2 ref]
- H2 --> H3[3 effect]
- H3 --> H4[4 transition]
- N[Next render: same order] --> H1
+	F[ProductPage Fiber] --> H1[Hook 1: state queue]
+	H1 --> H2[Hook 2: ref object]
+	H2 --> H3[Hook 3: memo value and deps]
+	H3 --> H4[Hook 4: effect and deps]
+	N[Next render] --> O[Call hooks in identical order]
+	O --> H1
 ```
 
-| Hook | Purpose | Key production rule |
-|---|---|---|
-| `useState` | local snapshot | updater when next depends on previous |
-| `useReducer` | action-driven transitions | pure reducer; exhaustive actions |
-| `useEffect` | passive external sync | complete dependencies and cleanup |
-| `useLayoutEffect` | pre-paint sync | use only when paint must wait |
-| `useRef` | stable mutable cell/DOM ref | mutation does not render |
-| `useMemo` | cache calculation | performance hint after measurement |
-| `useCallback` | cache function identity | only when identity is observed |
-| `useContext` | nearest provider value | changed value renders consumers |
-| `useImperativeHandle` | narrow ref API | prefer declarative props |
-| `useTransition` | non-urgent update | never transition controlled input value |
-| `useDeferredValue` | lag slow consumer | does not debounce network calls |
-| `useId` | SSR-safe accessibility ID | never a list key |
-| `useSyncExternalStore` | consistent external subscription | stable cached snapshot |
-| `useInsertionEffect` | CSS library insertion | library API; no refs/state updates |
+On initial mount, React creates hook records. On update, it reuses the records in the same order, processes pending updates, compares dependencies with `Object.is`, and returns the current values for that render.
+
+### Rules of Hooks
+
+1. Call hooks only at the top level of a React function component or custom hook.
+2. Do not call hooks in conditions, loops, event handlers, nested functions, or ordinary utilities.
+3. Custom hook names begin with `use` so tooling can enforce these rules.
+4. Components and hooks must remain pure during render.
 
 ```jsx
-// State and reducer
-const [count, setCount] = useState(0);
-setCount((current) => current + 1);
-const [state, dispatch] = useReducer(reducer, initialState);
+// Wrong: the second render may skip a hook and shift later records.
+if (authenticated) {
+	const [profile, setProfile] = useState(null);
+}
 
-// Ref: survives renders without causing one.
-const inputRef = useRef(null);
-inputRef.current?.focus();
-
-// Memoization: valuable only when cost/identity matters.
-const visible = useMemo(() => expensiveRank(items, query), [items, query]);
-const select = useCallback((id) => onSelect(id), [onSelect]);
+// Correct: always call the hook; put the condition in behavior or output.
+const [profile, setProfile] = useState(null);
+if (!authenticated) return <Login />;
 ```
 
-### Effects and Cancellation
+```mermaid
+flowchart TD
+	R1[Render 1 calls state, effect, ref] --> M1[Records: 1 state, 2 effect, 3 ref]
+	R2[Render 2 condition skips effect] --> M2[Calls: 1 state, 2 ref]
+	M2 --> E[Record 2 is misinterpreted]
+	E --> B[Broken hook state association]
+```
+
+## Hook Reference
+
+| Hook | Primary purpose | Schedules rendering? | Main production rule |
+|---|---|---:|---|
+| `useState` | Local state snapshot | Setter does | Use updater when next depends on previous |
+| `useReducer` | Action-driven transitions | `dispatch` does | Reducer must be pure |
+| `useEffect` | Passive external synchronization | Only if effect queues state | Complete dependencies and cleanup |
+| `useLayoutEffect` | Pre-paint synchronization | Only if setup queues state | Blocks paint; reserve for visual measurement |
+| `useRef` | Stable mutable cell or host ref | No | Do not use for visible state |
+| `useMemo` | Cache calculation result | No | Optimization, not semantic storage |
+| `useCallback` | Cache function identity | No | Use only when identity is observed |
+| `useContext` | Read nearest provider value | Provider change does | Split broad/high-frequency contexts |
+| `useImperativeHandle` | Customize exposed ref API | No by itself | Expose narrow operations |
+| `useTransition` | Mark updates non-urgent | Yes | Keep controlled inputs urgent |
+| `useDeferredValue` | Let a consumer lag behind a value | Yes | Does not debounce requests itself |
+| `useId` | Hydration-safe accessibility IDs | No | Never use for list keys |
+| `useSyncExternalStore` | Consistent external-store snapshot | Subscription does | Snapshot must be cached/stable |
+| `useInsertionEffect` | Insert dynamic styles before layout work | Not for state updates | Library-author API |
+
+## `useState`
+
+`useState(initialState)` returns the state snapshot for the current render and a stable setter. Passing a function as the initial argument performs lazy initialization on mount.
 
 ```jsx
-useEffect(() => {
-	const controller = new AbortController();
-	fetch(`/api/users/${userId}`, { signal: controller.signal })
-		.then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); })
-		.then(setUser)
-		.catch((e) => { if (e.name !== "AbortError") reportError(e); });
-	return () => controller.abort();
-}, [userId]);
+import { useState } from "react";
 
-// Wrong: derived state causes an extra render and can drift.
-useEffect(() => setFullName(`${first} ${last}`), [first, last]);
-// Correct:
-const fullName = `${first} ${last}`;
+function CartLine({ product }) {
+	const [quantity, setQuantity] = useState(() => {
+		return Math.max(1, product.initialQuantity ?? 1);
+	});
+
+	function increase() {
+		setQuantity((current) => current + 1);
+	}
+
+	return (
+		<div>
+			<span>{product.name}</span>
+			<output>{quantity}</output>
+			<button onClick={increase}>Increase</button>
+		</div>
+	);
+}
 ```
 
-### Concurrent and Specialized Hooks
+The lazy initializer runs when React creates the component state, though development Strict Mode may invoke it again to verify purity. The functional updater receives the pending queue value, so it is safe when multiple updates compose.
+
+### State Queue Execution
+
+```mermaid
+sequenceDiagram
+	participant E as Event handler snapshot count=0
+	participant Q as State update queue
+	participant R as Next render
+	E->>Q: enqueue current => current + 1
+	E->>Q: enqueue current => current + 1
+	E->>Q: enqueue current => current + 1
+	Q->>R: process from base state 0
+	R->>R: 0 to 1 to 2 to 3
+	R-->>E: commit output count=3
+```
+
+Three `setCount(count + 1)` calls instead capture `0` and commonly enqueue the same replacement `1`. State setters do not mutate the current render snapshot.
+
+### Object and Array State
 
 ```jsx
-const [query, setQuery] = useState("");
-const deferredQuery = useDeferredValue(query);
-const [isPending, startTransition] = useTransition();
+const [profile, setProfile] = useState({ name: "Asha", role: "Student" });
 
-<input value={query} onChange={(e) => setQuery(e.target.value)} />
-<button onClick={() => startTransition(() => setTab("reports"))}>Reports</button>
-<SlowResults query={deferredQuery} pending={isPending} />
+// Wrong: mutation keeps the same object identity.
+profile.role = "Mentor";
+setProfile(profile);
+
+// Correct: preserve unchanged fields in a replacement object.
+setProfile((current) => ({ ...current, role: "Mentor" }));
 ```
 
-`useId` generates hydration-stable label/help IDs. `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)` prevents tearing for external state. `useInsertionEffect` exists mainly for CSS-in-JS library authors. `useImperativeHandle` should expose narrow operations such as `focus`, not an unrestricted DOM implementation.
+React uses `Object.is` when deciding whether a state value changed. Store the minimum source of truth and derive values such as totals or full names during render.
 
-### Custom Hook
+## `useReducer`
+
+`useReducer` centralizes related transitions as actions. It is useful when state has several fields, transitions must be explicit, or many handlers update the same model.
+
+```jsx
+import { useReducer } from "react";
+
+const initialState = {
+	status: "idle",
+	draft: { amount: "", recipientId: "" },
+	error: null,
+};
+
+function transferReducer(state, action) {
+	switch (action.type) {
+		case "fieldChanged":
+			return {
+				...state,
+				draft: { ...state.draft, [action.field]: action.value },
+			};
+		case "submitted":
+			return { ...state, status: "pending", error: null };
+		case "succeeded":
+			return { ...initialState, status: "succeeded" };
+		case "failed":
+			return { ...state, status: "failed", error: action.error };
+		default:
+			throw new Error(`Unknown transfer action: ${action.type}`);
+	}
+}
+
+function TransferForm() {
+	const [state, dispatch] = useReducer(transferReducer, initialState);
+	// Render fields and dispatch domain events.
+}
+```
+
+Reducers execute during render and must be pure. `dispatch` has stable identity and queues an action. A reducer improves transition modeling; it does not make state global and does not run asynchronous work.
+
+```mermaid
+flowchart LR
+	UI[Event handler] -->|dispatch action| Q[Reducer update queue]
+	Q --> RR[Render calls reducer]
+	RR --> NS[Next immutable state]
+	NS --> RC[Reconcile output]
+	RC --> C[Commit changes]
+```
+
+Use state for independent values and a reducer when transitions benefit from names, atomic updates, or standalone tests.
+
+## `useEffect`
+
+`useEffect` synchronizes a committed component with systems outside React. Setup runs after commit; cleanup runs before setup repeats and during unmount.
+
+```jsx
+import { useEffect, useState } from "react";
+
+function UserProfile({ userId }) {
+	const [user, setUser] = useState(null);
+	const [error, setError] = useState(null);
+
+	useEffect(() => {
+		const controller = new AbortController();
+
+		async function loadUser() {
+			try {
+				const response = await fetch(`/api/users/${userId}`, {
+					signal: controller.signal,
+				});
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				setUser(await response.json());
+			} catch (requestError) {
+				if (requestError.name !== "AbortError") setError(requestError);
+			}
+		}
+
+		loadUser();
+		return () => controller.abort();
+	}, [userId]);
+
+	if (error) return <p role="alert">Unable to load profile.</p>;
+	return user ? <UserCard user={user} /> : <Spinner />;
+}
+```
+
+```mermaid
+stateDiagram-v2
+	[*] --> Setup: first committed dependencies
+	Setup --> Active
+	Active --> Cleanup: dependencies change
+	Cleanup --> Setup: synchronize next values
+	Active --> FinalCleanup: unmount
+	FinalCleanup --> [*]
+```
+
+Do not make the effect callback itself `async`; React expects cleanup or `undefined`, not a Promise. Production remote data often belongs in RTK Query because caching, deduplication, retries, invalidation, and races span many components.
+
+### Effects You Do Not Need
+
+```jsx
+// Wrong: duplicated derived state adds a render and can drift.
+useEffect(() => setFullName(`${firstName} ${lastName}`), [firstName, lastName]);
+
+// Correct: calculate pure output during render.
+const fullName = `${firstName} ${lastName}`;
+```
+
+User actions belong in handlers. Effects are for synchronization caused by the component being committed with particular reactive values.
+
+## `useLayoutEffect`
+
+`useLayoutEffect` follows the same dependency and cleanup model as `useEffect`, but setup runs after DOM mutation and before browser paint. It can measure layout and synchronously request a correction.
+
+```jsx
+function Popover({ anchorRect, children }) {
+	const ref = useRef(null);
+	const [height, setHeight] = useState(0);
+
+	useLayoutEffect(() => {
+		setHeight(ref.current.getBoundingClientRect().height);
+	}, [children]);
+
+	return (
+		<div ref={ref} style={{ position: "fixed", top: anchorRect.top - height }}>
+			{children}
+		</div>
+	);
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant R as Render
+	participant D as DOM commit
+	participant L as useLayoutEffect
+	participant B as Browser paint
+	participant E as useEffect
+	R->>D: Apply host changes
+	D->>L: Measure and optionally update
+	L->>R: Synchronous correction
+	R->>D: Commit corrected position
+	D->>B: Paint
+	B->>E: Passive synchronization
+```
+
+Layout effects block paint. Use them only when the current frame depends on measurement or imperative visual state.
+
+## `useRef`
+
+`useRef(initialValue)` returns the same mutable object across renders. React does not monitor `.current`, so changing it does not schedule rendering.
+
+```jsx
+function SearchBox() {
+	const inputRef = useRef(null);
+	const requestSequence = useRef(0);
+
+	function focus() {
+		inputRef.current?.focus();
+	}
+
+	async function search(query) {
+		const sequence = ++requestSequence.current;
+		const result = await api.search(query);
+		if (sequence === requestSequence.current) display(result);
+	}
+
+	return (
+		<>
+			<input ref={inputRef} onChange={(event) => search(event.target.value)} />
+			<button onClick={focus}>Focus search</button>
+		</>
+	);
+}
+```
+
+Refs suit DOM handles, timer IDs, previous integration values, and mutable bookkeeping. If changing a value must update visible output, use state or a store.
+
+| Use state | Use ref |
+|---|---|
+| Value affects rendering | Value is invisible bookkeeping |
+| Transition should be observable | Mutation should not render |
+| Snapshot semantics are desired | Latest mutable value is required |
+| DevTools/state flow should show it | DOM or third-party handle is stored |
+
+## `useMemo`
+
+`useMemo(calculate, dependencies)` caches a calculation result between renders while dependencies remain `Object.is`-equal.
+
+```jsx
+function ProductResults({ products, query }) {
+	const rankedProducts = useMemo(() => {
+		return expensiveRank(products, query);
+	}, [products, query]);
+
+	return <ProductList products={rankedProducts} />;
+}
+```
+
+React may discard memoized values in situations where re-computation is valid, so `useMemo` must never be required for correctness. It retains the value and dependencies while the component identity remains mounted, increasing memory usage.
+
+Use it when profiling shows an expensive repeated calculation or when stable result identity is required by another measured optimization. Do not memoize trivial arithmetic or every object by default.
+
+## `useCallback`
+
+`useCallback(fn, dependencies)` returns a stable function identity while dependencies remain equal. It is conceptually similar to memoizing the function itself.
+
+```jsx
+const ProductList = memo(function ProductList({ products, onSelect }) {
+	return products.map((product) => (
+		<button key={product.id} onClick={() => onSelect(product.id)}>
+			{product.name}
+		</button>
+	));
+});
+
+function Catalog({ products, selectProduct }) {
+	const handleSelect = useCallback((productId) => {
+		selectProduct(productId);
+	}, [selectProduct]);
+
+	return <ProductList products={products} onSelect={handleSelect} />;
+}
+```
+
+This helps only if `ProductList` is costly, memoized, and receives otherwise stable props. `useCallback` does not stop creation of the function expression during render; React returns the cached reference when dependencies match.
+
+```mermaid
+flowchart TD
+	P[Parent renders] --> F{Callback identity stable?}
+	F -->|No| CR[Memoized child props changed]
+	CR --> R[Child renders]
+	F -->|Yes| O{Other props equal?}
+	O -->|No| R
+	O -->|Yes| S[Child render may be skipped]
+```
+
+## `useContext`
+
+`useContext(Context)` reads the nearest matching provider above the component. React subscribes the consumer to provider value changes.
+
+```jsx
+const ThemeContext = createContext(null);
+
+function useTheme() {
+	const theme = useContext(ThemeContext);
+	if (!theme) throw new Error("useTheme must be used inside ThemeProvider");
+	return theme;
+}
+
+function Toolbar() {
+	const { mode, toggleMode } = useTheme();
+	return <button onClick={toggleMode}>Current theme: {mode}</button>;
+}
+```
+
+When the provider value changes by `Object.is`, every consuming component under that provider is eligible to render, even through memoized ancestors. Split unrelated or differently changing context values. Context solves delivery, not ownership, caching, reducers, or high-frequency selector performance.
+
+```mermaid
+flowchart TB
+	P[ThemeProvider value changes] --> C1[Toolbar consumer renders]
+	P --> C2[Settings consumer renders]
+	P --> C3[Deep button consumer renders]
+	M[Memoized intermediary] -. does not block context .-> C3
+```
+
+## `useImperativeHandle`
+
+This hook customizes the value exposed through a ref. Use it for small imperative operations that are difficult to express declaratively, such as focus, selection, or media control.
+
+```jsx
+import { forwardRef, useImperativeHandle, useRef } from "react";
+
+export const SearchInput = forwardRef(function SearchInput(props, forwardedRef) {
+	const inputRef = useRef(null);
+
+	useImperativeHandle(forwardedRef, () => ({
+		focus() {
+			inputRef.current?.focus();
+		},
+		selectAll() {
+			inputRef.current?.select();
+		},
+	}), []);
+
+	return <input ref={inputRef} type="search" {...props} />;
+});
+```
+
+The parent receives only `focus` and `selectAll`, not unrestricted DOM access. Keep the exposed object stable through correct dependencies. Prefer props/state when the behavior can be declarative.
+
+## `useTransition`
+
+`useTransition` returns a pending flag and `startTransition`. Updates scheduled synchronously inside `startTransition` are marked non-urgent and may be interrupted by newer urgent work.
+
+```jsx
+function ReportsWorkspace() {
+	const [tab, setTab] = useState("overview");
+	const [isPending, startTransition] = useTransition();
+
+	function openTab(nextTab) {
+		startTransition(() => setTab(nextTab));
+	}
+
+	return (
+		<>
+			<TabList value={tab} onChange={openTab} />
+			{isPending && <span>Updating report...</span>}
+			<ExpensiveReport tab={tab} />
+		</>
+	);
+}
+```
+
+Do not transition the state controlling a text input because controlled input output must follow typing immediately. Transitions improve scheduling responsiveness; they do not make expensive algorithms cheaper.
+
+```mermaid
+sequenceDiagram
+	participant U as User
+	participant S as Scheduler
+	participant I as Urgent input render
+	participant T as Transition render
+	U->>S: Type character plus update results
+	S->>I: Process urgent input
+	I-->>U: Commit responsive input
+	S->>T: Start non-urgent results
+	U->>S: Type another character
+	S--xT: Supersede obsolete render
+	S->>I: Commit latest input
+	S->>T: Render latest results
+```
+
+## `useDeferredValue`
+
+`useDeferredValue(value)` returns a deferred version that may temporarily lag behind the latest value while React prioritizes urgent work.
+
+```jsx
+function SearchPage() {
+	const [query, setQuery] = useState("");
+	const deferredQuery = useDeferredValue(query);
+	const stale = query !== deferredQuery;
+
+	return (
+		<>
+			<input value={query} onChange={(event) => setQuery(event.target.value)} />
+			<div aria-busy={stale} style={{ opacity: stale ? 0.6 : 1 }}>
+				<SlowResults query={deferredQuery} />
+			</div>
+		</>
+	);
+}
+```
+
+Use a transition when you control the state update; use a deferred value when a slow consumer receives a rapidly changing value. It is not a fixed-time debounce and does not stop effects from requesting every value. Debounce network initiation separately or use a cache that handles request identity.
+
+## `useId`
+
+`useId` generates a stable identifier prefix designed to match across server rendering and client hydration.
+
+```jsx
+function PasswordField() {
+	const id = useId();
+	const helpId = `${id}-help`;
+
+	return (
+		<>
+			<label htmlFor={id}>Password</label>
+			<input id={id} type="password" aria-describedby={helpId} />
+			<p id={helpId}>Use at least 12 characters.</p>
+		</>
+	);
+}
+```
+
+Use IDs for accessibility relationships, not list keys. List identity must come from data because `useId` follows component call position rather than business records.
+
+## `useSyncExternalStore`
+
+This hook provides a consistent contract for state held outside React. It accepts a subscription function, a client snapshot getter, and an optional server snapshot getter.
+
+```jsx
+import { useSyncExternalStore } from "react";
+
+function subscribe(callback) {
+	window.addEventListener("online", callback);
+	window.addEventListener("offline", callback);
+	return () => {
+		window.removeEventListener("online", callback);
+		window.removeEventListener("offline", callback);
+	};
+}
+
+function getSnapshot() {
+	return navigator.onLine;
+}
+
+export function useOnlineStatus() {
+	return useSyncExternalStore(subscribe, getSnapshot, () => true);
+}
+```
+
+React reads the snapshot during rendering and subscribes around commit. When notified, it reads again and schedules an update if the snapshot changed. Object snapshots must be cached; returning a new object on every call can cause repeated updates.
+
+```mermaid
+sequenceDiagram
+	participant R as React
+	participant G as getSnapshot
+	participant S as subscribe
+	participant X as External store
+	R->>G: Read consistent render snapshot
+	R->>S: Subscribe after commit
+	X->>S: Store changed notification
+	S->>R: Request snapshot check
+	R->>G: Read latest snapshot
+	G-->>R: Changed value schedules render
+```
+
+Library authors and integrations should use this instead of hand-written effect subscriptions when concurrent consistency matters.
+
+## `useInsertionEffect`
+
+`useInsertionEffect` runs during commit before layout effects so CSS-in-JS libraries can insert dynamic rules before components measure layout. It is not a general component hook.
+
+```jsx
+// Simplified library-level illustration, not typical application code.
+function useDynamicStyle(rule) {
+	useInsertionEffect(() => {
+		const style = document.createElement("style");
+		style.textContent = rule;
+		document.head.appendChild(style);
+		return () => style.remove();
+	}, [rule]);
+}
+```
+
+Refs are not ready for ordinary measurement at this timing, and state updates are inappropriate. Application teams should normally use their styling system rather than writing this hook directly.
+
+```mermaid
+flowchart LR
+	C[Commit begins] --> I[useInsertionEffect: insert rules]
+	I --> D[DOM mutation complete]
+	D --> L[useLayoutEffect: measure layout]
+	L --> P[Browser paint]
+	P --> E[useEffect: passive work]
+```
+
+## Custom Hooks
+
+A custom hook extracts reusable React behavior behind a purpose-specific API. Each caller gets independent hook state unless the custom hook connects them to a shared context or external store.
+
+### Beginner Custom Hook: Debounced Value
 
 ```jsx
 function useDebouncedValue(value, delayMs) {
 	const [debounced, setDebounced] = useState(value);
+
 	useEffect(() => {
-		const id = setTimeout(() => setDebounced(value), delayMs);
-		return () => clearTimeout(id);
+		const timerId = window.setTimeout(() => setDebounced(value), delayMs);
+		return () => window.clearTimeout(timerId);
 	}, [value, delayMs]);
+
 	return debounced;
 }
 ```
 
-Each caller receives independent state; custom hooks share logic, not state. Common failures are conditional hooks, stale closures, refs for visible state, state for timer IDs, effects for user actions, and memoization without profiling.
+Every value or delay change cancels the previous timer and starts a new one. Unmount cancels final pending work.
 
-**Practice:** explain all 15 hooks; implement `useOnlineStatus`; implement abortable search; compare debounce vs deferred value; diagnose three stale closures. **Interview answer:** three `setCount(count + 1)` calls capture one snapshot and usually replace with the same value; three functional updaters compose.
+### Production Custom Hook: Document Visibility
+
+```jsx
+function subscribeToVisibility(callback) {
+	document.addEventListener("visibilitychange", callback);
+	return () => document.removeEventListener("visibilitychange", callback);
+}
+
+function getVisibilitySnapshot() {
+	return document.visibilityState;
+}
+
+export function useDocumentVisibility() {
+	return useSyncExternalStore(
+		subscribeToVisibility,
+		getVisibilitySnapshot,
+		() => "visible",
+	);
+}
+```
+
+This custom hook names the domain concept, hides subscription mechanics, supports server rendering, and uses the correct external-store consistency contract.
+
+### Custom Hook Design Principles
+
+- Name the behavior, not the implementation (`useOnlineStatus`, not `useWindowListeners`).
+- Keep the returned API small and stable.
+- Expose data and commands, not internal setters by default.
+- Preserve errors and status explicitly for asynchronous behavior.
+- Accept dependencies as parameters rather than importing hidden mutable globals.
+- Test behavior through a representative component or hook test harness.
+- Avoid a custom hook that merely renames one built-in hook without adding meaning.
+
+```mermaid
+flowchart TB
+	C1[Component A] --> H1[Custom hook instance A]
+	C2[Component B] --> H2[Custom hook instance B]
+	H1 --> S1[Independent hook state]
+	H2 --> S2[Independent hook state]
+	H1 --> X[Optional shared context/store]
+	H2 --> X
+```
+
+## Choosing the Correct Hook
+
+```mermaid
+flowchart TD
+	Q[What does the value or behavior represent?] --> V{Affects visible output?}
+	V -->|Yes, simple local value| ST[useState]
+	V -->|Yes, structured transitions| RD[useReducer]
+	V -->|Shared provider dependency| CT[useContext]
+	V -->|External mutable store| ES[useSyncExternalStore]
+	V -->|No, mutable bookkeeping or DOM| RF[useRef]
+	Q --> SY{Synchronize external system?}
+	SY -->|After paint is fine| EF[useEffect]
+	SY -->|Before paint required| LE[useLayoutEffect]
+	Q --> OP{Measured optimization?}
+	OP -->|Expensive result| MM[useMemo]
+	OP -->|Observed function identity| CB[useCallback]
+	Q --> PR{Priority control?}
+	PR -->|Own update| TR[useTransition]
+	PR -->|Slow consumer value| DV[useDeferredValue]
+```
+
+The diagram is a decision aid, not a substitute for architecture. Server data usually belongs in a data cache; global workflow state may belong in Redux Toolkit; URL state belongs in the router.
+
+## Hook Memory and Rendering Behavior
+
+| Hook category | Retained while mounted | Render effect |
+|---|---|---|
+| State/reducer | Current state and update queues | Updates schedule render |
+| Ref | Stable object and referenced value | Mutation does not render |
+| Memo/callback | Cached value/function and dependencies | No render by itself; retains memory |
+| Effect | Setup function, dependencies, cleanup | Setup may queue updates after commit |
+| Context | Dependency on provider value | Provider changes schedule consumer render |
+| Transition/deferred | Priority-related state/work | Coordinates additional renders |
+| External store | Subscribe/getSnapshot contract | Changed snapshot schedules render |
+
+Unmount removes React's hook records from the active tree. External resources remain retained if cleanup is missing. Memoized large objects and closures remain reachable while their owning component is mounted.
+
+## Performance Guidance
+
+- Keep high-frequency state close to the component that consumes it.
+- Prefer deriving pure values over effect-driven duplicate state.
+- Use reducers for clarity, not because they are inherently faster.
+- Memoize only measured expensive work with sufficiently stable dependencies.
+- Do not use refs to bypass rendering when UI should update.
+- Split contexts by ownership and update rate.
+- Use transitions for scheduling, then optimize the underlying slow work separately.
+- Cancel stale asynchronous work and bound subscriptions, timers, and caches.
+- Profile production builds with React DevTools and browser tools.
+
+## Common Mistakes and Production Best Practices
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Hook inside condition/loop | Hook records shift | Always call at top level |
+| Missing effect dependency | Stale closure or wrong cleanup | Include reactive dependencies or restructure |
+| Effect for derived value | Extra render and drift | Calculate during render |
+| Async effect callback | Promise returned instead of cleanup | Define and call async function inside |
+| Ref stores visible state | UI remains stale | Use state/reducer/store |
+| State stores timer/instance handle | Unnecessary rendering | Use a ref |
+| Memoization everywhere | Comparison and memory overhead | Profile before optimizing |
+| Transition controls input value | Typing can lag | Keep controlled input state urgent |
+| `useId` used for keys | Identity follows call position, not data | Use persistent record IDs |
+| New object from external snapshot | Infinite/repeated checks | Return cached immutable snapshot |
+| Imperative handle exposes DOM | Tight implementation coupling | Expose narrow commands |
+| Custom hook hides side effects | Surprising consumers | Name behavior and document lifecycle |
+
+## Real-World Hook Architecture
+
+### E-Commerce
+
+Use state for cart drafts, reducers for checkout transitions, refs for focus and idempotency handles, RTK Query for products, deferred values for costly search results, and effects only for genuine external synchronization.
+
+### Banking
+
+Use reducers for explicit transfer states, layout effects only for accessibility focus correction, external-store hooks for network/session signals, and refs for request IDs that should not render. Authorization remains server-owned.
+
+### CRM and Dashboards
+
+Use context for stable workspace dependencies, Redux selectors for global workflow state, memoization for measured chart transformations, transitions for non-urgent tab/report rendering, and cleanup-aware hooks for observers or live feeds.
+
+### Chat and Social Media
+
+Use effects or a data layer for room/feed subscriptions, refs for scroll/sequence bookkeeping, stable state updates for messages, deferred rendering for expensive filters, and virtualization to control DOM size.
+
+Production hook design starts with ownership and lifecycle, not with choosing a hook by name.
 
 ---
 
