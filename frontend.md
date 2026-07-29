@@ -1176,56 +1176,752 @@ Production guidance:
 
 [Previous: Internals](#module-2-react-internals) | [Next: Hooks](#module-4-react-hooks)
 
-## Introduction and Lifecycle Map
+## Introduction
 
-Lifecycle describes mount, update, and unmount. Class APIs spread synchronization across methods; function components model independent setup/cleanup processes with effects.
+A component lifecycle describes how a component identity is created, rendered, committed, updated, and removed from the React tree. Lifecycle is not simply the amount of time a function or class exists in memory. It follows the identity React preserves through component type, tree position, and key.
 
-| Phase | Class API | Function model |
-|---|---|---|
-| Initialize | `constructor` | state initializer during render |
-| Calculate | `render` | component function |
-| After mount | `componentDidMount` | effect setup |
-| Before update commit | `getSnapshotBeforeUpdate` | layout-effect cleanup/measurement patterns |
-| After update | `componentDidUpdate` | effect resynchronization |
-| Bailout | `shouldComponentUpdate` | `memo`/stable state |
-| Remove | `componentWillUnmount` | effect cleanup |
+Three high-level lifecycle phases are visible to application developers:
+
+1. **Mount:** React creates a component identity and commits its initial host output.
+2. **Update:** existing identity receives new props, state, or context and may commit changed output.
+3. **Unmount:** React removes that identity, runs cleanup, detaches refs, and removes associated host output.
+
+Class components expose named lifecycle methods. Function components do not have equivalent methods for every phase. They render snapshots and use effects to synchronize independent external processes. This distinction matters: `useEffect` is not a generic "after lifecycle" callback and should not be used for pure calculations or user actions.
+
+### Why Lifecycle APIs Exist
+
+Rendering describes UI, but applications also interact with systems outside React:
+
+- Network requests and streaming connections
+- Browser event listeners and observers
+- Timers and animation APIs
+- Document title, focus, and selection
+- Third-party widgets and imperative libraries
+- Logging, monitoring, and analytics
+
+Lifecycle APIs define safe times to acquire, update, and release those resources relative to React's commits.
 
 ```mermaid
 stateDiagram-v2
- [*] --> Rendering
- Rendering --> Mounted: commit + setup
- Mounted --> Rendering: props/state/context
- Mounted --> Unmounting: removed/key/type changed
- Unmounting --> [*]: cleanup
- Rendering --> BoundaryFallback: descendant throws
+	[*] --> MountRender: identity introduced
+	MountRender --> Mounted: initial commit
+	Mounted --> UpdateRender: props, state, or context
+	UpdateRender --> Mounted: update commit
+	UpdateRender --> UpdateRender: interrupted or restarted render
+	Mounted --> Unmounting: removed or identity changed
+	Unmounting --> [*]: cleanup and host removal
+	MountRender --> ErrorRecovery: descendant throws
+	UpdateRender --> ErrorRecovery: descendant throws
+	ErrorRecovery --> Mounted: fallback committed
 ```
 
-```jsx
-import { useEffect } from "react";
+The state diagram separates render from commit. Mount and update rendering can be repeated before React commits. Cleanup occurs when synchronization dependencies change or when the component identity is removed. An ancestor error boundary can replace a failed subtree with fallback UI.
 
-function ChatRoom({ roomId }) {
-	useEffect(() => {
-		const connection = chatApi.subscribe(roomId);
-		return () => connection.unsubscribe();
-	}, [roomId]);
-	return <MessageList roomId={roomId} />;
+## Lifecycle and React Phases
+
+Lifecycle methods and hooks execute within React's broader render and commit phases:
+
+| React work | Class component | Function component | May perform side effects? |
+|---|---|---|---:|
+| Render calculation | `constructor`, `render`, static derived state | component body, state/reducer calculations | No |
+| Optional render bailout | `shouldComponentUpdate` | `memo`, unchanged state, compiler/store optimizations | No |
+| Before DOM mutation | `getSnapshotBeforeUpdate` | specialized layout-effect cleanup behavior | Read only for snapshot purpose |
+| Layout commit work | `componentDidMount`, `componentDidUpdate` | `useLayoutEffect` setup | Yes, but blocks paint |
+| Passive commit work | No direct class equivalent with identical timing | `useEffect` cleanup/setup | Yes |
+| Removal | `componentWillUnmount` | layout/passive effect cleanup | Release resources |
+
+> [!WARNING]
+> Constructors, render methods, component functions, reducer functions, state initializers, and `shouldComponentUpdate` belong to render calculation. They must remain pure because React may invoke or discard render work.
+
+## Class Component Lifecycle
+
+Class components remain fully supported. They are especially important when maintaining established enterprise applications and when implementing error boundaries.
+
+```mermaid
+flowchart TD
+	C[constructor] --> R1[render]
+	R1 --> CM[Commit DOM]
+	CM --> CDM[componentDidMount]
+	CDM --> T{Props, state, or context change}
+	T --> SCU[shouldComponentUpdate]
+	SCU -->|false| WAIT[Preserve current rendered output]
+	SCU -->|true| R2[render]
+	R2 --> GS[getSnapshotBeforeUpdate]
+	GS --> UC[Commit DOM update]
+	UC --> CDU[componentDidUpdate]
+	CDU --> T
+	WAIT --> T
+	T -->|identity removed| CWU[componentWillUnmount]
+	CWU --> END[Host removal]
+```
+
+This is a simplified application-facing sequence. Context updates and error recovery can affect paths, and React's internal implementation contains additional work. The key rule is that render-side methods calculate, while did-mount/did-update/unmount methods synchronize around committed output.
+
+### `constructor(props)`
+
+The constructor initializes class state and binds methods when class-field syntax is not used.
+
+```jsx
+import { Component } from "react";
+
+class OrderEditor extends Component {
+	constructor(props) {
+		super(props);
+		this.state = {
+			note: props.initialNote ?? "",
+			saving: false,
+		};
+		this.handleNoteChange = this.handleNoteChange.bind(this);
+	}
+
+	handleNoteChange(event) {
+		this.setState({ note: event.target.value });
+	}
+
+	render() {
+		return <textarea value={this.state.note} onChange={this.handleNoteChange} />;
+	}
 }
 ```
 
-After commit, setup subscribes. When `roomId` changes, old cleanup runs and new setup acquires the replacement. Unmount performs final cleanup. `useLayoutEffect` runs after DOM mutation but before paint and blocks paint, so reserve it for measurement/visual correction.
+`super(props)` initializes the base `Component` instance before `this` is used. The constructor must not subscribe, request data, set timers, or read DOM nodes because nothing has committed. Copying `initialNote` is appropriate only because this component intentionally owns an editable draft; ordinary props should not be duplicated into state.
 
-Error boundaries catch descendant render/lifecycle failures, but not event handlers, arbitrary asynchronous callbacks, or their own errors:
+### `render()`
+
+`render` reads props/state/context and returns elements, strings, numbers, fragments, portals, arrays of keyed elements, or `null`. It must be pure.
+
+```jsx
+render() {
+	const { order } = this.props;
+	const { saving } = this.state;
+
+	if (!order) return <p>No order selected.</p>;
+
+	return (
+		<section aria-busy={saving}>
+			<h2>Order {order.number}</h2>
+			<button disabled={saving} onClick={this.saveOrder}>
+				{saving ? "Saving..." : "Save"}
+			</button>
+		</section>
+	);
+}
+```
+
+An event callback may cause a side effect because it runs in response to user intent. Calling the side effect directly from `render` would be unsafe.
+
+### `componentDidMount()`
+
+`componentDidMount` runs after the initial output is committed. The DOM and refs exist, so it can establish subscriptions, integrate a widget, focus an element, or start a request.
+
+```jsx
+class OnlineStatus extends Component {
+	state = { online: navigator.onLine };
+
+	componentDidMount() {
+		window.addEventListener("online", this.updateStatus);
+		window.addEventListener("offline", this.updateStatus);
+	}
+
+	componentWillUnmount() {
+		window.removeEventListener("online", this.updateStatus);
+		window.removeEventListener("offline", this.updateStatus);
+	}
+
+	updateStatus = () => {
+		this.setState({ online: navigator.onLine });
+	};
+
+	render() {
+		return <output>{this.state.online ? "Online" : "Offline"}</output>;
+	}
+}
+```
+
+The unmount method mirrors mount setup. Without cleanup, the browser retains the callback and class instance after removal.
+
+### `shouldComponentUpdate(nextProps, nextState)`
+
+This method can return `false` to skip rendering for an update. It is a performance optimization, not a correctness mechanism.
+
+```jsx
+shouldComponentUpdate(nextProps, nextState) {
+	return (
+		nextProps.product !== this.props.product ||
+		nextState.expanded !== this.state.expanded
+	);
+}
+```
+
+Manual comparison is easy to get wrong. A skipped render also skips update lifecycle methods for that update. Prefer normal rendering unless profiling identifies a costly path; then use immutable data and a complete comparison or extend `PureComponent`, which performs shallow prop/state comparison.
+
+> [!NOTE]
+> Returning `false` does not permanently prevent all future rendering, and it should never be used to hide state synchronization defects.
+
+### `getSnapshotBeforeUpdate(previousProps, previousState)`
+
+This method runs after render has calculated updated output but immediately before React mutates the DOM. It captures information that would otherwise be lost, such as scroll position.
+
+```jsx
+class MessageList extends Component {
+	listRef = React.createRef();
+
+	getSnapshotBeforeUpdate(previousProps) {
+		if (previousProps.messages.length < this.props.messages.length) {
+			const list = this.listRef.current;
+			return list.scrollHeight - list.scrollTop;
+		}
+		return null;
+	}
+
+	componentDidUpdate(_previousProps, _previousState, snapshot) {
+		if (snapshot !== null) {
+			const list = this.listRef.current;
+			list.scrollTop = list.scrollHeight - snapshot;
+		}
+	}
+
+	render() {
+		return (
+			<ul ref={this.listRef}>
+				{this.props.messages.map((message) => (
+					<li key={message.id}>{message.text}</li>
+				))}
+			</ul>
+		);
+	}
+}
+```
+
+The returned snapshot becomes the third argument to `componentDidUpdate`. Do not perform asynchronous work here; capture the minimum pre-mutation value.
+
+### `componentDidUpdate(previousProps, previousState, snapshot)`
+
+This method runs after an update commits. It can synchronize an external system based on what changed, but conditions are essential to avoid loops.
+
+```jsx
+componentDidUpdate(previousProps) {
+	if (previousProps.roomId !== this.props.roomId) {
+		this.disconnectFromRoom(previousProps.roomId);
+		this.connectToRoom(this.props.roomId);
+	}
+}
+```
+
+Calling `setState` unconditionally from `componentDidUpdate` creates a render-update loop. Guard by comparing previous and current values, or redesign the state so no synchronization update is needed.
+
+### `componentWillUnmount()`
+
+Unmount runs before a component identity and committed host subtree are removed. It must release every owned external resource:
+
+```jsx
+componentWillUnmount() {
+	this.abortController?.abort();
+	this.subscription?.unsubscribe();
+	window.clearInterval(this.intervalId);
+	this.widget?.destroy();
+}
+```
+
+Do not call `setState` during unmount; the component will not render again. Cleanup should be idempotent where practical because integrations may already be closed.
+
+## Complete Class Lifecycle Example
+
+```jsx
+class ChatRoom extends Component {
+	state = { messages: [], status: "connecting" };
+
+	componentDidMount() {
+		this.connect(this.props.roomId);
+	}
+
+	componentDidUpdate(previousProps) {
+		if (previousProps.roomId !== this.props.roomId) {
+			this.disconnect();
+			this.setState({ messages: [], status: "connecting" });
+			this.connect(this.props.roomId);
+		}
+	}
+
+	componentWillUnmount() {
+		this.disconnect();
+	}
+
+	connect(roomId) {
+		this.connection = chatApi.subscribe(roomId, {
+			onOpen: () => this.setState({ status: "connected" }),
+			onMessage: (message) => {
+				this.setState(({ messages }) => ({ messages: [...messages, message] }));
+			},
+		});
+	}
+
+	disconnect() {
+		this.connection?.unsubscribe();
+		this.connection = null;
+	}
+
+	render() {
+		return (
+			<section aria-busy={this.state.status === "connecting"}>
+				<p>Status: {this.state.status}</p>
+				<MessageList messages={this.state.messages} />
+			</section>
+		);
+	}
+}
+```
+
+One synchronization concern is distributed across mount, update, and unmount methods. This fragmentation is one reason hooks model synchronization by concern instead of by lifecycle phase.
+
+## Function Component Lifecycle
+
+A function component has no persistent function instance. React calls the function for each render and associates state/effects with the preserved Fiber identity. Local variables belong to one render snapshot; refs and hook state survive through React's bookkeeping.
+
+### Functional Mount Flow
+
+```mermaid
+sequenceDiagram
+	participant R as React
+	participant C as Component function
+	participant D as DOM
+	participant B as Browser
+	participant E as Effects
+	R->>C: Call with initial props and state
+	C-->>R: Return element tree
+	R->>D: Commit initial host nodes
+	R->>E: Attach refs and run layout effects
+	E->>B: Browser paints
+	B->>E: Run passive effect setup
+```
+
+Mount execution:
+
+1. State initializers and component logic run during render.
+2. React reconciles the returned elements.
+3. Commit creates/updates host nodes and attaches refs.
+4. Layout effects run before paint.
+5. The browser paints.
+6. Passive effects normally run after commit/paint opportunity.
+
+### Functional Update Flow
+
+An update begins when state, parent rendering, consumed context, or an external-store subscription changes.
+
+```mermaid
+sequenceDiagram
+	participant T as Update trigger
+	participant R as React render
+	participant C as Commit
+	participant L as Layout effects
+	participant P as Passive effects
+	T->>R: Queue update
+	R->>R: Call component with new snapshot
+	R->>R: Reconcile identities
+	R->>C: Commit changed host output
+	C->>L: Previous layout cleanup
+	L->>L: New layout setup
+	C->>P: Schedule passive work
+	P->>P: Previous passive cleanup
+	P->>P: New passive setup
+```
+
+Only effects whose dependency comparisons indicate a change need resynchronization. Effects without a dependency array run after every relevant commit; `[]` effects rerun when the component remounts and receive an extra development test cycle under Strict Mode.
+
+### Functional Unmount Flow
+
+```mermaid
+flowchart LR
+	ID[Identity removed by parent, type, or key] --> LC[Run layout-effect cleanup]
+	LC --> RR[Detach refs]
+	RR --> HD[Remove host descendants]
+	HD --> PC[Run passive-effect cleanup]
+	PC --> GC[Release reachable references]
+	GC --> EL[Objects become GC eligible]
+```
+
+Garbage collection is not immediate or controlled by React. Cleanup removes external references so unreachable Fibers, closures, and DOM-related objects can become eligible.
+
+## Effects as Synchronization Processes
+
+An effect should describe one independent synchronization relationship: connect to a room, observe an element, control a map widget, or report a committed page view. Setup acquires/configures the external resource; cleanup reverses that work.
+
+```jsx
+import { useEffect, useState } from "react";
+
+function ChatRoom({ roomId }) {
+	const [messages, setMessages] = useState([]);
+	const [status, setStatus] = useState("connecting");
+
+	useEffect(() => {
+		setMessages([]);
+		setStatus("connecting");
+
+		const connection = chatApi.subscribe(roomId, {
+			onOpen: () => setStatus("connected"),
+			onMessage: (message) => {
+				setMessages((current) => [...current, message]);
+			},
+		});
+
+		return () => connection.unsubscribe();
+	}, [roomId]);
+
+	return (
+		<section aria-busy={status === "connecting"}>
+			<p>Status: {status}</p>
+			<MessageList messages={messages} />
+		</section>
+	);
+}
+```
+
+When `roomId` changes, React renders and commits the new snapshot, cleans up the old room subscription, and establishes the new one. On unmount, cleanup releases the final connection.
+
+> [!TIP]
+> If changing `roomId` represents a completely new screen identity and every nested draft should reset, key the room subtree by `roomId` instead of resetting many independent state variables in an effect.
+
+### Dependency Arrays
+
+```jsx
+// Runs after every commit of this component.
+useEffect(() => synchronize());
+
+// Resynchronizes when roomId or serverUrl changes, and on mount/remount.
+useEffect(() => {
+	const connection = connect(serverUrl, roomId);
+	return () => connection.disconnect();
+}, [serverUrl, roomId]);
+
+// Synchronizes with no reactive values, but still remounts and is tested by Strict Mode.
+useEffect(() => {
+	const listener = () => reportViewport(window.innerWidth);
+	window.addEventListener("resize", listener);
+	return () => window.removeEventListener("resize", listener);
+}, []);
+```
+
+Dependencies are not an optimization wish list. They describe every reactive value read by setup/cleanup. Suppressing the exhaustive-deps rule can preserve stale closures and connect cleanup to the wrong resource.
+
+### Stale Closure Example
+
+```jsx
+// Wrong: interval always sees the first count because count is omitted.
+useEffect(() => {
+	const id = setInterval(() => console.log(count), 1000);
+	return () => clearInterval(id);
+}, []);
+
+// Correct when the interval should reflect each committed count.
+useEffect(() => {
+	const id = setInterval(() => console.log(count), 1000);
+	return () => clearInterval(id);
+}, [count]);
+```
+
+If recreating the interval is undesirable, redesign around a functional update, ref, or effect-event pattern appropriate to the actual requirement rather than lying about dependencies.
+
+## `useEffect` Lifecycle Timing
+
+`useEffect` is passive synchronization. It normally runs after React commits, often after the browser has painted. It is suitable for subscriptions, requests, analytics, storage coordination, and nonvisual third-party integrations.
+
+```mermaid
+stateDiagram-v2
+	[*] --> Setup: first committed dependency set
+	Setup --> Active
+	Active --> Cleanup: dependency changed
+	Cleanup --> Setup: establish next dependency set
+	Active --> FinalCleanup: component unmounted
+	FinalCleanup --> [*]
+	Setup --> Cleanup: Strict Mode development test
+```
+
+The lifecycle belongs to the synchronization process, not merely the component. A component can stay mounted while an effect repeatedly cleans up and restarts because one dependency changed.
+
+### Cancellable Request Example
+
+```jsx
+function UserProfile({ userId }) {
+	const [state, setState] = useState({ status: "loading", user: null, error: null });
+
+	useEffect(() => {
+		const controller = new AbortController();
+		setState({ status: "loading", user: null, error: null });
+
+		async function loadUser() {
+			try {
+				const response = await fetch(`/api/users/${userId}`, {
+					signal: controller.signal,
+				});
+				if (!response.ok) throw new Error(`HTTP ${response.status}`);
+				const user = await response.json();
+				setState({ status: "succeeded", user, error: null });
+			} catch (error) {
+				if (error.name !== "AbortError") {
+					setState({ status: "failed", user: null, error });
+				}
+			}
+		}
+
+		loadUser();
+		return () => controller.abort();
+	}, [userId]);
+
+	if (state.status === "loading") return <Spinner />;
+	if (state.status === "failed") return <p role="alert">Unable to load user.</p>;
+	return <UserCard user={state.user} />;
+}
+```
+
+Cancellation prevents an obsolete request from continuing to consume resources or committing stale data. Production applications with shared server state usually benefit from RTK Query or another data layer rather than repeating request lifecycle logic in components.
+
+## `useLayoutEffect` Lifecycle Timing
+
+`useLayoutEffect` has the same dependency/cleanup model as `useEffect`, but setup runs synchronously after DOM mutation and before the browser paints. It is intended for layout measurement or visual correction that cannot tolerate one frame of incorrect geometry.
+
+```jsx
+import { useLayoutEffect, useRef, useState } from "react";
+
+function Tooltip({ targetRect, children }) {
+	const tooltipRef = useRef(null);
+	const [height, setHeight] = useState(0);
+
+	useLayoutEffect(() => {
+		const nextHeight = tooltipRef.current.getBoundingClientRect().height;
+		setHeight(nextHeight);
+	}, [children]);
+
+	return (
+		<div
+			ref={tooltipRef}
+			style={{ position: "fixed", top: targetRect.top - height }}
+		>
+			{children}
+		</div>
+	);
+}
+```
+
+React first commits a measurable tooltip, the layout effect reads its geometry, and a synchronous corrective render occurs before paint. This avoids a visible jump but delays painting. Use passive effects for all work that does not require this timing.
+
+```mermaid
+sequenceDiagram
+	participant R as React render
+	participant D as DOM commit
+	participant L as useLayoutEffect
+	participant B as Browser paint
+	participant E as useEffect
+	R->>D: Apply host mutations
+	D->>L: Cleanup previous and run new layout setup
+	L-->>R: Optional synchronous correction
+	R->>D: Commit correction if queued
+	D->>B: Paint final frame
+	B->>E: Run passive cleanup and setup
+```
+
+## When No Effect Is Needed
+
+Effects are frequently overused. Do not use an effect for pure derived data, event-specific work, or resetting an entire identity.
+
+```jsx
+// Wrong: adds an unnecessary commit and can show stale data briefly.
+useEffect(() => {
+	setFullName(`${firstName} ${lastName}`);
+}, [firstName, lastName]);
+
+// Correct: derive during render.
+const fullName = `${firstName} ${lastName}`;
+```
+
+```jsx
+// Wrong: an effect observes state to infer the user just submitted.
+useEffect(() => {
+	if (submitted) ordersApi.create(order);
+}, [submitted, order]);
+
+// Correct: the submit event owns the action.
+async function handleSubmit(event) {
+	event.preventDefault();
+	await ordersApi.create(order);
+}
+```
+
+Removing unnecessary effects reduces render chains, synchronization bugs, and memory complexity.
+
+## Error Boundaries
+
+An error boundary is a class component that catches errors thrown while rendering descendants, in descendant constructors, and in descendant lifecycle methods. It commits fallback UI instead of leaving a corrupted subtree.
+
+```mermaid
+flowchart TD
+	CH[Child subtree renders] --> ER{Error thrown?}
+	ER -->|No| OK[Commit normal UI]
+	ER -->|Yes| AN[Find nearest ancestor boundary]
+	AN --> DS[getDerivedStateFromError]
+	DS --> FB[Render and commit fallback]
+	FB --> DC[componentDidCatch reports details]
+	DC --> RT{User retries?}
+	RT -->|Yes| NK[Reset boundary or change subtree key]
+	NK --> CH
+```
+
+### Production Error Boundary
 
 ```jsx
 class ErrorBoundary extends React.Component {
-	state = { failed: false };
-	static getDerivedStateFromError() { return { failed: true }; }
-	componentDidCatch(error, info) { monitoring.capture(error, info); }
-	render() { return this.state.failed ? <Fallback /> : this.props.children; }
+	state = { error: null, resetKey: 0 };
+
+	static getDerivedStateFromError(error) {
+		return { error };
+	}
+
+	componentDidCatch(error, info) {
+		monitoring.captureException(error, {
+			componentStack: info.componentStack,
+			feature: this.props.feature,
+		});
+	}
+
+	handleRetry = () => {
+		this.setState(({ resetKey }) => ({ error: null, resetKey: resetKey + 1 }));
+	};
+
+	render() {
+		if (this.state.error) {
+			return <Fallback onRetry={this.handleRetry} />;
+		}
+
+		return <React.Fragment key={this.state.resetKey}>{this.props.children}</React.Fragment>;
+	}
 }
 ```
 
-**Mistakes:** missing cleanup, unconditional state-setting effects, suppressed dependencies, layout effects for nonvisual work, and treating `useEffect([])` as a guaranteed once-only command. **Assignment:** implement a cancellable room subscription and route-level boundary. **Interview answer:** an effect is not `componentDidMount`; it declares synchronization for reactive dependencies and must mirror acquisition with cleanup.
+Boundaries do not catch:
+
+- Errors thrown in event handlers (use `try/catch` or rejected-state handling)
+- Arbitrary asynchronous callbacks and promise rejections
+- Server/API error responses unless rendering code throws them deliberately
+- Errors thrown inside the boundary itself
+- Errors during server rendering for that same boundary instance
+
+Place boundaries around routes and independently recoverable widgets. A single root boundary prevents a blank application but cannot preserve unaffected regions when one small widget fails.
+
+## Lifecycle Identity and Remounting
+
+A component unmounts and mounts again when its identity changes because of type, key, or tree removal.
+
+```jsx
+function CustomerPage({ customerId }) {
+	return <CustomerForm key={customerId} customerId={customerId} />;
+}
+```
+
+When the ID changes:
+
+1. The old form's layout/passive cleanup runs.
+2. Its local draft state is discarded.
+3. React creates a new form identity with fresh hook state.
+4. New host output commits.
+5. New effects establish synchronization.
+
+This is useful for deliberate reset. Accidental dynamic keys create repeated requests, lost focus, destroyed input drafts, and unnecessary allocation.
+
+## Class vs Function Lifecycle Comparison
+
+| Requirement | Class pattern | Function pattern |
+|---|---|---|
+| Initialize local state | constructor/class field | `useState` or `useReducer` initializer |
+| Render output | `render()` | component function return |
+| Subscribe after commit | `componentDidMount` | `useEffect` |
+| Replace subscription on prop change | compare in `componentDidUpdate` | dependency-driven effect cleanup/setup |
+| Release subscription | `componentWillUnmount` | effect cleanup |
+| Measure before paint | snapshot/did-update combination | `useLayoutEffect` |
+| Skip expensive render | `PureComponent`/`shouldComponentUpdate` | `memo` after profiling |
+| Catch descendant render failure | error-boundary class | class boundary/library wrapper |
+| Reuse stateful behavior | render props/HOC/helper class | custom hook |
+
+Hooks do not make lifecycle disappear. They organize related setup and cleanup together, while class methods organize work by lifecycle phase.
+
+## Memory Changes Across the Lifecycle
+
+```mermaid
+flowchart TB
+	M[Mount] --> A[Allocate Fiber, hook/class state, closures, host nodes]
+	A --> S[Effect setup adds external references]
+	S --> U[Updates create snapshots and replace retained values]
+	U --> C[Dependency cleanup releases old external references]
+	C --> S
+	U --> X[Unmount]
+	X --> FC[Final cleanup and ref detachment]
+	FC --> G[Unreachable objects become GC eligible]
+```
+
+Common retainers include event targets, timers, observers, subscriptions, unresolved requests, query caches, and third-party widgets. React can remove its tree references, but it cannot automatically unsubscribe from an external API that still holds a callback.
+
+## Lifecycle Performance
+
+- Rendering is JavaScript work even when commit makes no DOM changes.
+- A layout effect blocks paint and may force synchronous layout when reading geometry.
+- An effect that immediately sets state adds another render and commit.
+- Repeated mount/unmount destroys caches, DOM state, focus, and subscriptions.
+- Broad parent state can update many children and run their render calculations.
+- Cleanup/setup churn can be costly for sockets, observers, media streams, and widgets.
+- Strict Mode development behavior should reveal defects, not be used for production timing measurements.
+
+### Optimized Subscription Ownership
+
+```jsx
+function Dashboard({ selectedRoomId }) {
+	return (
+		<DashboardLayout>
+			<StaticNavigation />
+			<ChatRoom roomId={selectedRoomId} />
+		</DashboardLayout>
+	);
+}
+```
+
+Keep the subscription in the narrow `ChatRoom` owner rather than the entire dashboard. Room updates then affect a smaller render subtree, and cleanup responsibility remains near acquisition.
+
+## Real-World Lifecycle Scenarios
+
+| Domain | Mount | Update | Unmount/cleanup |
+|---|---|---|---|
+| E-commerce | Load or subscribe to cart state | Product/cart identity changes | Cancel obsolete requests |
+| Student management | Initialize selected student workspace | Student ID or filters change | Release observers and drafts |
+| Banking | Establish secure session/status listener | Account or transfer state changes | Clear sensitive timers/subscriptions |
+| CRM | Connect lead activity stream | Selected lead changes | Disconnect previous lead stream |
+| Dashboard | Initialize charts after host commit | Data/size/theme changes | Destroy chart instances and observers |
+| HRMS | Load leave workflow | Employee or policy changes | Cancel validation and upload work |
+| Food ordering | Open restaurant/menu context | Restaurant changes | Reset basket according to business rule |
+| Chat | Subscribe to room | Room identity changes | Unsubscribe and release callbacks |
+| Social media | Observe feed sentinel | Filter/account changes | Disconnect observer and abort pages |
+
+## Common Mistakes and Production Best Practices
+
+| Mistake | Result | Production correction |
+|---|---|---|
+| Side effect in constructor/render | Repeats during discarded render work | Move to event or effect/did-mount |
+| Missing cleanup | Duplicate callbacks and retained memory | Mirror every acquired resource |
+| Unconditional update in did-update/effect | Infinite or excessive render loop | Compare dependencies or derive during render |
+| Empty dependency array used to silence lint | Stale closure and wrong resource | Include dependencies or restructure ownership |
+| One effect handles unrelated systems | Coupled restart and difficult cleanup | Split by synchronization concern |
+| Layout effect for network/analytics | Blocks paint unnecessarily | Use passive effect/data layer |
+| Random key to "refresh" component | Repeated remount, lost state/focus | Stable identity; explicit reset only when required |
+| Root-only error boundary | Small failure replaces entire app | Add route/widget recovery boundaries |
+| Manual class bailout with incomplete comparison | Stale UI | Preserve correctness; optimize measured paths |
+
+Production guidance:
+
+- Treat render as a pure calculation and commit APIs as integration points.
+- Pair setup and cleanup in the same conceptual concern.
+- Use dependency arrays as correctness declarations.
+- Cancel obsolete requests and ignore expected cancellation errors.
+- Prefer explicit status state over ambiguous booleans.
+- Use layout effects only for pre-paint visual requirements.
+- Preserve or reset identity deliberately through type, position, and key.
+- Place boundaries according to recovery scope and report errors with release context.
+- Profile mount/update churn on production builds and representative devices.
 
 ---
 
