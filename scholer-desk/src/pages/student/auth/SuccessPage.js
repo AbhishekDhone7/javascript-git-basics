@@ -11,8 +11,8 @@ function SuccessPage() {
         <div style={{fontSize:'3rem'}}>✅</div>
         <h2>Operation Successful</h2>
         <p>Your request has been processed successfully. You can now proceed to your dashboard using your updated credentials.</p>
-        <Link to="/login"><AppButton>Return to Login</AppButton></Link>
-        <p className="auth-footer">Having trouble? <a href="#support">Contact Support</a></p>
+        <AppButton to="/login">Return to Login</AppButton>
+        <p className="auth-footer">Having trouble? <Link to="/support">Contact Support</Link></p>
       </div>
       <AppFooter compact />
     </section>

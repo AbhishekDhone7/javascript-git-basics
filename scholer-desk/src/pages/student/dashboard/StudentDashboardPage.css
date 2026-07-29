@@ -1,6 +1,6 @@
 .student-dashboard { display: grid; grid-template-columns: 1fr 390px; gap: 18px; }
 .student-dashboard .welcome { grid-column: 1 / 2; padding: 32px; background: linear-gradient(145deg, #1d5bcf, #2258ba); color:#fff; }
-.student-dashboard .welcome span { background:#4b7de0; padding:8px 12px; border-radius:999px; }
+.student-dashboard .welcome span { display:inline-block; width:max-content; max-width:100%; background:#4b7de0; padding:8px 12px; border-radius:999px; white-space:nowrap; }
 .student-dashboard .welcome h1 { margin:14px 0; color:#fff; }
 .student-dashboard .welcome p { color:#d8e8ff; max-width:800px; }
 .student-dashboard .welcome > div { margin-top:16px; display:flex; gap:14px; }
@@ -19,5 +19,9 @@
 @media (max-width: 900px) {
   .student-dashboard { grid-template-columns: 1fr; }
   .student-dashboard .welcome > div { flex-direction:column; }
+  .student-dashboard .welcome span { font-size:.84rem; }
   .student-dashboard .activity, .student-dashboard .welcome { grid-column:auto; }
+  .student-dashboard .activity header { display:grid; grid-template-columns:minmax(0, 1fr) auto; gap:8px; padding:18px; }
+  .student-dashboard .activity header h2 { font-size:1.8rem; }
+  .student-dashboard .activity header .app-button { height:auto; padding:8px; font-size:.9rem; }
 }

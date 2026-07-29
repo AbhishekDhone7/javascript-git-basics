@@ -4,22 +4,27 @@
 @media (max-width: 900px) {
   .mobile-bottom-nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     background: #d5e3ff;
     border-top: 1px solid var(--border);
-    padding: 10px 10px 14px;
-    z-index: 20;
+    padding: 8px 8px calc(10px + env(safe-area-inset-bottom));
+    z-index: 1000;
+    isolation: isolate;
+    box-shadow: 0 -6px 18px rgba(21, 52, 105, .12);
   }
+  .mobile-bottom-nav.student { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .mobile-bottom-nav a {
     text-align: center;
-    padding: 10px 8px;
+    min-width: 0;
+    padding: 10px 2px;
     color: #3f4d67;
     border-radius: 14px;
-    font-size: 0.95rem;
+    font-size: 0.74rem;
+    white-space: nowrap;
   }
   .mobile-bottom-nav a.active {
     background: var(--primary);

@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import AppButton from '../../components/buttons/AppButton';
 import './NotFoundPage.css';
 
@@ -8,7 +7,7 @@ function NotFoundPage() {
     <section className="not-found-page">
       <h1>404</h1>
       <p>Page not found.</p>
-      <Link to="/"><AppButton>Return Home</AppButton></Link>
+      <AppButton to="/">Return Home</AppButton>
     </section>
   );
 }

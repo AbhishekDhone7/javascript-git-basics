@@ -1,0 +1,4 @@
+.data-table-wrap { overflow:auto; border:1px solid var(--border); border-radius:14px; }
+.data-table { width:100%; border-collapse:collapse; background:#fff; }
+.data-table th,.data-table td { text-align:left; padding:12px; border-bottom:1px solid #dce5f8; }
+.data-table thead th { background:#edf3ff; color:#314669; font-weight:600; }

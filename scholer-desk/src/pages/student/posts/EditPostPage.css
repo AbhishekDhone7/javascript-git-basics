@@ -1,0 +1,7 @@
+.edit-post-page .form-card { padding:20px; display:grid; gap:14px; }
+.edit-post-page .textarea-wrap { display:grid; gap:8px; }
+.edit-post-page .textarea-wrap label { font-size:1.8rem; font-weight:600; color:var(--text-900); }
+.edit-post-page textarea { width:100%; min-height:260px; border:1px solid var(--border); border-radius:14px; background:#f6f9ff; padding:14px; resize:vertical; font:inherit; }
+.edit-post-page .meta { color:var(--text-700); }
+.edit-post-page .actions { display:flex; gap:10px; }
+@media (max-width:900px){ .edit-post-page .actions { flex-direction:column; } }

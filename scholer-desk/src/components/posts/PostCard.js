@@ -1,9 +1,10 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './PostCard.css';
 
-function PostCard({ title, description, author, time, likes, comments, category, image }) {
-  return (
-    <article className="feed-post-card">
+function PostCard({ title, description, author, time, likes, comments, category, image, to }) {
+  const content = (
+    <>
       <header>
         <div className="author-row">
           <img src={author?.profileImage || 'https://i.pravatar.cc/100?img=40'} alt={author?.name || 'user'} />
@@ -21,8 +22,12 @@ function PostCard({ title, description, author, time, likes, comments, category,
         <div className="meta">{likes} likes · {comments} comments</div>
         <span className="tag">{category}</span>
       </footer>
-    </article>
+    </>
   );
+
+  return to
+    ? <Link className="feed-post-card" to={to}>{content}</Link>
+    : <article className="feed-post-card">{content}</article>;
 }
 
 export default PostCard;

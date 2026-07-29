@@ -4,6 +4,7 @@ import comments from '../mock/comments.json';
 import categories from '../mock/categories.json';
 import notifications from '../mock/notifications.json';
 import reports from '../mock/reports.json';
+import tags from '../mock/tags.json';
 
 export const mockUsers = users;
 export const mockPosts = posts;
@@ -11,6 +12,7 @@ export const mockComments = comments;
 export const mockCategories = categories;
 export const mockNotifications = notifications;
 export const mockReports = reports;
+export const mockTags = tags;
 
 export const getUserById = (userId) => users.find((u) => u.id === userId);
 export const getCategoryById = (categoryId) => categories.find((c) => c.id === categoryId);

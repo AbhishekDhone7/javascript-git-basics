@@ -16,8 +16,8 @@ function StudentDashboardPage() {
           <h1>Hello, Alex Johnson</h1>
           <p>Your academic portfolio is growing. You've published 3 new posts this week and received 12 new comments.</p>
           <div>
-            <AppButton variant="outline">View All Posts</AppButton>
-            <AppButton>Manage Profile</AppButton>
+            <AppButton variant="outline" to="/posts">View All Posts</AppButton>
+            <AppButton to="/profile">Manage Profile</AppButton>
           </div>
         </div>
         <aside className="stat-grid">
@@ -26,7 +26,7 @@ function StudentDashboardPage() {
           <StatCard title="Drafts" value="2" />
         </aside>
         <section className="activity surface-card">
-          <header><h2>Recent Activity</h2><a href="#history">View History</a></header>
+          <header><h2>Recent Activity</h2><AppButton variant="ghost" to="/notifications">View History</AppButton></header>
           {recent.map((item) => (
             <article key={item.id}>
               <img src={item.author?.profileImage} alt={item.author?.name} />
@@ -44,7 +44,7 @@ function StudentDashboardPage() {
           <div className="meter"><span style={{width:'78%'}} /></div>
           <p>Engagement Rate <b>4.8%</b></p>
           <div className="meter"><span style={{width:'52%'}} /></div>
-          <AppButton variant="outline">Detailed Analytics</AppButton>
+          <AppButton variant="outline" to="/profile">View Portfolio</AppButton>
         </section>
       </section>
       <AppFooter />

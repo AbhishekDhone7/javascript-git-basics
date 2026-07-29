@@ -1,0 +1,36 @@
+.admin-settings-page {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-settings-page .block {
+  padding: 20px;
+}
+
+.admin-settings-page .block h2 {
+  margin-bottom: 10px;
+}
+
+.admin-settings-page .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid #dce5f8;
+}
+
+.admin-settings-page .row:first-of-type {
+  border-top: none;
+}
+
+.admin-settings-page .actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .admin-settings-page .actions {
+    flex-direction: column;
+  }
+}

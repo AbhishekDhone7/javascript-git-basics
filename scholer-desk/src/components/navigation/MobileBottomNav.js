@@ -12,13 +12,14 @@ function MobileBottomNav({ section, active }) {
       ]
     : [
         { key: 'posts', label: 'Posts', to: '/posts' },
+        { key: 'create', label: 'Create', to: '/posts/create' },
         { key: 'dashboard', label: 'Dashboard', to: '/dashboard' },
         { key: 'profile', label: 'Profile', to: '/profile' },
         { key: 'settings', label: 'Settings', to: '/settings' }
       ];
 
   return (
-    <nav className="mobile-bottom-nav">
+    <nav className={`mobile-bottom-nav ${section === 'admin' ? 'admin' : 'student'}`}>
       {links.map((item) => (
         <Link key={item.key} className={active === item.key ? 'active' : ''} to={item.to}>{item.label}</Link>
       ))}

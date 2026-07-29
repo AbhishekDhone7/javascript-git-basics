@@ -1,0 +1,10 @@
+.component-library-page { padding: 28px 0 46px; display:grid; gap:14px; }
+.component-library-page > header { text-align:center; display:grid; gap:6px; }
+.component-library-page > header h1 { color:var(--primary); }
+.component-library-page > header a { color:var(--primary); text-decoration:underline; }
+.component-library-page .block { padding:18px; }
+.component-library-page .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.component-library-page .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.component-library-page .grid.two { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.component-library-page .stack { display:grid; gap:8px; }
+@media (max-width:900px){ .component-library-page .form-grid, .component-library-page .grid.two { grid-template-columns:1fr; } }

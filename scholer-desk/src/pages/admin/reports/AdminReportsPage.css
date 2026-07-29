@@ -1,0 +1,8 @@
+.admin-reports-page .cards { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:10px; }
+.admin-reports-page .cards article { padding:18px; }
+.admin-reports-page .cards h3 { font-size:2.8rem; }
+.admin-reports-page .table-wrap { margin-top:14px; overflow:auto; }
+.admin-reports-page table { width:100%; border-collapse:collapse; }
+.admin-reports-page th,.admin-reports-page td{ text-align:left; padding:12px; border-bottom:1px solid #dce5f8; text-transform:capitalize; }
+.admin-reports-page td button { border:1px solid var(--primary); border-radius:6px; padding:6px 10px; background:#fff; color:var(--primary); cursor:pointer; }
+@media (max-width:900px){ .admin-reports-page .cards { grid-template-columns:1fr 1fr; } .admin-reports-page table { min-width:640px; } }

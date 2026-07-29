@@ -5,6 +5,7 @@
 .profile-page .score { padding:20px; background:#273a56; color:#d8e8ff; }
 .profile-page .score strong { font-size:2.2rem; color:#fff; }
 .profile-page .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+.profile-page .profile-post-link { color:inherit; text-decoration:none; }
 .profile-page .grid article img { width:100%; height:170px; object-fit:cover; border-top-left-radius:18px; border-top-right-radius:18px; }
 .profile-page .grid .pad { padding:16px; }
 .profile-page .grid span { text-transform:capitalize; background:#d8e8ff; padding:6px 10px; border-radius:999px; }

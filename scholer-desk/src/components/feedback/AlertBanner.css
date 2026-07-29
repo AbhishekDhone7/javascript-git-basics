@@ -1,0 +1,4 @@
+.alert-banner { border-radius:12px; padding:12px 14px; font-weight:500; }
+.alert-info { background:#e5efff; color:#2f4f82; }
+.alert-success { background:#e5f8ec; color:#0a7a3b; }
+.alert-danger { background:#ffecec; color:#c51b1b; }

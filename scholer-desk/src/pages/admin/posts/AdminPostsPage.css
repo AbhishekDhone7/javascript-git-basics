@@ -1,0 +1,10 @@
+.admin-posts-page .top-cards { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; margin-top:10px; }
+.admin-posts-page .top-cards article { padding:18px; }
+.admin-posts-page .top-cards article h3 { font-size:3rem; }
+.admin-posts-page .top-cards article.dark { background:#263851; color:#e7efff; }
+.admin-posts-page .table-wrap { margin-top:14px; overflow:auto; }
+.admin-posts-page table { width:100%; border-collapse:collapse; }
+.admin-posts-page th,.admin-posts-page td { padding:12px; border-bottom:1px solid #dce5f8; text-align:left; text-transform:capitalize; }
+.admin-posts-page .table-actions { display:flex; gap:8px; align-items:center; }
+.admin-posts-page .table-actions button, .admin-posts-page .table-actions a { border:1px solid var(--border); border-radius:6px; padding:6px 9px; background:#fff; color:var(--primary); cursor:pointer; text-decoration:none; }
+@media (max-width:900px){ .admin-posts-page .top-cards { grid-template-columns:1fr; } .admin-posts-page table{ min-width:720px; } }

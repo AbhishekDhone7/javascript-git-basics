@@ -1,0 +1,6 @@
+.expanded-library-page { padding:28px 0 44px; display:grid; gap:14px; }
+.expanded-library-page h1 { color:var(--primary); }
+.expanded-library-page .chips { display:flex; gap:8px; flex-wrap:wrap; }
+.expanded-library-page .chips span { background:#dce8ff; color:#2d4f87; padding:8px 12px; border-radius:999px; }
+.expanded-library-page .section { padding:18px; }
+.expanded-library-page .cta { display:flex; gap:10px; flex-wrap:wrap; }

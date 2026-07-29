@@ -10,6 +10,8 @@ function Sidebar({ section, active }) {
         { key: 'dashboard', label: 'Dashboard', to: '/admin/dashboard' },
         { key: 'students', label: 'Students', to: '/admin/students' },
         { key: 'posts', label: 'Posts', to: '/admin/posts' },
+        { key: 'categories', label: 'Categories', to: '/admin/categories' },
+        { key: 'analytics', label: 'Analytics', to: '/admin/analytics' },
         { key: 'reports', label: 'Reports', to: '/admin/reports' },
         { key: 'settings', label: 'Settings', to: '/admin/settings' }
       ]
@@ -33,7 +35,9 @@ function Sidebar({ section, active }) {
         ))}
       </nav>
       <div className="sidebar-bottom">
-        <AppButton className="full" variant="primary">+ Create Post</AppButton>
+        <AppButton className="full" variant="primary" to={admin ? '/admin/posts' : '/posts/create'}>
+          {admin ? 'Manage Posts' : '+ Create Post'}
+        </AppButton>
       </div>
     </div>
   );

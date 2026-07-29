@@ -26,13 +26,18 @@
 .sd-topbar .actions img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
 @media (max-width: 900px) {
   .sd-topbar {
-    grid-template-columns: auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "logo actions" "search search";
     gap: 8px;
     height: auto;
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
   }
-  .sd-topbar .logo { color: var(--primary); font-size: 2rem; font-weight: 700; }
-  .sd-topbar .search-wrap { grid-column: 1 / -1; }
+  .sd-topbar nav.desktop-only { display:none; }
+  .sd-topbar .logo { grid-area:logo; min-width:0; color: var(--primary); font-size: 1.55rem; font-weight: 700; }
+  .sd-topbar .search-wrap { grid-area:search; min-width:0; }
+  .sd-topbar .actions { grid-area:actions; gap:12px; }
+  .sd-topbar .actions a:nth-child(2) { display:none; }
+  .sd-topbar .actions a { display:flex; align-items:center; }
   .sd-topbar input { width: 100%; height: 52px; }
 }

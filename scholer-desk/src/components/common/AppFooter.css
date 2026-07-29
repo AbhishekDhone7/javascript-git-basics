@@ -15,6 +15,6 @@
 .app-footer.compact { background: transparent; border-top: none; justify-content: center; text-align: center; }
 .app-footer.compact nav { justify-content: center; }
 @media (max-width: 900px) {
-  .app-footer { padding: 18px 14px 96px; display: grid; }
+  .app-footer { width:100%; min-width:0; padding: 18px 14px 126px; display: grid; }
   .app-footer nav { gap: 14px; }
 }

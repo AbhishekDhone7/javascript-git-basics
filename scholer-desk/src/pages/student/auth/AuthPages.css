@@ -24,6 +24,8 @@
 .auth-divider:before,.auth-divider:after { content:''; position:absolute; top:50%; width:36%; height:1px; background:var(--border); }
 .auth-divider:before{left:0;} .auth-divider:after{right:0;}
 .auth-footer { text-align: center; color: var(--text-500); }
+.auth-error { margin:0; padding:10px 12px; border-radius:8px; background:#fff0f0; color:#a61b1b; }
+.link-button { border:0; padding:0; background:transparent; color:var(--primary); cursor:pointer; font:inherit; text-decoration:underline; }
 .otp-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
 .otp-grid input { height: 72px; border: 1px solid var(--border); border-radius: 14px; text-align: center; font-size: 1.7rem; }
 @media (max-width: 900px) {

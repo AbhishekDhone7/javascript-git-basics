@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import AppShell from '../../../components/layout/AppShell';
 import StatCard from '../../../components/cards/StatCard';
 import AppFooter from '../../../components/common/AppFooter';
@@ -23,10 +24,10 @@ function StudentProfilePage() {
         <div className="stats"><StatCard title="Total Posts" value="42" /><StatCard title="Likes Received" value="1.2k" /><article className="score surface-card"><h3>Scholar Score</h3><strong>984 pts</strong></article></div>
         <div className="grid">
           {myPosts.map((post) => (
-            <article key={post.id} className="surface-card">
-              <img src={post.images?.[0]} alt={post.title} />
-              <div className="pad"><span>{post.status}</span><h3>{post.title}</h3><p>{post.description}</p></div>
-            </article>
+            <Link className="profile-post-link" key={post.id} to={`/posts/${post.id}`}><article className="surface-card">
+                <img src={post.images?.[0]} alt={post.title} />
+                <div className="pad"><span>{post.status}</span><h3>{post.title}</h3><p>{post.description}</p></div>
+              </article></Link>
           ))}
         </div>
       </section>

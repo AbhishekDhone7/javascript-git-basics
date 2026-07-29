@@ -1,0 +1,7 @@
+.user-badge { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; border:1px solid var(--border); background:#fff; }
+.user-badge img { width:42px; height:42px; border-radius:50%; object-fit:cover; }
+.user-badge h4 { margin:0; font-size:1rem; }
+.user-badge p { margin:2px 0 0; font-size:.82rem; color:var(--text-500); }
+.user-badge span { margin-left:auto; text-transform:capitalize; padding:4px 10px; border-radius:999px; font-size:.78rem; }
+.user-badge span.active { background:#e3f7ea; color:#0b7a3d; }
+.user-badge span.inactive { background:#ffe9e9; color:#c51818; }

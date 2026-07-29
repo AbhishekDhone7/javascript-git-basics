@@ -1,0 +1,4 @@
+.modal-backdrop { background:rgba(24,33,49,0.2); border:1px dashed var(--border); border-radius:16px; padding:20px; }
+.modal-dialog { background:#fff; border:1px solid var(--border); border-radius:14px; padding:20px; max-width:440px; }
+.modal-dialog h3 { margin:0 0 8px; }
+.modal-actions { margin-top:14px; display:flex; justify-content:flex-end; gap:10px; }

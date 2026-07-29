@@ -1,0 +1,3 @@
+.admin-analytics-page { display:grid; gap:14px; }
+.admin-analytics-page .chart-block { padding:18px; }
+.admin-analytics-page .chart-area { margin-top:10px; height:280px; border:1px solid #d9e4f8; border-radius:14px; background:linear-gradient(180deg,#f4f8ff,#ffffff); }

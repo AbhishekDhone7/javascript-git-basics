@@ -1,0 +1,14 @@
+.admin-students-page .table-wrap { padding:0; overflow:hidden; }
+.admin-students-page .add-student-form { display:grid; grid-template-columns:repeat(4,1fr) auto; gap:10px; padding:16px; margin-bottom:14px; }
+.admin-students-page .add-student-form h2 { grid-column:1 / -1; }
+.admin-students-page .add-student-form input { min-height:50px; border:1px solid var(--border); border-radius:10px; padding:0 12px; font:inherit; }
+.admin-students-page .toolbar { display:flex; gap:10px; padding:14px; border-bottom:1px solid var(--border); }
+.admin-students-page .toolbar input, .admin-students-page .toolbar select { height:50px; border:1px solid var(--border); border-radius:12px; background:#edf3ff; padding:0 14px; }
+.admin-students-page .toolbar input { flex:1; }
+.admin-students-page table { width:100%; border-collapse:collapse; }
+.admin-students-page th, .admin-students-page td { padding:14px; border-bottom:1px solid #dde6f8; text-align:left; }
+.admin-students-page td p { margin:4px 0 0; }
+.admin-students-page .ok, .admin-students-page .bad { padding:6px 12px; border-radius:999px; text-transform:capitalize; }
+.admin-students-page .ok { background:#e0f5e8; color:#0a7a3b; }
+.admin-students-page .bad { background:#ffe9e9; color:#c51919; }
+@media (max-width:900px){ .admin-students-page .add-student-form { grid-template-columns:1fr; } .admin-students-page .toolbar { display:grid; } .admin-students-page table { min-width:760px; } .admin-students-page .table-wrap { overflow:auto; } }

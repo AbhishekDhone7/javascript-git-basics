@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import LandingPage from '../pages/shared/LandingPage';
 import NotFoundPage from '../pages/shared/NotFoundPage';
+import InfoPage from '../pages/shared/InfoPage';
 import LoginPage from '../pages/student/auth/LoginPage';
 import RegisterPage from '../pages/student/auth/RegisterPage';
 import ForgotPasswordPage from '../pages/student/auth/ForgotPasswordPage';
@@ -12,12 +13,17 @@ import StudentDashboardPage from '../pages/student/dashboard/StudentDashboardPag
 import StudentPostsPage from '../pages/student/posts/StudentPostsPage';
 import CreatePostPage from '../pages/student/posts/CreatePostPage';
 import PostDetailsPage from '../pages/student/posts/PostDetailsPage';
+import EditPostPage from '../pages/student/posts/EditPostPage';
 import StudentProfilePage from '../pages/student/profile/StudentProfilePage';
 import StudentSettingsPage from '../pages/student/settings/StudentSettingsPage';
 import StudentNotificationsPage from '../pages/student/notifications/StudentNotificationsPage';
+import ComponentLibraryPage from '../pages/shared/ComponentLibraryPage';
+import ExpandedComponentLibraryPage from '../pages/shared/ExpandedComponentLibraryPage';
 import AdminDashboardPage from '../pages/admin/dashboard/AdminDashboardPage';
 import AdminStudentsPage from '../pages/admin/students/AdminStudentsPage';
 import AdminPostsPage from '../pages/admin/posts/AdminPostsPage';
+import AdminCategoriesPage from '../pages/admin/categories/AdminCategoriesPage';
+import AdminAnalyticsPage from '../pages/admin/analytics/AdminAnalyticsPage';
 import AdminReportsPage from '../pages/admin/reports/AdminReportsPage';
 import AdminSettingsPage from '../pages/admin/settings/AdminSettingsPage';
 
@@ -31,21 +37,29 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/email-verification" element={<EmailVerificationPage />} />
       <Route path="/success" element={<SuccessPage />} />
+      <Route path="/privacy" element={<InfoPage page="privacy" />} />
+      <Route path="/terms" element={<InfoPage page="terms" />} />
+      <Route path="/support" element={<InfoPage page="support" />} />
+      <Route path="/api-docs" element={<InfoPage page="api" />} />
+      <Route path="/component-library" element={<ComponentLibraryPage />} />
+      <Route path="/component-library/expanded" element={<ExpandedComponentLibraryPage />} />
 
       <Route path="/dashboard" element={<StudentDashboardPage />} />
       <Route path="/posts" element={<StudentPostsPage />} />
       <Route path="/posts/create" element={<CreatePostPage />} />
       <Route path="/posts/:id" element={<PostDetailsPage />} />
-      <Route path="/posts/:id/edit" element={<CreatePostPage />} />
+      <Route path="/posts/:id/edit" element={<EditPostPage />} />
       <Route path="/profile" element={<StudentProfilePage />} />
       <Route path="/settings" element={<StudentSettingsPage />} />
       <Route path="/notifications" element={<StudentNotificationsPage />} />
 
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-      <Route path="/admin/login" element={<LoginPage />} />
+      <Route path="/admin/login" element={<LoginPage admin />} />
       <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
       <Route path="/admin/students" element={<AdminStudentsPage />} />
       <Route path="/admin/posts" element={<AdminPostsPage />} />
+      <Route path="/admin/categories" element={<AdminCategoriesPage />} />
+      <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
       <Route path="/admin/reports" element={<AdminReportsPage />} />
       <Route path="/admin/settings" element={<AdminSettingsPage />} />
 

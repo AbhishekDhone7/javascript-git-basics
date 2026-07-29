@@ -12,7 +12,7 @@ function LandingPage() {
     <div className="landing-page">
       <header className="landing-topbar">
         <strong>ScholarDesk</strong>
-        <nav className="desktop-only"><a href="#features">Dashboard</a><a href="#pub">Posts</a><a href="#cta">Reports</a></nav>
+        <nav className="desktop-only"><Link to="/dashboard">Dashboard</Link><Link to="/posts">Posts</Link><Link to="/admin/reports">Reports</Link></nav>
         <div><Link to="/login">Login</Link></div>
       </header>
 
@@ -22,8 +22,8 @@ function LandingPage() {
           <h1>Empowering <span>Student Voices</span> in Every Campus</h1>
           <p>The definitive platform for managing student-led publications, research sharing, and collaborative academic discussions.</p>
           <div className="hero-actions">
-            <Link to="/register"><AppButton>Get Started</AppButton></Link>
-            <Link to="/posts"><AppButton variant="outline">Browse Posts</AppButton></Link>
+            <AppButton to="/register">Get Started</AppButton>
+            <AppButton to="/posts" variant="outline">Browse Posts</AppButton>
           </div>
         </div>
         <img src="https://picsum.photos/seed/landing-hero/900/560" alt="hero" />
@@ -70,7 +70,7 @@ function LandingPage() {
       <section id="cta" className="page-container cta surface-card">
         <h2>Ready to transform your campus discourse?</h2>
         <p>Join thousands of students already sharing their thoughts and research.</p>
-        <div><Link to="/register"><AppButton variant="outline">Create Account</AppButton></Link><Link to="/dashboard"><AppButton>Schedule Demo</AppButton></Link></div>
+        <div><AppButton to="/register" variant="outline">Create Account</AppButton><AppButton to="/dashboard">Open Demo</AppButton></div>
       </section>
 
       <AppFooter />

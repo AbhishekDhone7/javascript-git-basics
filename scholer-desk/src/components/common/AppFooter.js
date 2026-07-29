@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import './AppFooter.css';
 
 function AppFooter({ compact = false }) {
@@ -9,10 +10,10 @@ function AppFooter({ compact = false }) {
         <p>© 2024 ScholarDesk Management System. All rights reserved.</p>
       </div>
       <nav>
-        <a href="#privacy">Privacy Policy</a>
-        <a href="#terms">Terms of Service</a>
-        <a href="#support">Contact Support</a>
-        <a href="#api">API Documentation</a>
+        <Link to="/privacy">Privacy Policy</Link>
+        <Link to="/terms">Terms of Service</Link>
+        <Link to="/support">Contact Support</Link>
+        <Link to="/api-docs">API Documentation</Link>
       </nav>
     </footer>
   );
