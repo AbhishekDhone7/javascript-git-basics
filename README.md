@@ -148,3 +148,35 @@ Author: Abhishek Dhone
 
 Last updated: 2026-07-28
 
+## ScholarDesk Student Posts Management System
+
+The workspace now also includes [ScholarDesk](scholer-desk/README.md), a responsive React frontend for student publishing and campus administration workflows.
+
+### Project Location
+
+- Application: [scholer-desk/](scholer-desk/)
+- Project documentation: [scholer-desk/README.md](scholer-desk/README.md)
+- Student login: `http://localhost:3000/login`
+- Administrator login: `http://localhost:3000/admin/login`
+
+### Included Features
+
+- Student and administrator login flows
+- Student posts, profiles, notifications, and settings
+- Post creation, editing, filtering, and detail views
+- Administrator students, posts, categories, analytics, reports, and settings pages
+- Responsive desktop and mobile navigation
+- Mock datasets for local frontend testing
+
+### Run ScholarDesk
+
+```bash
+cd scholer-desk
+npm install
+npm start
+```
+
+All available student and administrator test credentials are documented in the [ScholarDesk README](scholer-desk/README.md#demo-login-credentials).
+
+ScholarDesk documentation updated: 2026-07-29
+
