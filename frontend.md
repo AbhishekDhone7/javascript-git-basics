@@ -10387,36 +10387,1227 @@ A professional configuration system makes public behavior explicit, validates ev
 
 [Previous: Environment](#module-12-environment-variables) | [Next: Vite](#module-14-vite)
 
-Webpack builds a dependency graph from one or more entries, transforms matching modules with loaders, lets plugins participate across compilation lifecycle hooks, and emits assets/chunks. Babel transforms syntax; it is not a bundler. `webpack-dev-server` serves memory output and HMR updates changed modules while preserving state when boundaries accept updates.
+## Introduction
+
+Webpack is a programmable module bundler. It begins with one or more entry modules, follows static and dynamic dependencies, transforms matching resources, optimizes modules and chunks, and emits deployable assets.
+
+Webpack's value is not merely concatenating files. It coordinates a complete asset pipeline across JavaScript, CSS, images, fonts, WebAssembly, and generated HTML while maintaining a graph that supports code splitting, caching, development updates, and production optimization.
 
 ```mermaid
 flowchart LR
- E[Entry] --> G[Module graph]
- G --> L[Loaders transform modules]
- L --> P[Plugins optimize compilation]
- P --> C[Chunks]
- C --> O[Hashed output assets]
+	ENTRY[Entry modules] --> GRAPH[Dependency graph]
+	GRAPH --> RESOLVE[Resolve requests]
+	RESOLVE --> LOAD[Load and transform modules]
+	LOAD --> OPT[Optimize modules and chunks]
+	OPT --> EMIT[Emit JavaScript, CSS, maps, and assets]
+	EMIT --> HOST[Web server or CDN]
 ```
+
+Webpack does not replace Babel, TypeScript, Sass, PostCSS, or a minifier. It orchestrates those capabilities through loaders and plugins.
+
+## Core Mental Model
+
+The most important Webpack concepts are distinct:
+
+| Concept | Responsibility |
+|---|---|
+| Entry | Starting point used to construct a dependency graph |
+| Module | A graph node such as JavaScript, CSS, JSON, or an image |
+| Resolver | Converts an import request into a concrete module resource |
+| Loader | Transforms one module's source into JavaScript or another recognized representation |
+| Plugin | Participates in compiler-wide lifecycle hooks |
+| Chunk | Group of modules produced for loading together |
+| Asset | File emitted to the output file system |
+| Runtime | Webpack bootstrap logic that loads and connects modules/chunks |
+| Compilation | One build of the current dependency graph |
+| Compiler | Long-lived build coordinator created from configuration |
+
+Modules and chunks are not synonyms. A module represents authored or generated code in the graph. A chunk is a delivery grouping chosen by entry points, dynamic imports, and optimization rules. One chunk commonly contains many modules.
+
+```mermaid
+flowchart TB
+	E[Entry] --> M1[Application module]
+	M1 --> M2[Header module]
+	M1 --> M3[Router module]
+	M3 --> M4[Lazy reports module]
+	M1 --> C1[Initial application chunk]
+	M2 --> C1
+	M3 --> C1
+	M4 --> C2[Asynchronous reports chunk]
+```
+
+## Build Lifecycle
+
+A simplified lifecycle is:
+
+1. Webpack reads and normalizes configuration.
+2. It creates a compiler and applies plugins.
+3. The compiler starts a compilation.
+4. Entry dependencies seed the module graph.
+5. Resolution identifies each requested resource.
+6. Matching loaders transform resource content.
+7. Webpack parses transformed modules and discovers dependencies.
+8. Optimization determines used exports, module IDs, chunks, and minimization.
+9. Assets are rendered and emitted.
+10. In watch mode, affected graph portions rebuild after changes.
+
+```mermaid
+sequenceDiagram
+	participant CLI as Webpack CLI/API
+	participant C as Compiler
+	participant P as Plugins
+	participant G as Compilation graph
+	participant F as Output file system
+	CLI->>C: Create compiler from configuration
+	C->>P: Apply plugin hooks
+	C->>G: Start compilation
+	G->>G: Resolve, load, parse dependencies
+	G->>P: Run optimization hooks
+	P-->>G: Modify chunks/assets/metadata
+	G->>F: Emit assets
+	F-->>CLI: Return stats and exit status
+```
+
+Plugins use the `tapable` hook system. Some hooks are synchronous, while others support callbacks or promises. A plugin must tap the correct lifecycle stage and complete asynchronous work correctly or the compilation can hang or emit incomplete output.
+
+## Configuration Anatomy
+
+Webpack configuration is executable JavaScript. Exporting a function allows command-line environment and argument values to select controlled behavior.
 
 ```js
 // webpack.config.js
+const path = require("node:path");
 const HtmlWebpackPlugin = require("html-webpack-plugin");
-module.exports = (_, argv) => ({
-	mode: argv.mode ?? "development",
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+module.exports = (environment, argv) => {
+	const production = argv.mode === "production";
+
+	return {
+		mode: production ? "production" : "development",
+		entry: path.resolve(__dirname, "src/main.jsx"),
+		output: {
+			path: path.resolve(__dirname, "dist"),
+			filename: production
+				? "assets/js/[name].[contenthash:8].js"
+				: "assets/js/[name].js",
+			chunkFilename: production
+				? "assets/js/[name].[contenthash:8].chunk.js"
+				: "assets/js/[name].chunk.js",
+			assetModuleFilename: "assets/media/[name].[contenthash:8][ext][query]",
+			publicPath: "/",
+			clean: true,
+		},
+		module: {
+			rules: [
+				{
+					test: /\.[jt]sx?$/,
+					exclude: /node_modules/,
+					use: "babel-loader",
+				},
+			],
+		},
+		resolve: {
+			extensions: [".tsx", ".ts", ".jsx", ".js"],
+		},
+		plugins: [
+			new HtmlWebpackPlugin({ template: "public/index.html" }),
+			production && new MiniCssExtractPlugin({
+				filename: "assets/css/[name].[contenthash:8].css",
+			}),
+		].filter(Boolean),
+		devtool: production ? "source-map" : "eval-cheap-module-source-map",
+	};
+};
+```
+
+Use `path.resolve` for file-system paths. `output.publicPath` is a browser URL prefix, not a disk path. Keep build mode and deployment environment separate as explained in Module 12.
+
+## Mode and Defaults
+
+`mode` selects a coordinated set of defaults:
+
+| Mode | Typical behavior |
+|---|---|
+| `development` | Readable module names, development definitions, faster diagnostics, no production minification |
+| `production` | Deterministic optimization, minification, used-export analysis, production definitions |
+| `none` | No mode-specific defaults; useful only when every decision is deliberate |
+
+Production mode enables optimization opportunities, but it does not configure caching headers, compression, HTTPS, source-map privacy, SPA rewrites, environment values, or monitoring. Those remain deployment responsibilities.
+
+## Entry Points
+
+A single-page React application commonly has one entry:
+
+```js
+module.exports = {
 	entry: "./src/main.jsx",
-	output: { filename: "assets/[name].[contenthash].js", clean: true },
-	module: { rules: [{ test: /\.jsx?$/, exclude: /node_modules/, use: "babel-loader" }] },
-	resolve: { extensions: [".js", ".jsx"] },
-	plugins: [new HtmlWebpackPlugin({ template: "./public/index.html" })],
-	devtool: argv.mode === "production" ? "source-map" : "eval-cheap-module-source-map",
-	optimization: { splitChunks: { chunks: "all" }, runtimeChunk: "single" },
-	devServer: { historyApiFallback: true, hot: true },
+};
+```
+
+Multiple independent pages can use an entry object:
+
+```js
+module.exports = {
+	entry: {
+		storefront: "./src/storefront.jsx",
+		admin: "./src/admin.jsx",
+	},
+};
+```
+
+Do not create separate entries merely to split one SPA. Dynamic `import()` expresses on-demand boundaries and lets Webpack share common dependencies. Multiple entries are appropriate when pages have distinct bootstraps or HTML documents.
+
+Entry descriptors support advanced properties such as `dependOn`, `filename`, and `runtime`:
+
+```js
+entry: {
+	shared: ["react", "react-dom"],
+	storefront: { import: "./src/storefront.jsx", dependOn: "shared" },
+	admin: { import: "./src/admin.jsx", dependOn: "shared" },
+}
+```
+
+Measure this structure against `splitChunks`; manual shared entries can create ordering and duplication problems when applied without evidence.
+
+## Module Resolution
+
+When Webpack sees `import Button from "@ui/Button"`, the resolver determines which file and package export the request represents.
+
+```mermaid
+flowchart TD
+	REQ[Import request] --> TYPE{Request type}
+	TYPE -->|relative| REL[Resolve from importing file]
+	TYPE -->|package| PKG[Search configured modules and package exports]
+	TYPE -->|alias| ALIAS[Apply exact or prefix alias]
+	REL --> EXT[Try explicit/configured extensions]
+	PKG --> COND[Evaluate exports conditions and fields]
+	ALIAS --> EXT
+	EXT --> FILE[Resolved resource]
+	COND --> FILE
+```
+
+```js
+const path = require("node:path");
+
+module.exports = {
+	resolve: {
+		extensions: [".tsx", ".ts", ".jsx", ".js", ".json"],
+		alias: {
+			"@app": path.resolve(__dirname, "src/app"),
+			"@shared": path.resolve(__dirname, "src/shared"),
+		},
+	},
+};
+```
+
+Aliases must match TypeScript, Jest, ESLint, and editor configuration. Keep the extension list focused; ambiguous files and aliases that bypass package public APIs make refactoring harder.
+
+Modern packages use the `exports` field to define public entry points and conditional variants. Deep imports outside exported paths may fail after dependency upgrades even when files still exist in `node_modules`.
+
+## Loaders
+
+Loaders transform individual matched modules. They run from right to left, or bottom to top when declared as separate `use` entries.
+
+```js
+module: {
+	rules: [
+		{
+			test: /\.scss$/,
+			use: [
+				"style-loader",
+				"css-loader",
+				"postcss-loader",
+				"sass-loader",
+			],
+		},
+	],
+}
+```
+
+```mermaid
+flowchart RL
+	SCSS[theme.scss] --> SASS[sass-loader: SCSS to CSS]
+	SASS --> POST[postcss-loader: compatibility transforms]
+	POST --> CSS[css-loader: imports and URLs to module]
+	CSS --> STYLE[style-loader: runtime style injection]
+	STYLE --> JS[Webpack JavaScript module]
+```
+
+Loader rules commonly use:
+
+| Property | Purpose |
+|---|---|
+| `test` | Include resources matching a condition |
+| `include` | Restrict processing to known paths |
+| `exclude` | Omit paths such as most dependencies |
+| `use` | Loader chain and options |
+| `oneOf` | Stop after the first matching rule |
+| `resourceQuery` | Match query suffixes such as `?raw` |
+| `issuer` | Match based on the importing module |
+| `type` | Select built-in module type or asset behavior |
+
+Prefer narrow `include` paths over broad transforms when possible. Some dependencies ship syntax that requires transpilation; include only those packages intentionally rather than processing all of `node_modules`.
+
+## Babel and React
+
+Babel parses and transforms JavaScript/JSX syntax. `babel-loader` connects Babel to Webpack.
+
+```js
+// babel.config.js
+module.exports = {
+	presets: [
+		[
+			"@babel/preset-env",
+			{
+				bugfixes: true,
+				modules: false,
+				useBuiltIns: "usage",
+				corejs: "3.40",
+			},
+		],
+		["@babel/preset-react", { runtime: "automatic" }],
+	],
+};
+```
+
+`modules: false` preserves ES modules for Webpack's static analysis. Browser targets should come from a shared Browserslist policy. Syntax transformation and polyfilling are different: Babel can rewrite syntax, while unsupported runtime APIs require appropriate polyfills or alternative code.
+
+For React Fast Refresh in a custom Webpack development setup, use the supported Babel plugin and Webpack plugin together, only in development. HMR alone can replace modules; Fast Refresh adds React-aware state preservation and component boundary handling.
+
+## TypeScript
+
+Two common strategies are:
+
+1. `ts-loader` compiles TypeScript through the TypeScript compiler.
+2. Babel or SWC strips TypeScript syntax quickly while a separate `tsc --noEmit` process performs type checking.
+
+```js
+module: {
+	rules: [
+		{
+			test: /\.tsx?$/,
+			include: path.resolve(__dirname, "src"),
+			use: {
+				loader: "babel-loader",
+				options: {
+					presets: [
+						["@babel/preset-env", { modules: false }],
+						["@babel/preset-react", { runtime: "automatic" }],
+						"@babel/preset-typescript",
+					],
+				},
+			},
+		},
+	],
+}
+```
+
+When transpilation does not type-check, CI must run `tsc --noEmit`. A successful bundle is not proof of type correctness.
+
+## Plugins
+
+Plugins operate across the compiler or compilation rather than transforming one resource.
+
+Common production plugins include:
+
+| Plugin | Responsibility |
+|---|---|
+| `HtmlWebpackPlugin` | Generates HTML and injects emitted assets |
+| `MiniCssExtractPlugin` | Extracts CSS into standalone files |
+| `CssMinimizerWebpackPlugin` | Minimizes CSS |
+| `DefinePlugin` | Replaces compile-time expressions |
+| `CopyWebpackPlugin` | Copies assets that should not enter the module graph |
+| `WebpackManifestPlugin` | Emits asset-name manifest for servers/deployment tools |
+| `BundleAnalyzerPlugin` | Visualizes module and chunk composition |
+
+A minimal custom plugin shows the lifecycle shape:
+
+```js
+class BuildMetadataPlugin {
+	apply(compiler) {
+		compiler.hooks.thisCompilation.tap("BuildMetadataPlugin", (compilation) => {
+			compilation.hooks.processAssets.tap(
+				{
+					name: "BuildMetadataPlugin",
+					stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_SUMMARIZE,
+				},
+				() => {
+					const body = JSON.stringify({
+						release: process.env.APP_RELEASE ?? "local",
+					});
+					compilation.emitAsset(
+						"build-metadata.json",
+						new compiler.webpack.sources.RawSource(body),
+					);
+				},
+			);
+		});
+	}
+}
+```
+
+Custom plugins should use documented hooks, stable Webpack APIs, deterministic output, and tests. Prefer an established plugin when one already solves the requirement.
+
+## CSS Architecture
+
+Development commonly injects styles for fast updates; production extracts CSS for parallel loading, caching, and Content Security Policy compatibility.
+
+```js
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+
+const styleLoader = production
+	? MiniCssExtractPlugin.loader
+	: "style-loader";
+
+module.exports = {
+	module: {
+		rules: [
+			{
+				test: /\.module\.css$/,
+				use: [
+					styleLoader,
+					{
+						loader: "css-loader",
+						options: {
+							modules: {
+								localIdentName: production
+									? "[hash:base64:6]"
+									: "[path][name]__[local]",
+							},
+							importLoaders: 1,
+						},
+					},
+					"postcss-loader",
+				],
+			},
+			{
+				test: /\.css$/,
+				exclude: /\.module\.css$/,
+				use: [styleLoader, "css-loader", "postcss-loader"],
+			},
+		],
+	},
+};
+```
+
+CSS imported by an asynchronous route can form a related asynchronous CSS asset. Test loading and flash behavior under slow networks. If packages mark all files side-effect-free incorrectly, CSS imports can disappear during production optimization.
+
+## Asset Modules
+
+Webpack 5 includes asset modules, reducing the need for legacy `file-loader`, `url-loader`, and `raw-loader`.
+
+```js
+module: {
+	rules: [
+		{
+			test: /\.(png|jpe?g|gif|webp|avif)$/i,
+			type: "asset",
+			parser: {
+				dataUrlCondition: { maxSize: 4 * 1024 },
+			},
+		},
+		{
+			test: /\.(woff2?|ttf)$/i,
+			type: "asset/resource",
+			generator: {
+				filename: "assets/fonts/[name].[contenthash:8][ext]",
+			},
+		},
+		{
+			test: /\.txt$/i,
+			type: "asset/source",
+		},
+	],
+}
+```
+
+| Type | Behavior |
+|---|---|
+| `asset/resource` | Emits a separate file and exports its URL |
+| `asset/inline` | Exports a data URL |
+| `asset/source` | Exports source text |
+| `asset/bytes` | Exports binary data where supported |
+| `asset` | Chooses inline or resource based on size condition |
+
+Inlining removes a request but increases JavaScript/CSS size and prevents independent caching. Use a measured threshold, not a universal rule.
+
+## Development Server
+
+`webpack-dev-server` serves development assets, typically from memory, watches files, and coordinates HMR. It is not a production web server.
+
+```js
+devServer: {
+	host: "127.0.0.1",
+	port: 3000,
+	hot: true,
+	historyApiFallback: true,
+	client: {
+		overlay: { errors: true, warnings: false },
+	},
+	proxy: [
+		{
+			context: ["/api"],
+			target: "http://localhost:8080",
+			changeOrigin: true,
+		},
+	],
+}
+```
+
+`historyApiFallback` returns the SPA HTML for unknown navigation paths during development. Production hosting requires an equivalent rewrite while excluding real asset and API paths.
+
+Binding to `0.0.0.0` exposes the server to the local network. Do so only intentionally, configure allowed hosts correctly, and never expose a development server as a public deployment.
+
+## Hot Module Replacement
+
+HMR sends updated modules to the browser without a full reload. An update succeeds only when the changed dependency path reaches an accepting boundary.
+
+```mermaid
+sequenceDiagram
+	participant E as Editor
+	participant W as Webpack watcher
+	participant S as Dev server
+	participant R as Browser runtime
+	participant A as Accept boundary
+	E->>W: Save module
+	W->>W: Rebuild affected graph
+	W->>S: Publish update manifest/chunk
+	S-->>R: Notify update available
+	R->>S: Fetch changed module
+	R->>A: Dispose old and apply update
+	alt accepted
+		A-->>R: Preserve compatible application state
+	else not accepted
+		R->>R: Full-page reload
+	end
+```
+
+React Fast Refresh builds on HMR with React-specific boundary rules. State preservation is a development convenience, not a production guarantee. Reload occasionally during development and always validate a clean production build.
+
+## Code Splitting
+
+Dynamic imports create asynchronous split points:
+
+```jsx
+import { lazy, Suspense } from "react";
+
+const ReportsPage = lazy(() =>
+	import(
+		/* webpackChunkName: "reports" */
+		"./pages/ReportsPage.jsx"
+	),
+);
+
+export function ReportsRoute() {
+	return (
+		<Suspense fallback={<PageSpinner />}>
+			<ReportsPage />
+		</Suspense>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	NAV[User navigates to reports] --> IMPORT[Execute dynamic import]
+	IMPORT --> RT[Webpack runtime resolves chunk URL]
+	RT --> CACHE{Chunk cached?}
+	CACHE -->|yes| EXEC[Execute module]
+	CACHE -->|no| FETCH[Fetch reports chunk]
+	FETCH --> EXEC
+	EXEC --> RENDER[React renders route]
+```
+
+Split at meaningful interaction or route boundaries. Too few chunks delay first load; too many tiny chunks increase request, parsing, and coordination overhead. HTTP/2 and HTTP/3 reduce connection costs but do not make chunk count irrelevant.
+
+Webpack magic comments can name chunks, prefetch likely future work, or preload critical parallel work. Use prefetch/preload sparingly because speculative downloads compete for bandwidth.
+
+## `splitChunks` Optimization
+
+`optimization.splitChunks` extracts modules shared by chunks or matching cache groups.
+
+```js
+optimization: {
+	runtimeChunk: "single",
+	splitChunks: {
+		chunks: "all",
+		cacheGroups: {
+			react: {
+				test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+				name: "react-vendor",
+				priority: 30,
+			},
+			vendors: {
+				test: /[\\/]node_modules[\\/]/,
+				name: "vendors",
+				priority: 10,
+				reuseExistingChunk: true,
+			},
+		},
+	},
+}
+```
+
+This is illustrative, not a universal optimum. One giant `vendors` chunk can invalidate whenever any dependency changes and force users to download code for routes they never visit. Begin with Webpack defaults, inspect the graph, then introduce cache groups for measured stability or loading needs.
+
+```mermaid
+flowchart TD
+	GRAPH[Module and chunk graph] --> SHARED{Shared or cache-group match?}
+	SHARED -->|no| OWNER[Remain in owning chunk]
+	SHARED -->|yes| LIMIT{Meets size/request constraints?}
+	LIMIT -->|no| OWNER
+	LIMIT -->|yes| EXTRACT[Create or reuse shared chunk]
+	EXTRACT --> LOAD[Connect initial or async consumers]
+```
+
+## Long-Term Browser Caching
+
+Good caching separates stable dependencies, application code, and the small Webpack runtime so unrelated changes do not invalidate every asset.
+
+```js
+output: {
+	filename: "assets/[name].[contenthash:8].js",
+	chunkFilename: "assets/[name].[contenthash:8].chunk.js",
+},
+optimization: {
+	moduleIds: "deterministic",
+	chunkIds: "deterministic",
+	runtimeChunk: "single",
+	splitChunks: { chunks: "all" },
+}
+```
+
+```mermaid
+flowchart LR
+	CHANGE[Application module changes] --> BUILD[New compilation]
+	BUILD --> APP[New app content hash]
+	BUILD --> RT[Possibly updated runtime hash]
+	BUILD --> VENDOR[Unchanged stable vendor hash]
+	APP --> MISS[Browser fetches new asset]
+	RT --> MISS
+	VENDOR --> HIT[Browser reuses cached asset]
+```
+
+Serve hashed assets with a long immutable cache policy, for example `Cache-Control: public, max-age=31536000, immutable`. Serve HTML with a revalidation or short-cache policy because HTML points to current hashes. Never mark non-hashed mutable assets immutable.
+
+`[hash]`, `[chunkhash]`, and `[contenthash]` describe different scopes. For emitted JS/CSS, `[contenthash]` is normally the best long-term caching signal.
+
+## Tree Shaking and Side Effects
+
+Webpack can mark unused ES module exports and a minimizer can remove unreachable code. Effective tree shaking depends on static ESM syntax, production optimization, package metadata, and code without required top-level effects.
+
+```json
+{
+  "sideEffects": [
+    "**/*.css",
+    "./src/polyfills.js"
+  ]
+}
+```
+
+Setting `"sideEffects": false` incorrectly can remove CSS imports, polyfills, registrations, or initialization. Named imports alone do not guarantee a small result, especially for CommonJS packages. Module 15 examines tree shaking in depth.
+
+## Source Maps
+
+Source maps connect generated bundle locations to authored source. Their quality, build cost, and exposure differ by `devtool` option.
+
+| Requirement | Typical choice | Important tradeoff |
+|---|---|---|
+| Fast local rebuild and readable stacks | `eval-cheap-module-source-map` | Development only |
+| High-quality production diagnostics | `source-map` | Browser can discover map URL unless access is controlled |
+| Upload maps privately without browser reference | `hidden-source-map` | Monitoring must receive matching artifacts |
+| No original source content in map | `nosources-source-map` | Names/paths and mappings may still reveal information |
+| No maps | `false` | Harder production diagnosis |
+
+```mermaid
+flowchart TD
+	ERR[Minified production error] --> RELEASE[Identify exact release]
+	RELEASE --> MAP[Locate matching source map]
+	MAP --> SYMBOL[Symbolicate stack]
+	SYMBOL --> REDACT[Redact sensitive context]
+	REDACT --> TRIAGE[Actionable diagnosis]
+```
+
+Source maps are not secrets management. Keep credentials out of source code and build inputs. Upload maps to monitoring before deployment, associate them with release identifiers, and decide whether the host should publish or block `.map` files.
+
+## Production Optimization
+
+Webpack production mode uses Terser for JavaScript minimization by default. CSS extraction and minimization require separate configuration.
+
+```js
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+
+optimization: {
+	minimize: true,
+	minimizer: ["...", new CssMinimizerPlugin()],
+}
+```
+
+The `"..."` retains default minimizers. Removing it while adding a CSS minimizer can accidentally disable JavaScript minimization.
+
+Optimization should be evaluated using:
+
+- Initial transferred bytes after Brotli/gzip.
+- Parsed and executed JavaScript.
+- Main-thread time on representative devices.
+- Route-level async chunk cost.
+- Duplicate modules and dependency versions.
+- Cache reuse across deployments.
+- Core Web Vitals and user interactions.
+
+Smaller output is valuable only when runtime correctness and maintainability remain intact.
+
+## Performance Budgets
+
+Webpack can warn or fail when assets exceed configured thresholds:
+
+```js
+performance: {
+	hints: production ? "error" : false,
+	maxEntrypointSize: 350 * 1024,
+	maxAssetSize: 250 * 1024,
+	assetFilter: (filename) => /\.(js|css)$/.test(filename),
+}
+```
+
+Built-in budgets use emitted file size, not necessarily compressed transfer size. Add a CI budget tool when compressed sizes, route groups, or historical regressions matter.
+
+```mermaid
+flowchart LR
+	BUILD[Production build] --> STATS[Emit machine-readable stats]
+	STATS --> BUDGET[Compare asset and route budgets]
+	BUDGET -->|pass| DEPLOY[Continue deployment]
+	BUDGET -->|fail| REPORT[Report largest regressions]
+	REPORT --> FIX[Split, replace, defer, or remove]
+```
+
+Set budgets from product performance goals and real baselines, then lower them deliberately. A warning ignored forever is not a budget.
+
+## Bundle Analysis
+
+Generate a stats file without dumping it into normal logs:
+
+```bash
+npx webpack --mode production --profile --json=dist/stats.json
+```
+
+Analyze:
+
+- Largest modules by parsed size.
+- Duplicate package versions.
+- Unexpected server-only libraries.
+- Locale/data bundles imported wholesale.
+- CommonJS modules that limit optimization.
+- Modules retained by side effects.
+- Initial chunks containing route-specific code.
+- Oversized source maps or embedded assets.
+
+`webpack-bundle-analyzer` visualizes stats, but a treemap is evidence, not a prescription. Confirm improvements with production builds and runtime measurements.
+
+## Build Performance
+
+Webpack 5 persistent filesystem caching can reduce rebuild time:
+
+```js
+cache: {
+	type: "filesystem",
+	buildDependencies: {
+		config: [__filename],
+	},
+},
+```
+
+Additional practices:
+
+- Keep loader include paths narrow.
+- Avoid expensive source maps where they do not add value.
+- Use loader/plugin caches supported by current versions.
+- Separate type checking from transpilation when appropriate.
+- Reduce resolver extension and module search space.
+- Keep dependency versions deduplicated.
+- Profile before parallelizing expensive transforms.
+- Avoid invalidating cache with non-deterministic configuration.
+
+```mermaid
+flowchart TD
+	CHANGE[File change] --> INVALIDATE[Identify affected modules]
+	INVALIDATE --> CACHE{Valid transformed result cached?}
+	CACHE -->|yes| REUSE[Reuse result]
+	CACHE -->|no| WORK[Resolve, load, parse, transform]
+	REUSE --> LINK[Rebuild affected chunks]
+	WORK --> LINK
+	LINK --> UPDATE[Emit update/assets]
+```
+
+Build speed and bundle runtime performance are separate goals. A faster loader is not automatically a smaller or more compatible output.
+
+## Environment Variables and `DefinePlugin`
+
+`DefinePlugin` performs compile-time code replacement. Values must be serialized as valid code fragments.
+
+```js
+const webpack = require("webpack");
+
+new webpack.DefinePlugin({
+	"process.env.PUBLIC_API_URL": JSON.stringify(process.env.PUBLIC_API_URL),
+	"process.env.APP_RELEASE": JSON.stringify(process.env.APP_RELEASE),
+	__ENABLE_DIAGNOSTICS__: JSON.stringify(!production),
 });
 ```
 
-Production mode enables minification and tree-shaking-related optimizations. Content hashes support long caching; source maps aid diagnosis but require an intentional exposure policy. Asset modules handle files. Dynamic imports split chunks. Bundle analyzers reveal duplicate/large modules. Loaders transform individual modules; plugins coordinate compilation-wide behavior.
+Never define the complete `process.env` object in a browser build. It risks exposing CI credentials and prevents precise auditing. Validate every public value, inject only an allowlist, and remember that all replacements become browser-visible. Module 12 covers configuration architecture and runtime alternatives.
 
-**Mistakes:** one giant vendor chunk, cache-busting filenames without cache headers, transpiling all dependencies, source maps exposed accidentally, and assuming HMR equals production. **Mini project:** build a React app with Babel, CSS/assets, HMR, route chunks, analyzer, budgets, and long-term caching.
+## Public Path and Deployment
+
+The Webpack runtime constructs asynchronous chunk URLs from the public path. A wrong value often lets the initial page load but causes lazy routes to fail with `ChunkLoadError`.
+
+```mermaid
+flowchart LR
+	HTML[HTML loads entry asset] --> RT[Webpack runtime]
+	RT --> BASE[Resolve public path]
+	BASE --> URL[Construct lazy chunk URL]
+	URL --> CDN[Request from host/CDN]
+	CDN -->|200 current chunk| OK[Execute route]
+	CDN -->|404/wrong origin| FAIL[Chunk load failure]
+```
+
+For a root deployment, `publicPath: "/"` is common. For `/portal/`, assets and router basename must align. `publicPath: "auto"` can infer the script location in supported scenarios, but explicit deployment contracts are easier to reason about.
+
+During rolling deployments, old HTML or an already-open tab may request chunks removed by a new release. Keep prior hashed assets available for an overlap window and design a controlled refresh path for genuine version skew.
+
+## Output and Asset Manifest
+
+Backend-rendered applications often need a mapping from logical entry names to hashed files.
+
+```json
+{
+  "main.js": "/assets/main.8f31cba2.js",
+  "main.css": "/assets/main.93ad7c10.css"
+}
+```
+
+Generate the manifest through a plugin rather than discovering filenames with fragile string matching. Deploy HTML/manifest and immutable assets atomically or in an order that keeps referenced hashes available.
+
+## Security Considerations
+
+Webpack participates in the software supply chain and output security boundary.
+
+```mermaid
+flowchart TD
+	SRC[Application source] --> BUILD[Trusted build]
+	DEP[Locked dependencies] --> BUILD
+	CFG[Allowlisted public config] --> BUILD
+	BUILD --> SCAN[Tests, audit, asset inspection]
+	SCAN --> ART[Immutable artifact]
+	ART --> SIGN[Provenance/signing where required]
+	SIGN --> CDN[Controlled deployment]
+	SECRET[CI and server secrets] -. must not enter client assets .-> ART
+```
+
+Production controls include:
+
+- Pin dependencies with a reviewed lockfile.
+- Run builds in isolated, least-privileged CI environments.
+- Audit loaders and plugins because they execute during build.
+- Keep secrets out of client definitions, source, maps, and logs.
+- Generate deterministic artifacts where practical.
+- Apply Content Security Policy at the host.
+- Avoid `eval`-based source-map modes in production.
+- Serve assets with correct MIME types and `X-Content-Type-Options: nosniff`.
+- Use Subresource Integrity when the deployment model benefits and supports it.
+- Scan emitted files for known credential patterns before release.
+
+Webpack's `output.crossOriginLoading` and plugins can help with integrity attributes, but HTML generation, CDN CORS headers, and deployment must agree.
+
+## Module Federation
+
+Module Federation allows separately built applications to expose and consume modules at runtime.
+
+```mermaid
+flowchart LR
+	SHELL[Host shell] --> REMOTE[Load remoteEntry manifest]
+	REMOTE --> MODULE[Request exposed module]
+	SHELL --> SHARE[Shared dependency scope]
+	REMOTE --> SHARE
+	SHARE --> NEGOTIATE[Negotiate compatible singleton/version]
+	NEGOTIATE --> RENDER[Render remote capability]
+```
+
+```js
+const { ModuleFederationPlugin } = require("webpack").container;
+
+new ModuleFederationPlugin({
+	name: "shell",
+	remotes: {
+		catalog: "catalog@https://catalog.example.com/remoteEntry.js",
+	},
+	shared: {
+		react: { singleton: true, requiredVersion: "^18.3.0" },
+		"react-dom": { singleton: true, requiredVersion: "^18.3.0" },
+	},
+});
+```
+
+Federation introduces runtime availability, version negotiation, security, independent release, observability, shared state, and rollback complexity. Use it when organizational deployment independence justifies those costs, not merely to split folders. Define contracts and fallbacks for remote failure.
+
+## Server-Side Rendering
+
+An SSR setup often has separate client and server configurations sharing carefully selected rules:
+
+```mermaid
+flowchart TB
+	SRC[Shared React source] --> CLIENT[Client compilation target web]
+	SRC --> SERVER[Server compilation target node]
+	CLIENT --> HYDRATE[Browser assets and manifest]
+	SERVER --> RENDER[Server render bundle]
+	RENDER --> HTML[Request HTML]
+	HYDRATE --> HTML
+	HTML --> BROWSER[Hydration]
+```
+
+The server build may externalize Node dependencies while the client build splits browser assets. Keep server-only secrets and modules out of the client graph. Ensure both builds use compatible asset manifests, module IDs, React versions, and release metadata.
+
+## Development and Production Parity
+
+Development success does not prove production correctness because important behavior differs:
+
+| Development | Production |
+|---|---|
+| Assets often served from memory | Files served by web server/CDN |
+| HMR/Fast Refresh active | Full page and chunk lifecycle |
+| Development React diagnostics | Production React build |
+| Fast source maps | Minified output and controlled maps |
+| Local API proxy | Real origin/CORS/reverse proxy |
+| Stable filenames | Content-hashed filenames |
+| Little/no minimization | Tree shaking and minimization |
+
+Always create and serve the actual production output before release. Test direct route navigation, lazy chunks, cache headers, asset base paths, source-map policy, compression, CSP, and API communication.
+
+## Multi-Configuration Projects
+
+Webpack accepts an array of configurations for multiple related outputs:
+
+```js
+module.exports = [
+	{
+		name: "client",
+		target: "web",
+		entry: "./src/client.jsx",
+		// client output and plugins
+	},
+	{
+		name: "server",
+		target: "node",
+		entry: "./src/server.jsx",
+		// server output and externals
+	},
+];
+```
+
+Share pure configuration factories rather than mutating one large object. Be careful with plugin instances and state across compilations.
+
+## Configuration Organization
+
+As configuration grows, separate stable concerns:
+
+```text
+build/
+|-- webpack.common.js
+|-- webpack.development.js
+|-- webpack.production.js
+|-- loaders.js
+`-- paths.js
+```
+
+Merge configuration with explicit object composition or a maintained merge utility. Arrays such as `module.rules` and `plugins` require intentional merge semantics. Avoid clever abstraction that makes the effective production config impossible to inspect.
+
+Validate normalized output when diagnosing behavior:
+
+```bash
+npx webpack configtest webpack.config.js
+npx webpack --mode production --stats=errors-warnings
+```
+
+Commands depend on the installed Webpack CLI version. Keep package scripts as the documented interface for the project.
+
+## CI/CD Pipeline
+
+```mermaid
+flowchart LR
+	LOCK[Install from lockfile] --> CHECK[Lint, types, and tests]
+	CHECK --> BUILD[Webpack production build]
+	BUILD --> BUDGET[Budget and stats checks]
+	BUDGET --> SCAN[Dependency and emitted-asset scans]
+	SCAN --> MAPS[Upload matching source maps]
+	MAPS --> ART[Publish immutable artifact]
+	ART --> SMOKE[Deploy and smoke-test routes/chunks]
+	SMOKE --> PROMOTE[Promote release]
+```
+
+Archive build stats when bundle regressions matter. Do not print complete environment objects or embed credentials in CI artifacts. The same commit and lockfile should produce traceable outputs under controlled inputs.
+
+## Testing the Build Pipeline
+
+Configuration deserves automated checks because unit tests can pass while production assets fail.
+
+Test at several layers:
+
+1. Configuration factory tests verify development/production branches.
+2. A production compilation verifies loaders, plugins, and optimization.
+3. Asset assertions verify HTML references, hashes, maps, and manifests.
+4. A static-server smoke test verifies routes and lazy chunks.
+5. Browser tests verify CSP, API paths, caching behavior, and error monitoring.
+
+```js
+const webpack = require("webpack");
+const createConfig = require("../webpack.config");
+
+test("production compilation succeeds without warnings", (done) => {
+	const config = createConfig({}, { mode: "production" });
+
+	webpack(config, (error, stats) => {
+		if (error) return done(error);
+
+		const result = stats.toJson({ all: false, errors: true, warnings: true });
+		expect(result.errors).toEqual([]);
+		expect(result.warnings).toEqual([]);
+		done();
+	});
+});
+```
+
+Use temporary output directories in tests and close compilers/watchers to avoid leaked handles.
+
+## Diagnostics and Stats
+
+Control log volume while retaining actionable data:
+
+```js
+stats: {
+	preset: "errors-warnings",
+	errorDetails: true,
+	timings: true,
+	builtAt: true,
+},
+infrastructureLogging: {
+	level: "warn",
+},
+```
+
+When a build fails:
+
+1. Read the first causal loader/resolution error, not only the final summary.
+2. Confirm the resource and issuer paths.
+3. Inspect the effective rule match and loader order.
+4. Check package exports and aliases.
+5. Reproduce with the production mode used by CI.
+6. Temporarily increase stats detail for the affected concern.
+7. Remove diagnostic verbosity after resolution.
+
+For bundle problems, use stats data. For loader behavior, isolate one resource. For resolution, use exact import and package metadata. For runtime chunk failures, inspect emitted URLs and network responses.
+
+## Common Failure Patterns
+
+| Symptom | Likely cause | Professional correction |
+|---|---|---|
+| `Module not found` | Alias, extension, package export, or case mismatch | Inspect request/issuer and align resolver/tool configs |
+| Unexpected token during build | Missing transform or unsupported dependency syntax | Add a narrow loader rule/target correction |
+| CSS imported but missing in production | Incorrect `sideEffects` or extraction setup | Preserve CSS side effects and inspect emitted CSS |
+| Lazy route returns 404 | Wrong public path or deleted old chunk | Align hosting path and retain prior hashed assets |
+| Duplicate React/runtime error | Multiple React copies or federation mismatch | Deduplicate and enforce compatible singleton policy |
+| Production bundle is huge | Broad imports, duplicate versions, poor chunking | Analyze stats and fix measured causes |
+| Build is slow | Broad loaders, expensive maps, cache misses | Profile phases and narrow invalidation/work |
+| Browser shows old release | HTML/service worker/CDN cache mismatch | Separate mutable HTML from immutable assets |
+| Source map exposes source | Public `.map` deployment | Use controlled upload/hosting policy |
+| `process is not defined` | Browser code expects Node polyfill/global | Replace dependency or configure exact fallback |
+| HMR always reloads | No accepting boundary or plugin mismatch | Configure React refresh and inspect update graph |
+| CI build differs locally | Node/package/config/environment drift | Pin toolchain and validate explicit inputs |
+| Environment secret in bundle | Broad `DefinePlugin` exposure | Revoke secret and allowlist public values only |
+| CSP rejects scripts/styles | Runtime injection or nonce/hash mismatch | Choose CSP-compatible loaders/runtime settings |
+| One enormous vendor chunk | Over-broad cache group | Let route graph split dependencies or refine groups |
+
+## Migration and Upgrade Strategy
+
+Webpack major upgrades can affect loader/plugin APIs, defaults, Node support, polyfills, caching, and output. Upgrade in controlled stages:
+
+1. Record current production build output, warnings, size, and critical flows.
+2. Upgrade Webpack, CLI, dev server, loaders, and plugins to compatible versions.
+3. Remove deprecated configuration and legacy loaders.
+4. Review Node core polyfills; Webpack 5 no longer injects many automatically.
+5. Validate development HMR and a clean production build.
+6. Compare stats, chunk names, public paths, source maps, and cache behavior.
+7. Run deployed route/chunk smoke tests before rollout.
+
+Do not preserve obsolete behavior automatically. Decide whether each compatibility shim remains architecturally necessary.
+
+## Professional Production Configuration
+
+The following combines the chapter's core practices without claiming to fit every repository:
+
+```js
+const path = require("node:path");
+const webpack = require("webpack");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+
+module.exports = (_, argv) => {
+	const production = argv.mode === "production";
+	const release = process.env.APP_RELEASE ?? "local";
+	const publicApiUrl = process.env.PUBLIC_API_URL;
+
+	if (production && !publicApiUrl) {
+		throw new Error("PUBLIC_API_URL is required for production builds");
+	}
+
+	return {
+		mode: production ? "production" : "development",
+		entry: path.resolve(__dirname, "src/main.jsx"),
+		output: {
+			path: path.resolve(__dirname, "dist"),
+			filename: "assets/js/[name].[contenthash:8].js",
+			chunkFilename: "assets/js/[name].[contenthash:8].chunk.js",
+			assetModuleFilename: "assets/media/[name].[contenthash:8][ext]",
+			publicPath: "/",
+			clean: true,
+		},
+		module: {
+			rules: [
+				{
+					test: /\.[jt]sx?$/,
+					include: path.resolve(__dirname, "src"),
+					use: "babel-loader",
+				},
+				{
+					test: /\.module\.css$/,
+					use: [
+						production ? MiniCssExtractPlugin.loader : "style-loader",
+						{
+							loader: "css-loader",
+							options: { modules: true, importLoaders: 1 },
+						},
+						"postcss-loader",
+					],
+				},
+				{
+					test: /\.css$/,
+					exclude: /\.module\.css$/,
+					use: [
+						production ? MiniCssExtractPlugin.loader : "style-loader",
+						"css-loader",
+						"postcss-loader",
+					],
+				},
+				{
+					test: /\.(png|jpe?g|gif|svg|webp|avif|woff2?)$/i,
+					type: "asset",
+					parser: { dataUrlCondition: { maxSize: 4 * 1024 } },
+				},
+			],
+		},
+		resolve: {
+			extensions: [".tsx", ".ts", ".jsx", ".js"],
+			alias: {
+				"@app": path.resolve(__dirname, "src/app"),
+				"@shared": path.resolve(__dirname, "src/shared"),
+			},
+		},
+		plugins: [
+			new HtmlWebpackPlugin({ template: "public/index.html" }),
+			new webpack.DefinePlugin({
+				"process.env.PUBLIC_API_URL": JSON.stringify(publicApiUrl ?? "/api"),
+				"process.env.APP_RELEASE": JSON.stringify(release),
+			}),
+			production && new MiniCssExtractPlugin({
+				filename: "assets/css/[name].[contenthash:8].css",
+				chunkFilename: "assets/css/[name].[contenthash:8].chunk.css",
+			}),
+		].filter(Boolean),
+		optimization: {
+			minimize: production,
+			minimizer: ["...", new CssMinimizerPlugin()],
+			moduleIds: "deterministic",
+			chunkIds: "deterministic",
+			runtimeChunk: "single",
+			splitChunks: { chunks: "all" },
+		},
+		cache: {
+			type: "filesystem",
+			buildDependencies: { config: [__filename] },
+		},
+		devtool: production ? "hidden-source-map" : "eval-cheap-module-source-map",
+		devServer: {
+			historyApiFallback: true,
+			hot: true,
+			port: 3000,
+		},
+		performance: {
+			hints: production ? "warning" : false,
+			maxEntrypointSize: 350 * 1024,
+			maxAssetSize: 250 * 1024,
+		},
+		stats: "errors-warnings",
+	};
+};
+```
+
+Adapt targets, CSS policy, source maps, budgets, public path, dev proxy, and deployment integration to the application. A production configuration is a documented contract, not a snippet copied unchanged.
+
+## Production Checklist
+
+1. Pin compatible Webpack, CLI, loader, and plugin versions.
+2. Keep development and production behavior explicit.
+3. Restrict loader rules to intended source paths.
+4. Preserve ESM for tree shaking where the toolchain supports it.
+5. Align aliases across TypeScript, tests, linting, and editors.
+6. Extract and minimize production CSS deliberately.
+7. Use asset modules with measured inlining thresholds.
+8. Split code at meaningful routes and interactions.
+9. Inspect `splitChunks` results before adding custom cache groups.
+10. Use content hashes and deterministic IDs for long-term caching.
+11. Serve HTML and immutable assets with different cache policies.
+12. Set the public path and SPA fallback for the actual deployment base.
+13. Keep previous hashed chunks available during release overlap.
+14. Choose and enforce a production source-map policy.
+15. Validate public environment definitions and exclude all secrets.
+16. Enable persistent caching without hiding stale configuration inputs.
+17. Generate stats and enforce useful performance budgets in CI.
+18. Test the real production build through a static server/browser.
+19. Verify lazy routes, direct navigation, CORS, CSP, and compression.
+20. Treat build warnings as owned work rather than permanent noise.
+21. Scan dependencies and emitted assets before deployment.
+22. Associate artifacts and source maps with a traceable release.
+23. Use Module Federation only with runtime contracts and failure plans.
+24. Profile both build performance and browser performance independently.
+
+## Real-World Architectures
+
+### E-Commerce SPA
+
+Split catalog, account, and checkout routes while preloading only the next probable transition. Keep checkout dependencies isolated from anonymous browsing, retain old hashed assets during deployment, and verify that product links work through direct navigation and CDN rewrites.
+
+### Banking Portal
+
+Use controlled source-map upload, strict CSP-compatible output, locked dependencies, redacted release metadata, deterministic artifacts, and conservative split points. Never place signing material, service credentials, or authorization policy in `DefinePlugin` values.
+
+### Enterprise CRM
+
+Analyze large editor, charting, and export dependencies by route. Use explicit aliases and feature boundaries, persistent build cache in CI where trustworthy, production budgets, and staged migration for legacy CommonJS packages.
+
+### Multi-Page Platform
+
+Use distinct entry descriptors and HTML outputs for truly independent applications, extract only measured shared dependencies, generate an asset manifest for the server, and prevent one page's large dependency graph from becoming mandatory for every page.
+
+### Federated Frontend
+
+Define host/remote ownership, compatible shared versions, remote availability fallback, observability, release rollback, and security review. Keep domain contracts independent of the federation transport so a remote can evolve without silently breaking the shell.
+
+### Component Library
+
+Library builds need a different contract from application builds: externalize peer dependencies, preserve consumable modules where appropriate, emit declarations through the TypeScript toolchain, define package exports, mark side effects accurately, and test consumption from representative applications.
+
+A professional Webpack pipeline produces correct, traceable, cache-efficient assets; gives developers fast feedback; exposes measurable performance; and remains understandable enough to upgrade safely.
 
 ---
 
