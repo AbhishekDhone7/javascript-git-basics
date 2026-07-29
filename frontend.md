@@ -8404,54 +8404,1177 @@ A professional Redux architecture records meaningful events, keeps reducers dete
 
 [Previous: Redux Toolkit](#module-10-redux-toolkit-and-rtk-query) | [Next: Environment Variables](#module-12-environment-variables)
 
-## Introduction and Measurement Model
+## Introduction
 
-Performance is user experience under real devices and networks, not the number of optimization hooks. Measure loading (LCP), responsiveness (INP), layout stability (CLS), JavaScript long tasks, React render/commit duration, memory growth, and bundle transfer/parse cost. Optimize the measured bottleneck while preserving correctness.
+Frontend performance is the ability to deliver useful content quickly, respond to user input promptly, remain visually stable, and sustain those qualities during long sessions on real devices and networks.
+
+Performance optimization is not the number of `useMemo` calls in a codebase. It is an evidence-driven engineering loop:
+
+1. Define the user journey and performance target.
+2. Measure a representative production build.
+3. Classify the bottleneck.
+4. Change the smallest controlling cause.
+5. Verify behavior and accessibility.
+6. Measure again and prevent regression.
 
 ```mermaid
 flowchart LR
- M[Measure profile] --> B[Locate bottleneck]
- B --> C{Cost type}
- C -->|Render| R[Colocate state/memoize]
- C -->|Large list| V[Virtualize]
- C -->|Bundle| S[Split/tree shake]
- C -->|Network| Q[Cache/prefetch]
- R --> P[Measure again]
- V --> P
- S --> P
- Q --> P
+	G[Define user goal and budget] --> M[Measure representative journey]
+	M --> C[Classify bottleneck]
+	C --> H[Form falsifiable hypothesis]
+	H --> O[Apply focused optimization]
+	O --> V[Verify correctness and accessibility]
+	V --> R[Measure again]
+	R --> B{Budget met?}
+	B -->|no| C
+	B -->|yes| P[Protect with monitoring and tests]
 ```
 
-`React.memo` can skip rendering when props compare equal by `Object.is`; context and local state still update it. `useMemo` caches a calculation and `useCallback` caches function identity. All add comparison/cache/retention overhead. The React DevTools Profiler shows why and how long components rendered; browser Performance tools show main-thread, layout, paint, and network work.
+## Performance Layers
+
+Different bottlenecks require different tools and corrections.
+
+| Layer | Typical symptom | Evidence | Common direction |
+|---|---|---|---|
+| Network | Slow first content or data | Waterfall, TTFB, transfer sizes | Cache, compress, reduce requests, CDN |
+| Bundle | Long parse/evaluation before interactivity | Coverage, bundle analyzer, main-thread profile | Remove/split dependencies, tree shake |
+| React render | Components repeatedly execute expensive work | React Profiler | Colocate state, narrow subscriptions, memoize measured paths |
+| DOM/layout | Long style/layout, forced reflow | Browser Performance panel | Reduce DOM, batch reads/writes, simplify layout |
+| Paint/composite | Expensive visual updates | Paint flashing, layer tools | Reduce paint area, animate compositor-friendly properties |
+| JavaScript CPU | Long tasks block input | Performance trace, INP breakdown | Reduce/slice work, improve algorithm, worker |
+| Memory | Increasing heap and degraded session | Heap snapshots, allocation timeline | Cleanup, bound caches, remove retained references |
+| Server/data | Slow API or repeated fetching | Request traces, cache metrics | Server optimization, query cache, pagination |
+
+```mermaid
+flowchart TD
+	S[Slow user experience] --> Q{Where is time spent?}
+	Q -->|Waiting for bytes| N[Network/server]
+	Q -->|Parsing/evaluating JS| B[Bundle/runtime startup]
+	Q -->|React work| R[Render/reconciliation]
+	Q -->|Style/layout/paint| D[Browser rendering]
+	Q -->|Long computation| CPU[Main-thread JavaScript]
+	Q -->|Gets worse over time| MEM[Memory/retention]
+```
+
+## User-Centered Metrics
+
+Core Web Vitals summarize loading, responsiveness, and visual stability. Evaluate field data at the 75th percentile across relevant mobile and desktop populations.
+
+| Metric | Measures | Good target | Main causes |
+|---|---|---:|---|
+| LCP | Largest visible content loading | $\leq 2.5\text{s}$ | TTFB, render-blocking assets, image priority, client rendering |
+| INP | Interaction responsiveness | $\leq 200\text{ms}$ | Long event work, render/commit, layout, main-thread contention |
+| CLS | Unexpected visual movement | $\leq 0.1$ | Missing dimensions, inserted content, font shifts, unstable ads |
+
+Supporting metrics include:
+
+| Metric | Purpose |
+|---|---|
+| TTFB | Server/network time until first response byte |
+| FCP | First visible DOM content |
+| TBT | Lab estimate of main-thread blocking before interactivity |
+| Resource timing | DNS, connection, request, transfer, cache behavior |
+| Long tasks | Main-thread tasks exceeding 50 ms |
+| React commit duration | Time React spends committing one update |
+| Memory trend | Whether reachable heap and DOM nodes remain bounded |
+
+Targets are product budgets, not guarantees for every individual request. Segment by route, device class, connection, geography, release, and authenticated state.
+
+```mermaid
+sequenceDiagram
+	participant N as Navigation starts
+	participant S as Server/network
+	participant P as Browser paint
+	participant U as User interaction
+	participant R as Response rendered
+	N->>S: Request document and assets
+	S-->>P: Content becomes renderable
+	P->>P: Largest content paints: LCP
+	U->>R: Interaction begins
+	R-->>U: Next frame presents: INP
+	Note over P,R: Unexpected movement accumulates into CLS
+```
+
+## Lab Data Versus Field Data
+
+Lab tools provide repeatable synthetic conditions and deep diagnostics. Real-user monitoring (RUM) captures actual devices, networks, data volumes, extensions, caches, and behavior.
+
+| Lab | Field |
+|---|---|
+| Lighthouse, browser traces, controlled profiles | Real-user Web Vitals and custom timings |
+| Reproducible before/after comparison | Represents production diversity |
+| Excellent for root-cause analysis | Excellent for impact and regression detection |
+| May miss real long-session/data behavior | Usually less detailed per session |
+
+Use both. A perfect developer-machine trace does not prove acceptable mobile performance; a field regression alert still needs a diagnostic reproduction.
+
+## Performance Budgets
+
+Budgets turn performance from an aspiration into an acceptance criterion.
+
+```text
+Example route budget
+- Initial compressed JavaScript: <= 180 KB
+- Route lazy chunk: <= 90 KB
+- LCP image: <= 180 KB at common mobile viewport
+- Main-thread long tasks during load: <= 2
+- Search interaction p75 INP: <= 200 ms
+- Product grid DOM nodes: bounded through pagination/virtualization
+```
+
+Budgets should reflect product and audience, then be enforced in CI or release dashboards where reliable. Avoid gaming one metric by degrading accessibility, correctness, or later interactions.
+
+## Measuring a Production Build
+
+Development mode includes warnings, source transforms, extra checks, Strict Mode behavior, and unoptimized assets. Diagnose correctness in development, but benchmark an optimized production build with representative data.
+
+Measurement workflow:
+
+1. Define the exact route and interaction.
+2. Build and serve production output locally or in staging.
+3. Use realistic network/CPU throttling and dataset size.
+4. Record multiple runs with cold and warm cache conditions.
+5. Inspect medians/distributions, not one best run.
+6. Preserve traces or screenshots as evidence.
+7. Compare after changing one primary variable.
+
+## Browser Rendering Pipeline
+
+JavaScript and React usually share the main thread with style calculation, layout, paint preparation, and input processing.
+
+```mermaid
+flowchart LR
+	JS[JavaScript and React] --> STYLE[Style calculation]
+	STYLE --> LAYOUT[Layout geometry]
+	LAYOUT --> PAINT[Paint records]
+	PAINT --> COMP[Compositing]
+	COMP --> FRAME[Presented frame]
+	INPUT[User input] --> JS
+	LONG[Long task] -. delays .-> INPUT
+	LONG -. delays .-> FRAME
+```
+
+At a 60 Hz display, a frame interval is about:
+
+$$
+\frac{1000\text{ ms}}{60} \approx 16.7\text{ ms}
+$$
+
+The application does not receive all 16.7 ms; browser and system work also consume time. Long tasks block input handling and frame presentation even when React's own render is fast.
+
+## React Render and Commit Costs
+
+React performance has two main phases:
+
+- **Render:** execute components, process hooks, create elements, reconcile trees, and determine changes.
+- **Commit:** apply host changes, update refs, run layout effects, and schedule passive effects.
+
+```mermaid
+flowchart LR
+	T[State, prop, context, or store update] --> R[Render component work]
+	R --> REC[Reconcile children and identities]
+	REC --> C[Commit DOM/ref/layout effects]
+	C --> P[Browser style/layout/paint]
+	R -->|may produce no DOM changes| C
+```
+
+A component can render without changing the DOM. Optimizing DOM mutations alone will not fix expensive component calculation, and memoizing React components will not fix a costly layout or oversized image.
+
+## React DevTools Profiler
+
+The Profiler shows which components rendered, why they rendered, and how much time React spent. Record the specific slow interaction rather than profiling an idle application indefinitely.
+
+Investigate:
+
+- Long commits.
+- Frequently rendered expensive components.
+- Components rendered by broad parent updates.
+- Changed props, local state, or context.
+- Repeated rendering caused by effects.
+- Store selectors returning unstable references.
+
+The `<Profiler>` API can collect targeted development or controlled telemetry measurements:
+
+```jsx
+import { Profiler } from "react";
+
+function recordProfile(
+	id,
+	phase,
+	actualDuration,
+	baseDuration,
+	startTime,
+	commitTime,
+) {
+	performanceLogger.record({
+		id,
+		phase,
+		actualDuration,
+		baseDuration,
+		startTime,
+		commitTime,
+	});
+}
+
+<Profiler id="ProductGrid" onRender={recordProfile}>
+	<ProductGrid />
+</Profiler>
+```
+
+Profiling itself adds overhead. Sample carefully and avoid recording sensitive props or user data.
+
+## Render Triggers and Render Reach
+
+A component can render because:
+
+- Its local state changed.
+- Its parent rendered and no bailout applied.
+- A consumed context value changed.
+- An external-store selected value changed.
+- Its identity was replaced through type, position, or key.
+
+```mermaid
+flowchart TB
+	U[Update source] --> OWN[Owning component renders]
+	OWN --> C1[Child A]
+	OWN --> C2[Child B]
+	OWN --> C3[Child C]
+	C1 --> B1{Valid bailout?}
+	C2 --> B2{Valid bailout?}
+	C3 --> B3{Valid bailout?}
+	B1 -->|yes| S1[Skip component work]
+	B1 -->|no| R1[Render]
+	B2 -->|yes| S2[Skip]
+	B2 -->|no| R2[Render]
+	B3 -->|yes| S3[Skip]
+	B3 -->|no| R3[Render]
+```
+
+The first optimization is often changing ownership so a frequent update starts closer to its consumers.
+
+## State Colocation
+
+Do not lift rapidly changing state higher than necessary.
+
+```jsx
+// Broad ownership: every keystroke renders the page and all descendants.
+function CatalogPage() {
+	const [query, setQuery] = useState("");
+	return (
+		<PageLayout>
+			<SearchInput value={query} onChange={setQuery} />
+			<ExpensiveDashboard />
+			<SearchResults query={query} />
+		</PageLayout>
+	);
+}
+```
+
+```jsx
+// Narrow ownership: unrelated dashboard work does not depend on typing.
+function CatalogPage() {
+	return (
+		<PageLayout>
+			<CatalogSearch />
+			<ExpensiveDashboard />
+		</PageLayout>
+	);
+}
+
+function CatalogSearch() {
+	const [query, setQuery] = useState("");
+	return (
+		<>
+			<SearchInput value={query} onChange={setQuery} />
+			<SearchResults query={query} />
+		</>
+	);
+}
+```
+
+Colocation reduces update reach without comparison caches. State that truly coordinates distant features may still belong in a common owner, URL, or selector-based store.
+
+## Composition as a Performance Boundary
+
+Passing stable child elements into an updating wrapper can avoid recreating unrelated subtrees.
+
+```jsx
+function ExpandablePanel({ children }) {
+	const [expanded, setExpanded] = useState(false);
+
+	return (
+		<section>
+			<button onClick={() => setExpanded((value) => !value)}>
+				Toggle filters
+			</button>
+			{expanded && <FilterControls />}
+			{children}
+		</section>
+	);
+}
+
+function ReportsPage() {
+	return (
+		<ExpandablePanel>
+			<ExpensiveReport />
+		</ExpandablePanel>
+	);
+}
+```
+
+The element supplied through `children` was created by `ReportsPage`, not by `ExpandablePanel`'s state update. This pattern is architectural; verify actual behavior with the Profiler.
+
+## `React.memo`
+
+`memo` may skip a component render when its parent renders and all props compare equal using `Object.is`.
 
 ```jsx
 const ProductRow = memo(function ProductRow({ product, onSelect }) {
-	return <button onClick={() => onSelect(product.id)}>{product.name}</button>;
+	return (
+		<button onClick={() => onSelect(product.id)}>
+			{product.name}: {product.price}
+		</button>
+	);
 });
-
-function Catalog({ products, query, onSelect }) {
-	const filtered = useMemo(() => rank(products, query), [products, query]);
-	const select = useCallback((id) => onSelect(id), [onSelect]);
-	return filtered.map((product) => <ProductRow key={product.id} product={product} onSelect={select} />);
-}
 ```
 
-This is useful only when ranking/rows are costly and `product` identities are stable. An inline reconstructed product object defeats the bailout.
+`memo` does not block:
 
-## Lazy Loading, Suspense, and Virtualization
+- The component's own state updates.
+- Context values consumed by the component.
+- External-store selector changes.
+- Remount caused by changed key/type/position.
+
+Memoization is useful when rendering is measurably expensive, parent renders are frequent, and props are usually stable. It adds prop comparison work and code complexity.
+
+### Custom Comparators
 
 ```jsx
-const Analytics = lazy(() => import("./Analytics.jsx"));
-function ReportsRoute() {
-	return <Suspense fallback={<ReportSkeleton />}><Analytics /></Suspense>;
+const Chart = memo(ChartView, (previous, next) =>
+	previous.series === next.series &&
+	previous.width === next.width &&
+	previous.height === next.height,
+);
+```
+
+Custom comparison must include every prop, including functions that close over state. A deep comparison can cost more than rendering and may freeze stale behavior if incorrect. Measure comparator cost with realistic data.
+
+## `useMemo`
+
+`useMemo` caches a calculation result while dependencies remain `Object.is`-equal.
+
+```jsx
+function Catalog({ products, query, sort }) {
+	const visibleProducts = useMemo(() => {
+		const matching = products.filter((product) =>
+			product.name.toLowerCase().includes(query.toLowerCase()),
+		);
+		return sortProducts(matching, sort);
+	}, [products, query, sort]);
+
+	return <ProductGrid products={visibleProducts} />;
 }
 ```
 
-Dynamic import creates an asynchronous chunk. Split at routes or heavy optional capabilities; too many chunks increase request/coordination overhead. Suspense displays fallback while a supported child suspends; it does not automatically make arbitrary effect fetching Suspense-aware.
+Use it when:
 
-Virtualization renders a visible window rather than thousands of DOM rows. Use a proven library, stable item keys, overscan, measured/fixed dimensions, accessible semantics, and focus handling. Optimize images with correct dimensions, responsive sources, modern formats, lazy loading below the fold, and CDN caching.
+- The calculation is expensive and often receives unchanged inputs.
+- A stable result identity enables a measured child or hook optimization.
 
-**Wrong:** memoize trivial arithmetic, create unstable props, render 50,000 hidden nodes, lazy-load above-the-fold essentials, or judge only development Strict Mode. **Best:** production profile, state colocation, server cache, route splitting, virtualization, and budgets. **Assignment:** compare baseline and optimized catalog with profiler evidence. **Interview:** memoization reduces repeated work; it does not make a calculation free and is not a correctness guarantee.
+Do not use it as semantic storage or for trivial arithmetic. React may discard cached values; correctness must survive recomputation. Memoized values also retain dependencies and result objects while mounted.
+
+## `useCallback`
+
+`useCallback` caches function identity, not execution results.
+
+```jsx
+function ProductList({ products, onProductSelect }) {
+	const selectProduct = useCallback((productId) => {
+		onProductSelect(productId);
+	}, [onProductSelect]);
+
+	return products.map((product) => (
+		<ProductRow
+			key={product.id}
+			product={product}
+			onSelect={selectProduct}
+		/>
+	));
+}
+```
+
+This matters only when identity is observed, such as a memoized child prop or effect dependency. The function expression is still created during render; React returns the cached reference when dependencies match.
+
+```mermaid
+flowchart TD
+	P[Parent render] --> CH{Child render expensive?}
+	CH -->|no| END[Do not optimize by default]
+	CH -->|yes| F{Parent renders frequently?}
+	F -->|no| END
+	F -->|yes| ST{Props usually stable?}
+	ST -->|no| OWN[Fix ownership/prop identity first]
+	ST -->|yes| MEMO[Measure React.memo plus stable values]
+	MEMO --> VERIFY[Profile again]
+```
+
+## Referential Stability
+
+Fresh object, array, and function identities can defeat memoization.
+
+```jsx
+// New object and function on every parent render.
+<ProductGrid
+	filters={{ category, inStock: true }}
+	onSelect={(id) => selectProduct(id)}
+/>
+```
+
+Before adding hooks, consider a better API:
+
+```jsx
+<ProductGrid
+	category={category}
+	inStockOnly
+	onSelect={selectProduct}
+/>
+```
+
+Primitive props often produce simpler contracts and stable comparisons. Do not contort every API for identity; optimize only meaningful hot paths.
+
+## React Compiler Considerations
+
+Some modern React toolchains can use the React Compiler to automate safe memoization. Follow the project's compiler configuration and supported patterns. Compiler adoption does not remove the need to:
+
+- Keep render pure.
+- Colocate state.
+- Narrow context/store subscriptions.
+- Optimize algorithms and DOM size.
+- Measure network, layout, paint, and memory.
+- Validate generated performance in production.
+
+Do not mix manual memoization changes into a compiler-enabled project without checking team guidance and profiling evidence.
+
+## Effects and Render Chains
+
+Effects that derive state often create an avoidable render-commit-effect-update cycle.
+
+```jsx
+// Avoid: commit stale fullName, run effect, then render again.
+useEffect(() => {
+	setFullName(`${firstName} ${lastName}`);
+}, [firstName, lastName]);
+
+// Prefer: calculate during render.
+const fullName = `${firstName} ${lastName}`;
+```
+
+```mermaid
+sequenceDiagram
+	participant R as Render
+	participant C as Commit
+	participant E as Effect
+	participant S as State update
+	R->>C: Commit derived value from previous state
+	C->>E: Run effect
+	E->>S: Set derived state
+	S->>R: Render again
+	Note over R,S: Pure render derivation removes the extra cycle
+```
+
+Audit effect chains before adding memoization. Removing unnecessary state and effects often improves both correctness and performance.
+
+## Concurrent Rendering and Scheduling
+
+React concurrency can prioritize urgent work and render non-urgent updates interruptibly. It improves scheduling; it does not reduce algorithmic cost.
+
+### `useTransition`
+
+```jsx
+function ReportTabs() {
+	const [tab, setTab] = useState("overview");
+	const [isPending, startTransition] = useTransition();
+
+	function selectTab(nextTab) {
+		startTransition(() => setTab(nextTab));
+	}
+
+	return (
+		<>
+			<TabList value={tab} onChange={selectTab} />
+			<div aria-busy={isPending}>
+				<ExpensiveReport tab={tab} />
+			</div>
+		</>
+	);
+}
+```
+
+### `useDeferredValue`
+
+```jsx
+function ProductSearch() {
+	const [query, setQuery] = useState("");
+	const deferredQuery = useDeferredValue(query);
+	const stale = deferredQuery !== query;
+
+	return (
+		<>
+			<input value={query} onChange={(event) => setQuery(event.target.value)} />
+			<div aria-busy={stale}>
+				<ExpensiveResults query={deferredQuery} />
+			</div>
+		</>
+	);
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant U as User input
+	participant S as React scheduler
+	participant I as Urgent input UI
+	participant R as Non-urgent results
+	U->>S: Type character
+	S->>I: Render and commit urgent value
+	S->>R: Begin deferred result render
+	U->>S: Type newer character
+	S--xR: Interrupt obsolete result work
+	S->>I: Commit latest input
+	S->>R: Render latest results
+```
+
+Never transition the controlled value of a text input. Debounce network initiation separately; deferred rendering does not automatically reduce request count.
+
+## Algorithmic Complexity
+
+Memoizing an inefficient algorithm may hide cost temporarily but does not improve a cache miss.
+
+```jsx
+// O(n) lookup repeated for every row can become O(n^2).
+const selectedRows = rows.map((row) => ({
+	...row,
+	selected: selectedIds.includes(row.id),
+}));
+
+// Build a Set once, then use average O(1) membership checks.
+const selectedIdSet = new Set(selectedIds);
+const selectedRows = rows.map((row) => ({
+	...row,
+	selected: selectedIdSet.has(row.id),
+}));
+```
+
+For input size $n$:
+
+$$
+T(n) = n \cdot O(n) = O(n^2)
+$$
+
+Replacing repeated linear membership with a set changes the mapping to approximately $O(n)$. Profile realistic sizes and include allocation/memory costs.
+
+## Large Lists and DOM Size
+
+Thousands of mounted rows increase React work, DOM memory, style calculation, layout, paint, accessibility-tree size, and browser query cost.
+
+Choose among:
+
+| Technique | Appropriate use |
+|---|---|
+| Pagination | User works with discrete result pages |
+| Load more | Progressive browsing with explicit control |
+| Virtualization | Large scrollable collection where only a window is visible |
+| Server filtering | Dataset is too large to transfer/process locally |
+| Grouping/aggregation | Users need summaries rather than every record |
+
+```mermaid
+flowchart TD
+	DATA[Large dataset] --> NEED{Must all records be visible together?}
+	NEED -->|no| PAGE[Paginate or load more]
+	NEED -->|yes| SIZE{Viewport shows small window?}
+	SIZE -->|yes| VIRT[Virtualize with proven library]
+	SIZE -->|no| REDUCE[Aggregate, filter, or redesign]
+	DATA --> SERVER{Transfer itself too large?}
+	SERVER -->|yes| SF[Server pagination/filtering]
+```
+
+## Virtualization
+
+Virtualization renders a visible window plus overscan rather than every item.
+
+```mermaid
+flowchart TB
+	ALL[100,000 logical rows] --> VP[Current viewport range]
+	VP --> OS[Add overscan before and after]
+	OS --> DOM[Render bounded DOM window]
+	SCROLL[Scroll position] --> VP
+	MEASURE[Row dimensions] --> VP
+```
+
+Use an established library rather than hand-rolling windowing. Production requirements include:
+
+- Stable item keys based on data identity.
+- Fixed or accurately measured dimensions.
+- Overscan to avoid blank edges.
+- Keyboard navigation across unmounted items.
+- Focus retention and restoration.
+- Semantic table/list structure where required.
+- Screen-reader behavior and a non-virtualized alternative when necessary.
+- Dynamic row expansion and resize handling.
+- Scroll anchoring and restoration.
+
+Virtualization trades DOM size for coordination complexity. Pagination is often simpler and more accessible.
+
+## Code Splitting
+
+Dynamic `import()` creates an asynchronous module boundary in supported bundlers.
+
+```jsx
+import { lazy, Suspense } from "react";
+
+const AnalyticsRoute = lazy(() => import("./routes/AnalyticsRoute.jsx"));
+
+function ReportsPage() {
+	return (
+		<Suspense fallback={<ReportRouteSkeleton />}>
+			<AnalyticsRoute />
+		</Suspense>
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	ENTRY[Initial application chunk] --> CORE[Critical shell and current route]
+	ENTRY -. user navigates .-> IMP[Dynamic import]
+	IMP --> CHUNK[Analytics route chunk]
+	CHUNK --> EXEC[Parse and execute]
+	EXEC --> UI[Render route]
+```
+
+Good boundaries include routes, heavy editors, visualization packages, admin-only tools, and optional workflows. Avoid splitting tiny modules into a request waterfall or lazy-loading critical first-viewport content.
+
+## Suspense and Loading Boundaries
+
+Suspense renders a fallback when a supported descendant suspends. `React.lazy` supports component code loading. Arbitrary data fetching in an effect does not become Suspense-aware automatically.
+
+Place boundaries so:
+
+- Persistent navigation remains available.
+- Fallback dimensions minimize layout shift.
+- Related content reveals together.
+- One optional panel does not blank the entire page.
+- Errors have a corresponding error boundary.
+
+```jsx
+<AppShell>
+	<ErrorBoundary fallback={<ReportsError />}>
+		<Suspense fallback={<ReportsSkeleton />}>
+			<ReportsRoute />
+		</Suspense>
+	</ErrorBoundary>
+</AppShell>
+```
+
+Fallbacks should communicate progress without flickering for very short loads. Preserve accessible names and avoid repeatedly moving focus during boundary transitions.
+
+## Bundle Analysis
+
+Bundle size affects transfer, decompression, parsing, compilation, execution, and memory. Analyze production output to identify:
+
+- Large dependencies.
+- Duplicate package versions.
+- Locale/data bundles imported wholesale.
+- CommonJS modules that tree shake poorly.
+- Source maps accidentally deployed publicly.
+- Heavy code in the initial route.
+- Polyfills for unsupported or unnecessary targets.
+
+```mermaid
+flowchart TD
+	OUT[Production bundle report] --> BIG[Large modules]
+	OUT --> DUP[Duplicate dependencies]
+	OUT --> INIT[Initial-route ownership]
+	BIG --> ALT[Smaller API/import/alternative]
+	DUP --> DEDUPE[Align and deduplicate versions]
+	INIT --> SPLIT[Move optional code to route boundary]
+	ALT --> REBUILD[Rebuild and measure]
+	DEDUPE --> REBUILD
+	SPLIT --> REBUILD
+```
+
+Do not replace a mature library solely because its raw package size looks large. Compare actually shipped code, capability, maintenance, correctness, and runtime cost.
+
+## Tree Shaking and Imports
+
+Tree shaking relies on statically analyzable ES modules and accurate package side-effect declarations.
+
+```jsx
+// Prefer direct named APIs that the package documents as tree-shakeable.
+import { format } from "date-fns";
+
+// Avoid importing an entire namespace if only one operation is needed.
+import * as dateUtilities from "date-fns";
+```
+
+Production build analysis is the authority. Some packages internally map both forms efficiently; others do not. Module 15 covers tree shaking in depth.
+
+## Network Waterfalls
+
+Sequential discovery delays completion when requests could begin together.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant H as HTML
+	participant J as JavaScript
+	participant A as API
+	B->>H: Request document
+	H-->>B: HTML references JS
+	B->>J: Request application JS
+	J-->>B: Execute route
+	B->>A: Discover and request data late
+	A-->>B: Data
+	Note over B,A: Each dependent discovery extends the critical path
+```
+
+Reduce waterfalls through server rendering where appropriate, route loaders, parallel independent requests, preload/modulepreload for known critical resources, and server-state prefetching. Do not preload everything; high-priority unnecessary resources compete with critical work.
+
+## Data Fetching and Caching
+
+Repeated effect-based requests can waste bandwidth and create loading flicker. Use a server-state cache such as RTK Query when data is shared or requires deduplication, freshness, invalidation, polling, and retries.
+
+```mermaid
+flowchart LR
+	C1[Component A] --> KEY[Query cache key]
+	C2[Component B] --> KEY
+	KEY -->|one in-flight request| API[Server]
+	API --> KEY
+	KEY --> C1
+	KEY --> C2
+	M[Mutation] -->|invalidate affected tags| KEY
+```
+
+Cache policy is a correctness decision. Define freshness, invalidation, memory bounds, retry policy, and authorization changes. Never show one user's cached data after sign-out or tenant switch.
+
+## Prefetching
+
+Prefetch likely next resources when probability and benefit justify bandwidth and server load.
+
+Useful triggers include:
+
+- Route link hover and keyboard focus.
+- Viewport proximity.
+- Known next step in a workflow.
+- Idle time after critical work.
+
+Consider data saver, connection quality, cache freshness, request cost, and user privacy. Prefetching a sensitive resource can leave traces and perform unnecessary authorized work.
+
+## Image Performance
+
+Images often dominate LCP and transfer size.
+
+```jsx
+<img
+	src="/images/product-800.avif"
+	srcSet="/images/product-480.avif 480w, /images/product-800.avif 800w, /images/product-1200.avif 1200w"
+	sizes="(max-width: 640px) 100vw, 50vw"
+	width="800"
+	height="600"
+	alt="Open notebook with ruled pages"
+	fetchPriority="high"
+	decoding="async"
+/>
+```
+
+Guidance:
+
+- Supply intrinsic width/height or aspect ratio to prevent layout shift.
+- Serve responsive dimensions rather than scaling oversized originals.
+- Use efficient formats with a tested fallback policy.
+- Give the real LCP image appropriate priority; do not lazy-load it.
+- Lazy-load below-the-fold images.
+- Use CDN transforms and long-lived caching for content-addressed assets.
+- Preserve meaningful alternative text.
+
+```mermaid
+flowchart TD
+	IMG[Image candidate] --> VIEW{Likely first viewport/LCP?}
+	VIEW -->|yes| PRI[Prioritize and load eagerly]
+	VIEW -->|no| LAZY[Lazy load near viewport]
+	PRI --> RESP[Serve responsive dimensions and format]
+	LAZY --> RESP
+	RESP --> DIM[Reserve width/height or aspect ratio]
+	DIM --> CACHE[CDN and immutable cache policy]
+```
+
+## Font Performance
+
+Web fonts affect transfer, text rendering, and layout stability.
+
+- Use only required families, weights, styles, and character subsets.
+- Prefer modern compressed formats.
+- Preload only critical font files actually used early.
+- Choose `font-display` behavior according to brand and readability needs.
+- Select fallback metrics that minimize reflow.
+- Cache versioned fonts for a long duration.
+- Respect font licensing and hosting policy.
+
+System fonts reduce downloads but are a design decision, not a universal requirement. Variable fonts can replace several files but may be larger than one narrowly used static face.
+
+## CSS Performance
+
+Most applications should prioritize maintainable CSS and bounded DOM over micro-optimizing selectors. Important concerns include:
+
+- Remove large unused framework CSS when verified.
+- Load route- or component-specific styles according to bundler strategy.
+- Avoid layout-invalidating style changes in tight loops.
+- Use CSS containment carefully for isolated complex regions.
+- Reserve dimensions for asynchronously loaded content.
+- Avoid expensive broad visual effects over large areas.
+- Keep critical above-the-fold styling available without a flash of unstyled content.
+
+CSS-in-JS runtime cost, server extraction, hydration, cache behavior, and bundle size vary significantly by library; profile the actual stack.
+
+## Layout Thrashing
+
+Alternating DOM writes and geometry reads can force repeated synchronous layout.
+
+```jsx
+// Risk: each write may invalidate layout before the next read.
+for (const row of rows) {
+	row.style.height = `${targetHeight}px`;
+	console.log(row.getBoundingClientRect().height);
+}
+
+// Better: group reads, then group writes.
+const heights = rows.map((row) => row.getBoundingClientRect().height);
+rows.forEach((row, index) => {
+	row.style.height = `${Math.max(heights[index], targetHeight)}px`;
+});
+```
+
+```mermaid
+flowchart LR
+	W1[DOM write] --> R1[Geometry read]
+	R1 --> FL1[Forced layout]
+	FL1 --> W2[DOM write]
+	W2 --> R2[Geometry read]
+	R2 --> FL2[Forced layout]
+	GOOD[Batch all reads] --> CALC[Calculate]
+	CALC --> WRITES[Batch writes]
+```
+
+Use browser traces to confirm forced layout. React layout effects that read and write geometry can create the same issue.
+
+## Animation Performance
+
+Prefer animations that avoid layout and large paints. `transform` and `opacity` are often compositor-friendly, but layer promotion consumes memory and is not guaranteed.
+
+```css
+.drawer {
+	transform: translateX(100%);
+	transition: transform 180ms ease;
+}
+
+.drawer[data-open="true"] {
+	transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.drawer {
+		transition: none;
+	}
+}
+```
+
+Do not add `will-change` broadly; reserve it for verified short-lived hot paths. Respect reduced-motion preferences and ensure motion does not block interaction.
+
+## Event Handling
+
+High-frequency events such as scroll, resize, pointer movement, and input can produce excessive work.
+
+- Use passive listeners for touch/scroll only when cancellation is not needed.
+- Throttle visual work to animation frames.
+- Debounce work that should occur after activity pauses.
+- Avoid global state dispatch for every pointer coordinate.
+- Use `IntersectionObserver` or `ResizeObserver` instead of repeated polling where suitable.
+- Clean up listeners and observers.
+
+```jsx
+function useRafPointerPosition() {
+	const [position, setPosition] = useState({ x: 0, y: 0 });
+	const frameRef = useRef(null);
+	const latestRef = useRef(position);
+
+	useEffect(() => {
+		function handlePointerMove(event) {
+			latestRef.current = { x: event.clientX, y: event.clientY };
+			if (frameRef.current !== null) return;
+
+			frameRef.current = requestAnimationFrame(() => {
+				frameRef.current = null;
+				setPosition(latestRef.current);
+			});
+		}
+
+		window.addEventListener("pointermove", handlePointerMove);
+		return () => {
+			window.removeEventListener("pointermove", handlePointerMove);
+			if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+		};
+	}, []);
+
+	return position;
+}
+```
+
+## Web Workers
+
+Move CPU-heavy, data-oriented computation off the main thread when reducing or slicing it is insufficient.
+
+```jsx
+const worker = new Worker(
+	new URL("./ranking.worker.js", import.meta.url),
+	{ type: "module" },
+);
+
+worker.postMessage({ products, query });
+worker.addEventListener("message", (event) => {
+	setRankedProducts(event.data);
+});
+```
+
+```mermaid
+sequenceDiagram
+	participant UI as Main-thread React UI
+	participant W as Web Worker
+	UI->>W: Structured-clone input or transfer buffer
+	UI->>UI: Remain available for input/paint
+	W->>W: Run CPU-heavy calculation
+	W-->>UI: Return result
+	UI->>UI: Render result
+```
+
+Workers cannot directly access the DOM and introduce messaging, serialization, startup, cancellation, error, and deployment complexity. Large structured clones can erase the benefit; transferable objects may help for binary data.
+
+## Memory and Long-Session Performance
+
+JavaScript garbage collection releases unreachable objects, not objects that are still referenced accidentally.
+
+Common retention sources:
+
+- Unremoved event listeners and observers.
+- Timers and intervals.
+- WebSocket/subscription callbacks.
+- Unbounded caches and history arrays.
+- Object URLs not revoked.
+- Closures retained by long-lived services.
+- Detached DOM nodes referenced by application code.
+- Large memoized values in mounted components.
+- Development tooling snapshots during profiling.
+
+```mermaid
+flowchart TD
+	ROOT[Reachable root: window, store, mounted Fiber, service] --> REF[Retained reference]
+	REF --> OBJ[Large object or detached DOM]
+	UNMOUNT[Component unmount] -. insufficient if reference remains .-> OBJ
+	CLEAN[Cleanup listener/timer/cache entry] --> DROP[Reference removed]
+	DROP --> GC[Object becomes garbage-collection eligible]
+```
+
+Memory is not released immediately after cleanup; garbage collection timing is implementation-dependent. Compare heap snapshots and retainer paths after repeating the same interaction and forcing collection only in controlled diagnostics.
+
+## Cleanup and Resource Lifetimes
+
+```jsx
+useEffect(() => {
+	const controller = new AbortController();
+	const observer = new ResizeObserver(handleResize);
+	observer.observe(element);
+
+	const intervalId = window.setInterval(refreshStatus, 30_000);
+	loadData({ signal: controller.signal });
+
+	return () => {
+		controller.abort();
+		observer.disconnect();
+		window.clearInterval(intervalId);
+	};
+}, [element]);
+```
+
+Acquisition and cleanup should be symmetrical. Strict Mode's development setup-cleanup-setup cycle helps expose missing cleanup but is not itself a production performance regression.
+
+## Server Rendering and Hydration
+
+Server rendering can improve initial content delivery and discoverability, but it moves work rather than eliminating it. The client still downloads JavaScript and hydrates interactive regions.
+
+```mermaid
+sequenceDiagram
+	participant B as Browser
+	participant S as Server
+	participant H as HTML
+	participant J as JavaScript
+	B->>S: Request route
+	S-->>H: Stream/render useful HTML
+	H-->>B: Early content paint
+	B->>J: Download route JavaScript
+	J-->>B: Hydrate matching UI
+	Note over B,J: Poorly sized JS can still delay interaction
+```
+
+SSR tradeoffs include server latency/cost, cache strategy, streaming boundaries, hydration CPU, request isolation, data serialization, and mismatch risk. Use framework-supported architecture for production SSR rather than assembling it casually.
+
+## Third-Party Scripts
+
+Analytics, tag managers, chat, ads, A/B testing, and monitoring can consume network, CPU, memory, and main-thread time.
+
+- Inventory every script owner and business purpose.
+- Load after consent where legally required.
+- Delay non-critical scripts until after primary interaction readiness.
+- Prefer server-side or lightweight integrations when appropriate.
+- Set performance budgets and expiration reviews.
+- Monitor script errors and long tasks separately.
+- Apply content security policy and supply-chain controls.
+
+One uncontrolled third-party tag can negate many application optimizations.
+
+## Production Observability
+
+Collect Web Vitals and custom journey timings with release and route context.
+
+```jsx
+import { onCLS, onINP, onLCP } from "web-vitals";
+
+function reportMetric(metric) {
+	performanceTelemetry.send({
+		name: metric.name,
+		value: metric.value,
+		rating: metric.rating,
+		navigationType: metric.navigationType,
+		routeTemplate: getCurrentRouteTemplate(),
+		release: APP_RELEASE,
+	});
+}
+
+onCLS(reportMetric);
+onINP(reportMetric);
+onLCP(reportMetric);
+```
+
+Do not attach raw URLs, search terms, record IDs, input values, or personal data. Sample appropriately and preserve metric attribution only within privacy policy.
+
+```mermaid
+flowchart LR
+	RUM[Real-user metrics] --> SEG[Segment by route/device/release]
+	SEG --> ALERT[Detect budget regression]
+	ALERT --> REPRO[Reproduce in lab]
+	REPRO --> TRACE[Collect browser/React trace]
+	TRACE --> FIX[Apply focused fix]
+	FIX --> DEPLOY[Deploy]
+	DEPLOY --> RUM
+```
+
+## Performance Testing and Regression Prevention
+
+Use several layers:
+
+| Layer | Purpose |
+|---|---|
+| Unit benchmark | Compare a pure hot algorithm with stable fixtures |
+| Component profile | Detect render-count or commit-duration regression |
+| Bundle budget | Prevent initial/route chunk growth |
+| Lighthouse CI | Track repeatable loading/accessibility indicators |
+| Browser journey | Measure key interaction and network waterfall |
+| RUM alert | Detect real production regression |
+
+Microbenchmarks are sensitive to warmup, engine optimization, fixtures, and environment noise. Benchmark only proven hot code, and keep user-level metrics primary.
+
+## Accessibility and Performance
+
+Performance work must preserve usability:
+
+- Virtualized content needs keyboard and assistive-technology strategy.
+- Lazy routes need meaningful loading and error states.
+- Skeletons need stable dimensions and should not create noisy announcements.
+- Focus must survive rerenders, pagination, and optimistic updates.
+- Reduced-motion settings must be respected.
+- Image optimization must preserve alternative text.
+- Debounce must not make controls feel unresponsive.
+- Infinite scrolling should offer an explicit navigation alternative.
+
+An inaccessible interface is not successfully optimized.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Measuring development mode only | Misleading timings and render behavior | Profile production build |
+| Optimizing without a user journey | Work targets irrelevant code | Define route, interaction, and budget |
+| Memoizing every component | Comparison, memory, and complexity overhead | Optimize measured expensive paths |
+| Deep custom memo comparison | Comparator costs more or becomes stale | Prefer stable inputs and shallow checks |
+| State lifted to application root | Broad render reach | Colocate frequent state |
+| Effect derives render data | Extra render cycle | Derive during render |
+| Transition used for controlled input | Typing can lag | Keep input state urgent |
+| 50,000 hidden DOM nodes | Layout/memory cost remains | Paginate or virtualize |
+| Every component lazy-loaded | Chunk/request waterfalls | Split meaningful optional boundaries |
+| LCP image lazy-loaded | Critical content delayed | Prioritize first-viewport image |
+| Images lack dimensions | Layout shift | Set width/height or aspect ratio |
+| Preload everything | Critical resources compete | Prioritize only known critical assets |
+| Cache without invalidation/bounds | Stale data and memory growth | Define ownership, freshness, eviction |
+| Layout reads/writes interleaved | Forced synchronous layouts | Batch reads then writes |
+| `will-change` everywhere | Excess layers and memory | Apply only to measured animation paths |
+| Event listener lacks cleanup | Long-session retention and duplicate work | Remove listener/observer/timer |
+| Worker used for tiny task | Messaging overhead exceeds gain | Measure computation and transfer cost |
+| One Lighthouse score treated as truth | Misses distributions and interactions | Combine repeated lab and field data |
+| Optimization harms accessibility | Faster but unusable experience | Include accessibility in verification |
+
+## Production Checklist
+
+1. Define key journeys and measurable budgets.
+2. Collect production field metrics by route, device, and release.
+3. Profile an optimized build with representative data.
+4. Classify network, bundle, React, DOM, CPU, and memory costs separately.
+5. Colocate frequent state and narrow context/store subscriptions.
+6. Remove unnecessary effects and duplicate derived state.
+7. Apply memoization only to measured paths with stable inputs.
+8. Use transitions/deferred values for scheduling, not cost reduction.
+9. Improve algorithms before caching inefficient work.
+10. Bound list and DOM size through pagination or virtualization.
+11. Split substantial optional code and analyze output bundles.
+12. Prevent network waterfalls and deduplicate server data requests.
+13. Optimize images, fonts, CSS, and critical-resource priority.
+14. Batch layout reads/writes and verify animation paint cost.
+15. Move suitable heavy computation to a worker only after measurement.
+16. Clean up resources and bound caches for long sessions.
+17. Audit third-party script cost and ownership.
+18. Protect accessibility, correctness, privacy, and security.
+19. Add bundle/journey budgets and production regression alerts.
+20. Re-measure after every optimization.
+
+## Real-World Architectures
+
+### E-Commerce Catalog
+
+Use server pagination/filtering, responsive prioritized product imagery, RTK Query deduplication, route splitting, stable entity identities, deferred expensive ranking, and virtualization only when product browsing genuinely requires a long continuous list.
+
+### Banking Dashboard
+
+Prioritize account summary content, keep sensitive telemetry redacted, split optional analytics, use focused selectors, avoid optimistic confirmation for transfers, bound polling, and monitor interaction latency on lower-end authenticated devices.
+
+### CRM
+
+Use normalized/selective subscriptions, server-paginated grids, virtualize large activity feeds with accessible controls, lazy-load heavy editors, prefetch likely customer routes, and detect edit-session memory growth.
+
+### Analytics Platform
+
+Move heavy transformations to server or workers, split chart libraries by route, aggregate data before transfer, avoid rendering invisible chart points, cache by validated filter keys, and measure pan/zoom INP separately from initial load.
+
+### Collaboration Application
+
+Bound message history, virtualize carefully, batch real-time updates, keep typing/cursor signals outside broad React state, reconnect with cache reconciliation, and profile memory over hours rather than only initial load.
+
+A professional performance program optimizes the user journey across network, JavaScript, React, browser rendering, and long-session memory, then protects the result with budgets and real production evidence.
 
 ---
 
