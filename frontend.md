@@ -16338,65 +16338,1053 @@ A professional error system makes failures explicit, bounded, secure, diagnosabl
 
 [Previous: Error Handling](#module-17-error-handling) | [Next: Deployment](#module-19-build-process-and-deployment)
 
-Architecture manages change. Organize by business capability as the application grows, define dependency direction, separate server state from client workflow state, and keep feature internals private. Avoid both one global `components` bucket and premature micro-frontends.
+## Introduction
+
+Frontend architecture is the set of boundaries, dependency rules, ownership decisions, and runtime policies that let a product change safely. A folder tree is evidence of architecture, not architecture itself.
+
+Good architecture makes common changes local, protects business rules from framework details, gives teams clear ownership, and leaves operational behavior visible. It should be only as elaborate as the product's current complexity requires.
+
+```mermaid
+flowchart LR
+	DRIVERS[Product and quality drivers] --> DECISIONS[Architecture decisions]
+	DECISIONS --> BOUNDARIES[Module and ownership boundaries]
+	BOUNDARIES --> DELIVERY[Implementation and deployment]
+	DELIVERY --> SIGNALS[Tests, telemetry, change cost]
+	SIGNALS --> REVIEW[Review and evolve decisions]
+	REVIEW --> DECISIONS
+```
+
+Architecture is successful when it improves delivery, correctness, security, performance, operability, and comprehension, not when it maximizes abstractions.
+
+## Architectural Drivers
+
+Start from forces that shape the system:
+
+- Product domains and user journeys.
+- Team size, ownership, and release cadence.
+- Security, privacy, and regulatory obligations.
+- Availability and offline requirements.
+- Performance budgets and supported devices.
+- Accessibility and internationalization.
+- API ownership and backend topology.
+- Expected lifetime and rate of change.
+- Testing and deployment capabilities.
+- Legacy constraints and migration cost.
+
+```mermaid
+mindmap
+  root((Frontend architecture))
+    Product
+      User journeys
+      Domain complexity
+      Change frequency
+    Quality
+      Security
+      Performance
+      Accessibility
+      Reliability
+    Organization
+      Team ownership
+      Release model
+      Governance
+    Technology
+      Browser support
+      APIs
+      Build and deployment
+```
+
+Two applications with the same React dependencies may need different architectures because their domains, teams, risks, and release models differ.
+
+## Core Principles
+
+1. Organize growing systems around business capabilities.
+2. Make dependency direction explicit and enforceable.
+3. Keep framework and transport details at boundaries.
+4. Give each state value one authoritative owner.
+5. Expose small public module APIs and hide internals.
+6. Colocate code that changes for the same reason.
+7. Separate policy from presentation and mechanism.
+8. Prefer incremental evolution over speculative infrastructure.
+9. Scale tests and observability with risk.
+10. Record consequential decisions and revisit them with evidence.
+
+## Architecture Layers
+
+One useful frontend layering model is:
 
 ```mermaid
 flowchart TB
- APP[app: bootstrap/providers/router] --> PAGES[pages/routes]
- PAGES --> FEATURES[features]
- FEATURES --> ENTITIES[domain entities]
- FEATURES --> SHARED[shared UI/hooks/utils]
- ENTITIES --> SHARED
- API[services/API] --> FEATURES
+	APP[App composition: bootstrap, providers, router] --> PAGES[Pages and route composition]
+	PAGES --> FEATURES[User capabilities and workflows]
+	FEATURES --> ENTITIES[Domain entities and reusable domain behavior]
+	FEATURES --> SHARED[Domain-neutral shared capabilities]
+	ENTITIES --> SHARED
+	SHARED --> PLATFORM[Browser/framework/platform adapters]
 ```
 
-### Small
+This is a dependency model, not a mandatory folder framework. Smaller applications can combine layers while preserving the direction.
 
-```text
-src/{components,hooks,services,App.jsx,main.jsx}
+| Layer | Owns | Should avoid |
+|---|---|---|
+| App | Bootstrap, global providers, router, store composition | Feature business rules |
+| Pages | Route-level composition and data boundaries | Reusable feature internals |
+| Features | User actions and workflows | App-wide bootstrapping |
+| Entities | Stable domain concepts, selectors, domain UI | Page navigation policy |
+| Shared | Domain-neutral UI, utilities, platform adapters | Product-specific business rules |
+
+## Dependency Direction
+
+Dependencies should point toward stable, lower-level contracts. Lower layers must not import higher-level features.
+
+```mermaid
+flowchart LR
+	APP --> PAGE
+	PAGE --> FEATURE
+	FEATURE --> ENTITY
+	FEATURE --> SHARED
+	ENTITY --> SHARED
+	SHARED -. forbidden .-> FEATURE
+	ENTITY -. forbidden .-> PAGE
+	FEATURE -. forbidden .-> APP
 ```
 
-### Medium Feature-Based
+Enforce rules with ESLint import restrictions, package boundaries, path aliases, or dependency graph checks. Documentation alone becomes stale under delivery pressure.
+
+```js
+// Conceptual ESLint boundary rule
+{
+	files: ["src/shared/**/*.{js,jsx,ts,tsx}"],
+	rules: {
+		"no-restricted-imports": [
+			"error",
+			{ patterns: ["@features/*", "@pages/*", "@app/*"] },
+		],
+	},
+}
+```
+
+## Composition Root
+
+The composition root creates concrete dependencies and wires the application together.
+
+```jsx
+const queryClient = createQueryClient(config.query);
+const apiClient = createApiClient(config.api);
+const monitoring = createMonitoring(config.monitoring);
+
+createRoot(document.getElementById("root")).render(
+	<StrictMode>
+		<MonitoringProvider value={monitoring}>
+			<ApiProvider value={apiClient}>
+				<QueryClientProvider client={queryClient}>
+					<RouterProvider router={router} />
+				</QueryClientProvider>
+			</ApiProvider>
+		</MonitoringProvider>
+	</StrictMode>,
+);
+```
+
+Feature modules should consume stable interfaces rather than create global clients repeatedly. Keep the composition root thin: wiring belongs there; domain decisions do not.
+
+```mermaid
+flowchart TD
+	CONFIG[Validated configuration] --> ROOT[Composition root]
+	ROOT --> HTTP[HTTP client]
+	ROOT --> STORE[State/query clients]
+	ROOT --> ROUTER[Router]
+	ROOT --> OBS[Monitoring]
+	HTTP --> FEATURES[Feature contracts]
+	STORE --> FEATURES
+	ROUTER --> PAGES[Page composition]
+```
+
+## Feature-Based Organization
+
+As products grow, group code by capability rather than only by file type.
 
 ```text
 src/
-|-- app/{router,store,providers}
+|-- app/
+|   |-- providers/
+|   |-- router/
+|   |-- store/
+|   `-- bootstrap.tsx
+|-- pages/
+|   |-- ProductDetailsPage/
+|   `-- CheckoutPage/
 |-- features/
-|   |-- products/{api,components,hooks,productsSlice.js}
-|   `-- checkout/{components,hooks,validation.js}
-|-- shared/{ui,hooks,utils,constants,assets}
+|   |-- add-to-cart/
+|   |   |-- api/
+|   |   |-- model/
+|   |   |-- ui/
+|   |   `-- index.ts
+|   `-- submit-order/
+|-- entities/
+|   |-- product/
+|   `-- order/
+|-- shared/
+|   |-- api/
+|   |-- config/
+|   |-- lib/
+|   `-- ui/
+`-- main.tsx
+```
+
+Capability folders improve locality: a change to add-to-cart validation, API mapping, state, and UI can remain inside one owned boundary.
+
+## Public Module APIs
+
+Each feature should expose an intentional public API.
+
+```ts
+// features/add-to-cart/index.ts
+export { AddToCartButton } from "./ui/AddToCartButton";
+export { addToCart } from "./model/addToCart";
+export type { AddToCartInput } from "./model/types";
+```
+
+Consumers import from the feature boundary:
+
+```ts
+import { AddToCartButton } from "@features/add-to-cart";
+```
+
+Avoid deep imports into another feature's internal folders. Public APIs reduce coupling, make migrations possible, and reveal what a module promises to maintain.
+
+```mermaid
+flowchart LR
+	CONSUMER[Consumer feature/page] --> API[Feature public index]
+	API --> UI[Internal UI]
+	API --> MODEL[Internal model]
+	API --> DATA[Internal API adapter]
+	CONSUMER -. forbidden deep import .-> MODEL
+```
+
+Barrels should remain bounded and free of surprising initialization. A repository-wide barrel can create cycles and increase build/test work.
+
+## Domain Modeling
+
+Frontend domain models should represent product language and invariants rather than mirror API JSON mechanically.
+
+```ts
+type OrderStatus = "draft" | "submitted" | "shipped" | "cancelled";
+
+type Order = {
+	id: string;
+	status: OrderStatus;
+	lines: OrderLine[];
+	total: Money;
+	version: number;
+};
+
+function canCancelOrder(order: Order): boolean {
+	return order.status === "draft" || order.status === "submitted";
+}
+```
+
+If the API changes field names, an adapter can protect the domain and UI from transport churn.
+
+```mermaid
+flowchart LR
+	JSON[API DTO] --> VALIDATE[Runtime validation]
+	VALIDATE --> MAP[DTO-to-domain adapter]
+	MAP --> DOMAIN[Domain model]
+	DOMAIN --> VIEW[Feature/page view model]
+	VIEW --> UI[Components]
+```
+
+Do not duplicate backend business authority in the frontend. Client rules provide immediate UX; the server validates authoritative operations.
+
+## State Ownership
+
+Classify state by source and lifetime before choosing a tool.
+
+| State category | Examples | Typical owner |
+|---|---|---|
+| Local UI | Dialog open, selected tab | Component/reducer |
+| Form | Draft values, validation | Form boundary/library |
+| URL | Search, filters, pagination, selected resource | Router/search params |
+| Server state | Products, orders, cache metadata | Query/data library |
+| Workflow | Checkout step, upload lifecycle | Feature reducer/state machine |
+| Auth session | User status/capabilities | Auth subsystem |
+| Preferences | Theme, density, locale | Settings service/store |
+| Ephemeral external | Online state, viewport, media query | External store adapter |
+
+```mermaid
+flowchart TD
+	STATE[New state value] --> SHARE{Must multiple distant owners coordinate it?}
+	SHARE -->|no| LOCAL[Keep local]
+	SHARE -->|yes| URL{Should reload/share/back-forward preserve it?}
+	URL -->|yes| ROUTER[Put canonical value in URL]
+	URL -->|no| SERVER{Owned by remote system?}
+	SERVER -->|yes| QUERY[Use server-state/query cache]
+	SERVER -->|no| FLOW{Complex workflow transitions?}
+	FLOW -->|yes| MACHINE[Feature reducer/state machine]
+	FLOW -->|no| STORE[Scoped shared store/context]
+```
+
+Avoid storing derived data when it can be computed from authoritative state. Duplicate state creates synchronization bugs.
+
+## Local State and Context
+
+Use local state by default. Lift state only to the nearest common owner.
+
+Context is dependency distribution, not automatically a state-management solution. Frequently changing broad context values can rerender many consumers and obscure ownership.
+
+Use separate contexts for independently changing concerns and expose focused hooks:
+
+```jsx
+const PreferencesContext = createContext(null);
+
+export function usePreferences() {
+	const value = useContext(PreferencesContext);
+	if (!value) throw new Error("usePreferences requires PreferencesProvider");
+	return value;
+}
+```
+
+Do not place all application data and commands into one global context object.
+
+## Server State
+
+Server state has remote ownership, staleness, caching, retries, invalidation, and concurrent updates. A query library is usually more appropriate than hand-written global loading flags.
+
+```mermaid
+stateDiagram-v2
+	[*] --> absent
+	absent --> loading: query requested
+	loading --> fresh: success
+	loading --> error: failure
+	fresh --> stale: freshness window expires
+	stale --> refreshing: refetch
+	refreshing --> fresh: success
+	refreshing --> stale: failure while cached data remains
+	fresh --> invalidated: mutation/event
+	invalidated --> refreshing
+```
+
+Centralize query keys and mutation invalidation within domain/feature boundaries. Clear user- and tenant-specific caches during session changes.
+
+## Client Workflow State
+
+Complex flows benefit from reducers or state machines.
+
+```mermaid
+stateDiagram-v2
+	[*] --> editing
+	editing --> validating: submit
+	validating --> editing: invalid
+	validating --> submitting: valid
+	submitting --> completed: confirmed
+	submitting --> failed: definitive failure
+	submitting --> unknown: outcome uncertain
+	failed --> editing: revise
+	unknown --> reconciling: check operation
+	reconciling --> completed: committed
+	reconciling --> editing: not committed
+```
+
+Explicit states prevent contradictory booleans and make cancellation, retries, and uncertain outcomes testable.
+
+## API Layer
+
+Separate transport policy from endpoint/domain adapters.
+
+```text
+shared/api/
+|-- httpClient.ts          # headers, timeout, normalization
+|-- errors.ts
+`-- contracts.ts
+
+entities/order/api/
+|-- orderDto.ts            # response schema
+|-- mapOrder.ts            # transport -> domain
+`-- orderApi.ts            # endpoint functions
+```
+
+```ts
+export async function getOrder(orderId: string, signal?: AbortSignal) {
+	const payload = await httpClient.get(`/orders/${encodeURIComponent(orderId)}`, {
+		signal,
+	});
+	return mapOrder(orderDtoSchema.parse(payload));
+}
+```
+
+The shared client handles cross-cutting mechanism such as correlation IDs and normalized transport errors. Domain adapters know endpoint contracts. Components do not construct URLs or parse response shapes.
+
+## Dependency Inversion
+
+Domain workflows can depend on interfaces supplied by the composition root.
+
+```ts
+type OrderRepository = {
+	submit(input: SubmitOrderInput): Promise<Order>;
+};
+
+export function createSubmitOrder(repository: OrderRepository) {
+	return async function submitOrder(input: SubmitOrderInput) {
+		validateOrderInput(input);
+		return repository.submit(input);
+	};
+}
+```
+
+```mermaid
+flowchart LR
+	FEATURE[Submit-order workflow] --> PORT[Order repository contract]
+	HTTP[HTTP repository adapter] --> PORT
+	MEMORY[In-memory test adapter] --> PORT
+	ROOT[Composition root] --> FEATURE
+	ROOT --> HTTP
+```
+
+Use inversion where it creates a meaningful testing, platform, or ownership boundary. Do not wrap every function in an interface without a real variation point.
+
+## Routing Architecture
+
+Routes define application navigation and are natural composition, data-loading, authorization-UX, code-splitting, and error boundaries.
+
+```jsx
+const routes = [
+	{
+		path: "/orders/:orderId",
+		lazy: () => import("@pages/OrderDetailsPage/route"),
+	},
+];
+```
+
+```mermaid
+flowchart LR
+	URL[URL] --> ROUTER[Router]
+	ROUTER --> GUARD[Session/capability UX boundary]
+	GUARD --> LOADER[Route data loader]
+	LOADER --> PAGE[Page composition]
+	PAGE --> FEATURES[Feature components]
+	ROUTER --> ERROR[Route error boundary]
+```
+
+Keep routes declarative and avoid one giant router file by composing route modules. The API remains responsible for authorization.
+
+## Page Composition
+
+Pages orchestrate features and entities for a route. They should not become a second global service layer.
+
+```jsx
+export function ProductDetailsPage() {
+	const product = useProductRouteData();
+
+	return (
+		<PageLayout>
+			<ProductSummary product={product} />
+			<AddToCartButton productId={product.id} />
+			<ProductReviews productId={product.id} />
+		</PageLayout>
+	);
+}
+```
+
+Business behavior belongs in its feature/domain owner; the page determines arrangement and route-level coordination.
+
+## Component Architecture
+
+Components can be viewed by responsibility:
+
+| Kind | Responsibility |
+|---|---|
+| Primitive | Domain-neutral controls such as Button/Input |
+| Domain component | ProductPrice, OrderStatus |
+| Feature component | AddToCartButton, CancelOrderDialog |
+| Page | Route-level composition |
+| Provider | Supplies a scoped dependency/state owner |
+| Boundary | Error, loading, authorization UX |
+
+Prefer explicit props and composition. Avoid components that fetch arbitrary endpoints, mutate global state, navigate, log analytics, and render complex UI all at once.
+
+```mermaid
+flowchart TD
+	PAGE[Page] --> FEATURE[Feature component]
+	FEATURE --> DOMAIN[Domain component]
+	FEATURE --> PRIMITIVE[Shared UI primitive]
+	DOMAIN --> PRIMITIVE
+	FEATURE --> HOOK[Feature hook/workflow]
+	HOOK --> REPOSITORY[Domain API adapter]
+```
+
+## Hooks
+
+Hooks package reusable React behavior, not arbitrary utility functions.
+
+Good custom hooks:
+
+- Own subscriptions and cleanup.
+- Integrate query/state/router behavior.
+- Expose a small feature-oriented contract.
+- Preserve React's hook rules.
+- Avoid hiding unrelated side effects.
+
+```jsx
+function useCancelOrder(orderId) {
+	const mutation = useMutation({
+		mutationFn: () => orderApi.cancel(orderId),
+		onSuccess: () => queryClient.invalidateQueries(orderKeys.detail(orderId)),
+	});
+
+	return {
+		cancel: mutation.mutate,
+		status: mutation.status,
+		error: normalizeError(mutation.error),
+	};
+}
+```
+
+Keep endpoint/cache policy near the feature rather than in every button.
+
+## Shared Code
+
+Shared is a high-cost dependency because many modules rely on it. Keep it domain-neutral and stable.
+
+Suitable shared code:
+
+- Design-system primitives.
+- Generic accessibility utilities.
+- HTTP transport and configuration adapters.
+- Date/number formatting mechanisms.
+- Logging and telemetry interfaces.
+- Pure language/platform helpers.
+
+Unsuitable shared code:
+
+- Checkout pricing rules.
+- Order-specific permissions.
+- Customer onboarding workflow.
+- Constants meaningful to one domain only.
+
+Promote code to shared after genuine reuse and stable semantics emerge, not before.
+
+## Design System Boundary
+
+A design system owns visual primitives, tokens, interaction contracts, accessibility behavior, and documentation. Product features own domain composition.
+
+```mermaid
+flowchart LR
+	TOKENS[Design tokens] --> PRIMITIVES[Button, Input, Dialog]
+	PRIMITIVES --> PATTERNS[FormField, DataTable patterns]
+	PATTERNS --> FEATURES[Product features]
+	FEATURES --> PAGES[Product pages]
+	PAGES -. product rules must not flow back .-> PRIMITIVES
+```
+
+Avoid putting product-specific API calls or authorization into generic design-system components.
+
+## Cross-Cutting Concerns
+
+Cross-cutting behavior should enter through explicit boundaries:
+
+| Concern | Architectural home |
+|---|---|
+| Configuration | Validated config module/composition root |
+| Authentication | Auth provider/service and route UX |
+| Authorization | Server policy; client capability presentation |
+| Error handling | Normalization, route/widget boundaries |
+| Telemetry | Adapter plus feature event contracts |
+| Internationalization | Locale provider and message ownership |
+| Feature flags | Flag service with ownership/expiry |
+| Accessibility | Component contracts, linting, tests |
+
+Do not solve cross-cutting behavior by importing a mutable global singleton everywhere without lifecycle or test control.
+
+## Event-Driven Communication
+
+Direct calls are easiest to trace. Use events when producers should not know consumers and asynchronous coordination is genuinely required.
+
+```mermaid
+flowchart LR
+	ORDER[Order submitted feature] --> EVENT[Domain event contract]
+	EVENT --> CACHE[Invalidate order queries]
+	EVENT --> TOAST[Show confirmation]
+	EVENT --> ANALYTICS[Record approved analytics event]
+```
+
+Events need schemas, ownership, delivery semantics, and cleanup. An untyped global event bus hides dependencies and creates ordering problems.
+
+## Dependency Cycles
+
+Cycles often indicate unclear ownership.
+
+```mermaid
+flowchart LR
+	CART[Cart feature] --> PRICE[Pricing utility]
+	PRICE --> PRODUCT[Product feature]
+	PRODUCT --> CART
+```
+
+Break cycles by extracting a stable lower-level domain contract, moving orchestration upward to a page/workflow, or replacing a reverse import with an explicit callback/event. Add cycle detection where scale warrants it.
+
+## Naming Conventions
+
+Use names that communicate product intent:
+
+- Components: `OrderSummary`, `CancelOrderDialog`.
+- Hooks: `useOrder`, `useCancelOrder`.
+- Commands: `submitOrder`, `cancelOrder`.
+- Events: `orderSubmitted`, `sessionExpired`.
+- Selectors: `selectCartTotal`.
+- API adapters: `orderApi`, `OrderRepository`.
+- Tests: behavior-oriented descriptions.
+
+Avoid vague buckets such as `helpers`, `common`, `misc`, or `manager` when a precise owner exists.
+
+## Project Sizes
+
+### Small Application
+
+```text
+src/
+|-- components/
+|-- hooks/
+|-- services/
+|-- App.jsx
 `-- main.jsx
 ```
 
-### Enterprise
+Keep the structure simple. Colocate feature files when a folder begins growing.
+
+### Medium Feature-Based Application
 
 ```text
 src/
-|-- app/                    # composition root only
-|-- pages/                  # route composition
-|-- features/               # user capabilities
-|-- entities/               # domain models/selectors/UI
-|-- services/               # transport, telemetry, config
-|-- shared/                 # domain-neutral primitives
-`-- test/                   # cross-feature fixtures/setup
+|-- app/{providers,router,store}
+|-- pages/{CatalogPage,CheckoutPage}
+|-- features/{search-products,add-to-cart,submit-order}
+|-- entities/{product,cart,order}
+|-- shared/{api,config,lib,ui}
+`-- main.tsx
 ```
 
-Use PascalCase components, `useX` hooks, event-named Redux actions, and explicit public `index.js` boundaries. Components render/coordinate; hooks integrate React behavior; services perform transport; selectors derive data; constants represent stable semantics; utilities remain pure. Tests should follow risk: reducers/selectors, integration flows, route/auth boundaries, and a few critical end-to-end journeys.
+### Large Product
+
+```text
+src/
+|-- app/                    # composition only
+|-- pages/                  # routes and page composition
+|-- widgets/                # optional large composed regions
+|-- features/               # user capabilities
+|-- entities/               # domain concepts
+|-- shared/                 # domain-neutral platform/UI
+`-- test/                   # cross-feature setup/contracts
+```
+
+Large repositories need automated boundaries, ownership, build/test partitioning, and dependency visibility more than additional folder depth.
+
+## Monorepos
+
+Use a monorepo when multiple deployables/packages benefit from shared changes, coordinated tooling, and atomic commits.
+
+```text
+apps/
+|-- customer-portal/
+`-- admin-portal/
+packages/
+|-- design-system/
+|-- auth-client/
+|-- domain-orders/
+`-- tooling-config/
+```
+
+```mermaid
+flowchart TB
+	CUSTOMER[Customer portal] --> DS[Design system]
+	ADMIN[Admin portal] --> DS
+	CUSTOMER --> ORDERS[Orders domain package]
+	ADMIN --> ORDERS
+	CUSTOMER --> AUTH[Auth client]
+	ADMIN --> AUTH
+	ORDERS --> SHARED[Stable shared contracts]
+```
+
+Do not turn every internal folder into a published package. Packages add versioning, build, dependency, and ownership cost. Create them for real reuse, isolation, or release boundaries.
+
+## Micro-Frontends
+
+Micro-frontends split frontend ownership and deployment across independently delivered units. They solve organizational scaling problems at significant runtime and governance cost.
+
+```mermaid
+flowchart LR
+	SHELL[Application shell] --> CATALOG[Catalog team frontend]
+	SHELL --> CHECKOUT[Checkout team frontend]
+	SHELL --> ACCOUNT[Account team frontend]
+	SHELL --> PLATFORM[Shared auth, navigation, telemetry contracts]
+	CATALOG --> DS[Shared design system]
+	CHECKOUT --> DS
+	ACCOUNT --> DS
+```
+
+Required decisions include:
+
+- Route and visual ownership.
+- Shared dependency/version strategy.
+- Authentication and session contracts.
+- Navigation and URL ownership.
+- Design-system compatibility.
+- Runtime failure isolation.
+- Cross-app communication.
+- Independent deployment and rollback.
+- Performance budgets and duplicate code.
+- End-to-end testing and incident ownership.
+
+Choose micro-frontends only when independent team delivery provides more value than integration complexity. A modular monolith is often the better intermediate architecture.
+
+## Modular Monolith
+
+A modular frontend ships as one application while enforcing internal feature boundaries.
+
+Advantages:
+
+- Atomic builds and releases.
+- Direct type-safe imports.
+- Simpler shared runtime and routing.
+- Easier cross-feature testing.
+- Lower operational overhead.
+
+Tradeoffs:
+
+- Release coordination across teams.
+- Build/test scaling requirements.
+- Boundary erosion unless automated.
+
+Start modular; distribute deployment only when organizational evidence justifies it.
+
+## Testing Architecture
+
+Tests should follow risk and ownership.
+
+```mermaid
+flowchart TB
+	PURE[Pure domain logic] --> UNIT[Fast unit tests]
+	FEATURE[Feature workflow] --> INTEGRATION[Component/integration tests]
+	BOUNDARY[API/router/auth contracts] --> CONTRACT[Contract tests]
+	JOURNEY[Critical user journey] --> E2E[Small real-browser suite]
+	DEPLOY[Production artifact] --> SMOKE[Deployment smoke tests]
+```
+
+| Layer | Main confidence |
+|---|---|
+| Unit | Domain calculations, reducers, selectors |
+| Integration | User interaction and feature collaboration |
+| Contract | API schemas, adapters, package public APIs |
+| E2E | Critical workflows across deployed boundaries |
+| Architecture | Dependency rules, cycles, package ownership |
+
+Avoid tests coupled to internal component structure. Prefer behavior at the module's public boundary.
+
+## Testability
+
+Testability is a design signal. Difficult tests often reveal hidden global dependencies, mixed responsibilities, or uncontrolled side effects.
+
+Use:
+
+- Dependency injection at meaningful boundaries.
+- Pure domain functions.
+- Network interception for API integration tests.
+- Deterministic clocks/IDs where workflows depend on them.
+- Small public feature APIs.
+- Production-like tests for routing, chunks, and deployment.
+
+Do not distort production architecture solely for shallow mocking convenience.
+
+## Observability Architecture
+
+Telemetry should use stable product events and technical context.
+
+```mermaid
+flowchart LR
+	FEATURE[Feature behavior] --> EVENT[Typed product event]
+	BOUNDARY[Error/performance boundary] --> TECH[Technical signal]
+	EVENT --> ADAPTER[Telemetry adapter]
+	TECH --> ADAPTER
+	ADAPTER --> REDACT[Privacy/redaction policy]
+	REDACT --> PROVIDER[Monitoring/analytics provider]
+```
+
+Feature code should not spread vendor SDK calls throughout components. An adapter supports redaction, consent, testing, and provider migration.
+
+## Performance Architecture
+
+Performance is influenced by module boundaries and data ownership:
+
+- Route-level code splitting.
+- Feature-specific heavy dependencies.
+- Query deduplication and cache policy.
+- Avoiding broad context updates.
+- Stable asset and deployment caching.
+- Server rendering/streaming where justified.
+- Rendering virtualization for large collections.
+- Performance budgets by user journey.
+
+Do not optimize component memoization globally before measuring. Architectural improvements often come from loading less code/data and narrowing update ownership.
+
+## Security Architecture
+
+```mermaid
+flowchart TD
+	BROWSER[Untrusted browser] --> BFF[BFF/API boundary]
+	BFF --> AUTHN[Server authentication]
+	AUTHN --> AUTHZ[Server authorization]
+	AUTHZ --> DOMAIN[Domain invariants]
+	DOMAIN --> DATA[Protected data/services]
+	CONFIG[Public client config] --> BROWSER
+	SECRETS[Server secrets] --> BFF
+	SECRETS -. never shipped .-> BROWSER
+```
+
+Architectural controls include:
+
+- Server-enforced authorization.
+- Trusted input validation at every boundary.
+- No secrets in browser artifacts.
+- Content Security Policy and safe rendering.
+- Tenant-aware cache/state separation.
+- Dependency and build-chain governance.
+- Privacy-aware telemetry.
+- Secure failure defaults.
+
+Security cannot be delegated to a `ProtectedRoute` component.
+
+## Accessibility Architecture
+
+Accessibility belongs in shared component contracts, page templates, routing behavior, testing, and acceptance criteria.
+
+Design-system primitives should own keyboard interactions and semantics where standardized. Pages own heading hierarchy, landmarks, route focus, and content meaning. Features own accessible labels, status announcements, and error recovery.
+
+Automated tests catch only part of accessibility quality; include keyboard and assistive-technology review for critical workflows.
+
+## Internationalization Architecture
+
+Decide ownership for locale resolution, message catalogs, formatting, routing, and content direction.
+
+Keep message identifiers near owning features, load catalogs by supported locale/route where useful, and centralize date/number/currency formatting. Avoid concatenating translated fragments or embedding business decisions in translated strings.
+
+Domain values should remain locale-neutral; formatting occurs near presentation.
+
+## Feature Flags
+
+Flags are temporary architectural branches with lifecycle cost.
+
+```mermaid
+flowchart LR
+	OWNER[Flag owner and expiry] --> EVALUATE[Typed flag service]
+	EVALUATE --> OLD[Established implementation]
+	EVALUATE --> NEW[New implementation]
+	NEW --> OBSERVE[Metrics and rollback]
+	OBSERVE --> DECIDE[Complete rollout or revert]
+	DECIDE --> REMOVE[Remove flag and dead branch]
+```
+
+Do not scatter string flag names through components. Centralize evaluation, define defaults, keep server policy authoritative, and remove stale flags.
+
+## Architecture Decision Records
+
+Record consequential choices in short ADRs.
+
+```markdown
+# ADR-007: Server state uses query cache
+
+## Status
+Accepted
+
+## Context
+Product data has remote ownership, staleness, retries, and invalidation.
+
+## Decision
+Use the approved query library for server state; keep workflow state in features.
+
+## Consequences
+Query keys and invalidation require domain ownership and logout cleanup.
+```
+
+ADRs preserve context, alternatives, and consequences. They should not duplicate ordinary code documentation or become immutable law.
+
+## Ownership and Governance
+
+Define ownership for modules and cross-cutting contracts.
+
+```mermaid
+flowchart LR
+	CHANGE[Proposed change] --> OWNER[Owning team review]
+	OWNER --> RULES[Automated architecture/security checks]
+	RULES --> CONTRACT{Public contract changed?}
+	CONTRACT -->|yes| CONSUMERS[Consumer/migration review]
+	CONTRACT -->|no| DELIVERY[Normal delivery]
+	CONSUMERS --> DELIVERY
+```
+
+Useful controls:
+
+- CODEOWNERS or equivalent review ownership.
+- Dependency boundary linting.
+- Public API and contract tests.
+- Dependency update policy.
+- Architecture fitness functions.
+- ADR review for consequential changes.
+- Deprecation and migration timelines.
+
+Governance should make safe changes easier, not create ceremonial approval for every local edit.
+
+## Architecture Fitness Functions
+
+Fitness functions continuously test architectural properties.
+
+Examples:
+
+- Shared modules do not import features.
+- No circular feature dependencies.
+- Entry and route bundles stay within budgets.
+- Public packages expose supported entry points only.
+- Critical pages pass accessibility checks.
+- Client artifacts contain no forbidden secret patterns.
+- APIs conform to schemas.
+- Tenant-specific caches clear on context change.
+
+Run fast checks in pull requests and deeper checks in CI/deployment pipelines.
+
+## Evolution Strategy
+
+Architecture should evolve with observed pressure.
 
 ```mermaid
 journey
- title Architecture growth
- section Small app
- Colocate simple code: 5: Team
- section Product grows
- Extract feature boundaries: 4: Team
- Add store/API policies: 4: Team
- section Enterprise
- Enforce dependency rules: 5: Team
- Observe and deploy independently where justified: 3: Team
+  title Architecture evolution
+  section Small product
+    Colocate simple code: 5: Team
+    Keep state local: 5: Team
+  section Growing product
+    Extract feature boundaries: 4: Team
+    Centralize API policies: 4: Team
+    Enforce dependency direction: 4: Team
+  section Multiple teams
+    Add package ownership: 4: Team
+    Optimize build and tests: 3: Team
+    Distribute deployment only if justified: 2: Team
 ```
 
-**Mistakes:** folders by file type at large scale, circular feature imports, business logic in shared UI, API calls throughout components, duplicated server state, and abstractions with one consumer. **Mini project:** design an e-commerce repository with dependency rules, ADRs, test strategy, ownership, and migration path from small to medium.
+Signals that justify restructuring include frequent merge conflicts, repeated cross-folder changes, circular dependencies, unclear ownership, duplicated domain rules, broad regressions, and slow feedback.
+
+## Incremental Migration
+
+Do not pause product delivery for a complete rewrite.
+
+1. Identify one high-change capability.
+2. Define its intended public boundary.
+3. Add tests around current behavior.
+4. Move domain/API/UI code incrementally.
+5. Add import rules preventing new violations.
+6. Redirect consumers through the public API.
+7. Remove obsolete paths after migration.
+8. Measure change cost and repeat.
+
+```mermaid
+flowchart LR
+	LEGACY[Legacy mixed module] --> CHARACTERIZE[Characterization tests]
+	CHARACTERIZE --> BOUNDARY[Create feature boundary]
+	BOUNDARY --> MOVE[Move one workflow]
+	MOVE --> RULE[Enforce new dependency rule]
+	RULE --> CONSUMERS[Migrate consumers]
+	CONSUMERS --> DELETE[Delete obsolete implementation]
+```
+
+Use strangler-style migration where old and new paths coexist temporarily behind explicit routing or adapters.
+
+## Common Mistakes
+
+| Mistake | Consequence | Professional correction |
+|---|---|---|
+| Folder structure treated as architecture | Dependencies remain uncontrolled | Define and enforce direction/ownership |
+| Large global `components` directory | Domain ownership disappears | Organize growing code by capability |
+| Business logic in shared UI | Generic layer becomes product-coupled | Move policy to owning domain/feature |
+| API calls throughout components | Inconsistent contracts and error policy | Use transport and domain adapters |
+| All state placed globally | Hidden coupling and broad rerenders | Classify state and keep ownership narrow |
+| Server data copied into client store | Synchronization bugs | Use one server-state cache authority |
+| URL-worthy state hidden in memory | Refresh/share/back behavior breaks | Use router search/path state |
+| Feature deep imports | Internal changes break consumers | Expose bounded public APIs |
+| Repository-wide barrel | Cycles and large graphs | Use local effect-free boundaries |
+| Context used as universal store | Broad updates and unclear lifecycle | Scope contexts by concern |
+| One service singleton everywhere | Hard tests and hidden lifecycle | Compose stable adapters at root |
+| Premature generic abstraction | Complex API with one consumer | Extract after real repeated semantics |
+| Duplicate domain models per screen | Rules diverge | Establish entity/domain ownership |
+| Frontend permission checks trusted | Security bypass | Enforce authorization server-side |
+| Micro-frontends for folder separation | Runtime/organizational overhead | Start with modular monolith |
+| Every folder made a package | Build/version complexity | Package only real boundaries |
+| Events used for all communication | Hidden control flow | Prefer direct contracts by default |
+| Architecture rules only documented | Drift | Add automated fitness functions |
+| Rewrite replaces incremental migration | High risk and delayed value | Migrate capability by capability |
+| Tests mirror implementation | Refactors become expensive | Test public behavior/contracts |
+
+## Production Checklist
+
+1. Document product, quality, organizational, and technical drivers.
+2. Define architecture layers and allowed dependency direction.
+3. Enforce boundaries with tooling.
+4. Keep the composition root focused on wiring.
+5. Organize growing code around business capabilities.
+6. Give features small, explicit public APIs.
+7. Prevent deep imports into feature internals.
+8. Keep shared code domain-neutral and stable.
+9. Model domain concepts separately from raw API DTOs.
+10. Validate and map data at trust boundaries.
+11. Assign one authoritative owner to each state value.
+12. Keep local UI state local.
+13. Put navigable/shareable state in the URL.
+14. Use a query cache for remote server state.
+15. Use reducers/state machines for complex workflows.
+16. Centralize transport policy without centralizing every domain endpoint.
+17. Align route, loading, error, and code-splitting boundaries.
+18. Keep design-system primitives free of product rules.
+19. Isolate telemetry and third-party SDKs behind adapters.
+20. Enforce security and tenant boundaries on the server.
+21. Build accessibility into shared and page contracts.
+22. Define feature-flag ownership and removal dates.
+23. Test domain logic, feature collaboration, contracts, and critical journeys.
+24. Monitor bundle, reliability, and user-journey fitness functions.
+25. Record consequential decisions with context and consequences.
+26. Define code ownership and deprecation policy.
+27. Detect cycles and forbidden dependencies in CI.
+28. Prefer modular monoliths before distributed frontends.
+29. Evolve architecture from measured delivery pressure.
+30. Migrate incrementally with characterization tests and enforcement.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Organize around catalog, search, cart, checkout, orders, and account capabilities. Keep pricing and inventory authoritative on the server, isolate checkout from optional recommendations, and make order submission an explicit idempotent workflow.
+
+### Banking
+
+Separate accounts, payments, beneficiaries, statements, and authentication domains. Use server-enforced policy, step-up workflows, immutable audit integration, strict data redaction, conservative shared code, and high-risk journey tests.
+
+### Enterprise CRM
+
+Model customers, opportunities, activities, reporting, and administration as owned capabilities. Keep complex editors and reports behind route boundaries, centralize contract adapters, and enforce tenant/customer access on APIs.
+
+### Multi-Tenant SaaS
+
+Treat tenant context as trusted session/server policy, clear tenant-scoped caches on switching, isolate branding/configuration from private data, and prevent shared modules from silently retaining tenant-specific state.
+
+### Design System
+
+Publish tokens, primitives, accessibility contracts, and stable package exports. Externalize React, preserve CSS side effects, version breaking behavior deliberately, and keep product workflows in consuming applications.
+
+### Offline Field Application
+
+Own local persistence, synchronization, conflict resolution, operation IDs, encryption, and schema migration as explicit platform capabilities. Features model queued, synchronized, conflicted, and rejected states rather than assuming immediate connectivity.
+
+### Multi-Team Platform
+
+Begin with enforceable modules and package ownership in a monorepo. Introduce independent deployment only when team autonomy, release frequency, and failure isolation outweigh shared-runtime, performance, testing, and governance costs.
+
+A professional frontend architecture makes dependencies and ownership visible, keeps business capabilities cohesive, and evolves through measured constraints. Its purpose is sustained product change with controlled risk, not structural complexity for its own sake.
 
 ---
 
