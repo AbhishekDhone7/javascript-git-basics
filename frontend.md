@@ -6231,44 +6231,895 @@ A professional Axios layer makes transport policy consistent, keeps authenticati
 
 [Previous: Axios](#module-8-axios) | [Next: Redux Toolkit](#module-10-redux-toolkit-and-rtk-query)
 
-Context distributes a value through a subtree without forwarding it through every intermediate component. A provider owns a value; `useContext` reads the nearest provider. Consumers re-render when provider value changes by `Object.is`, even through memoized ancestors.
+## Introduction
+
+React Context distributes a value from a provider to descendants without forwarding that value through every intermediate component. It is primarily a **dependency-delivery mechanism**. State, reducers, external stores, caches, and services still own the values being delivered.
+
+Context is well suited to coherent subtree-wide dependencies such as:
+
+- Theme and display density.
+- Locale and formatting services.
+- Authenticated session snapshots and session commands.
+- Feature configuration.
+- Route- or workspace-scoped dependencies.
+- Form or design-system component coordination.
+- Swappable services for dependency injection.
+
+Context is not automatically global state management, async orchestration, persistent storage, server caching, or fine-grained subscriptions.
+
+```mermaid
+flowchart LR
+	O[Owner: state, reducer, store, or service] --> P[Context Provider]
+	P --> C1[Direct consumer]
+	P --> N[Non-consuming intermediary]
+	N --> C2[Deep consumer]
+	C1 -->|intent callback| O
+	C2 -->|intent callback| O
+```
+
+## Context Mental Model
+
+Context has three central operations:
+
+1. `createContext(defaultValue)` creates a context identity.
+2. A matching provider supplies a value to a React subtree.
+3. `useContext(SomeContext)` reads and subscribes to the nearest provider above the calling component.
+
+The component calling `useContext` must be inside the provider in the rendered React tree. A provider returned later from the same component cannot affect a hook call that already occurred in that component.
+
+```jsx
+import { createContext, useContext } from "react";
+
+const DensityContext = createContext("comfortable");
+
+function CompactPanel() {
+	return (
+		<DensityContext.Provider value="compact">
+			<ResultsTable />
+		</DensityContext.Provider>
+	);
+}
+
+function ResultsTable() {
+	const density = useContext(DensityContext);
+	return <table data-density={density}>{/* rows */}</table>;
+}
+```
+
+The default value is used only when no matching provider exists above the consumer. Passing `undefined` as a provider value does not fall back to the default.
+
+## Nearest-Provider Resolution
+
+Providers can be nested. A consumer reads the closest provider for that exact context identity.
+
+```jsx
+function Application() {
+	return (
+		<DensityContext.Provider value="comfortable">
+			<Dashboard />
+			<AnalyticsWorkspace />
+		</DensityContext.Provider>
+	);
+}
+
+function AnalyticsWorkspace() {
+	return (
+		<DensityContext.Provider value="compact">
+			<ReportGrid />
+		</DensityContext.Provider>
+	);
+}
+```
 
 ```mermaid
 flowchart TB
- O[Provider owner renders] --> V{Value changed by Object.is?}
- V -->|No| N[Consumers retain current context]
- V -->|Yes| P[Publish new context value]
- P --> C1[Consumer A renders]
- P --> C2[Consumer B renders]
- P --> C3[Deep consumer renders]
- X[Non-consuming intermediary] -. need not read value .-> C3
+	R[Root Density: comfortable] --> D[Dashboard consumer: comfortable]
+	R --> A[Analytics subtree]
+	A --> N[Nested Density: compact]
+	N --> G[ReportGrid consumer: compact]
+	R --> F[Footer consumer: comfortable]
 ```
 
-The owner computes the provider value; React compares its identity; a real change notifies every subscribed consumer beneath that provider. Intermediate components need not receive props, but context consumers still pay for relevant provider updates.
+Resolution follows React ownership, including through portals. It does not search by provider name, DOM position, or object shape. Provider and consumer must import the same context object; duplicated package modules can accidentally create different identities.
+
+## Creating a Strict Context Contract
+
+A default such as `null` can hide a missing provider or conflict with a valid domain value. A unique sentinel lets a custom hook fail clearly when the provider is absent.
 
 ```jsx
-const AuthContext = createContext(null);
-export function AuthProvider({ children }) {
-	const [user, setUser] = useState(null);
-	const value = useMemo(() => ({ user, signOut: () => setUser(null) }), [user]);
-	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-export function useAuth() {
-	const context = useContext(AuthContext);
-	if (!context) throw new Error("useAuth must be inside AuthProvider");
-	return context;
+import { createContext, useContext } from "react";
+
+const MISSING_WORKSPACE = Symbol("MISSING_WORKSPACE");
+const WorkspaceContext = createContext(MISSING_WORKSPACE);
+
+export function useWorkspace() {
+	const value = useContext(WorkspaceContext);
+
+	if (value === MISSING_WORKSPACE) {
+		throw new Error("useWorkspace must be used within WorkspaceProvider");
+	}
+
+	return value;
 }
 ```
 
-Memoizing value avoids changes caused only by object recreation, but every actual `user` change still notifies all consumers. Split state/dispatch or fast/slow contexts; colocate providers; consider selector-based stores for high-frequency global data.
+The custom hook gives consumers a domain-specific API, centralizes the invariant, and keeps the context object private when direct access is not part of the feature contract.
 
-| Context | Redux Toolkit |
+### Context Module Structure
+
+```text
+src/features/workspace/
+  WorkspaceContext.js   # context identity and strict hook
+  WorkspaceProvider.jsx # ownership and provider value
+  workspaceReducer.js   # pure transitions when needed
+  workspace.test.jsx    # provider contract tests
+```
+
+Avoid a generic `contexts.js` file containing unrelated global values. Colocate each context with the feature or system that owns its contract.
+
+## Ownership Versus Delivery
+
+Context itself does not store or update a value. The provider component usually owns state or reads another owner and passes its current snapshot through context.
+
+```mermaid
+flowchart TD
+	E[User or external event] --> O[State owner calculates next value]
+	O --> R[Provider component renders]
+	R --> CMP{Object.is old and new provider value?}
+	CMP -->|same| N[No context-driven consumer update]
+	CMP -->|different| PUB[Publish new context snapshot]
+	PUB --> C1[Consumer A renders]
+	PUB --> C2[Consumer B renders]
+```
+
+This distinction helps choose the correct architecture:
+
+| Requirement | Owner | Context role |
+|---|---|---|
+| Static theme tokens | Configuration object | Deliver tokens/mode |
+| Editable theme mode | Provider state or external preference store | Deliver mode and command |
+| Authenticated user | Session state machine/store | Deliver session snapshot and commands |
+| Remote products | RTK Query/server cache | Usually no context needed |
+| Workspace reducer | Provider's `useReducer` | Deliver state and dispatch/commands |
+| API client | Configured service instance | Deliver dependency for subtree/testing |
+
+## Stateful Provider Pattern
+
+A provider can own local state when the value belongs to that subtree and changes at a moderate frequency.
+
+```jsx
+const ThemeContext = createContext(null);
+
+export function ThemeProvider({ initialMode = "system", children }) {
+	const [mode, setMode] = useState(initialMode);
+
+	const resolvedMode = mode === "system"
+		? getSystemColorScheme()
+		: mode;
+
+	const value = useMemo(() => ({
+		mode,
+		resolvedMode,
+		setMode,
+	}), [mode, resolvedMode]);
+
+	return (
+		<ThemeContext.Provider value={value}>
+			{children}
+		</ThemeContext.Provider>
+	);
+}
+```
+
+The provider owns the preference; context distributes it. A complete system-theme implementation also subscribes to `matchMedia`, cleans up the listener, persists only according to product policy, and avoids server/client hydration mismatches.
+
+## Context with `useReducer`
+
+Combining a reducer and context provides explicit transitions for a coherent subtree. It still does not add Redux middleware, selector subscriptions, time-travel DevTools, persistence, or server caching.
+
+```jsx
+const CartStateContext = createContext(null);
+const CartDispatchContext = createContext(null);
+
+const initialCart = { lines: [], status: "idle" };
+
+function cartReducer(state, action) {
+	switch (action.type) {
+		case "itemAdded": {
+			const existing = state.lines.find((line) => line.productId === action.product.id);
+			if (existing) {
+				return {
+					...state,
+					lines: state.lines.map((line) =>
+						line.productId === action.product.id
+							? { ...line, quantity: line.quantity + 1 }
+							: line,
+					),
+				};
+			}
+			return {
+				...state,
+				lines: [...state.lines, { productId: action.product.id, quantity: 1 }],
+			};
+		}
+		case "itemRemoved":
+			return {
+				...state,
+				lines: state.lines.filter((line) => line.productId !== action.productId),
+			};
+		case "cartCleared":
+			return initialCart;
+		default:
+			throw new Error(`Unknown cart action: ${action.type}`);
+	}
+}
+
+export function CartProvider({ children }) {
+	const [state, dispatch] = useReducer(cartReducer, initialCart);
+
+	return (
+		<CartDispatchContext.Provider value={dispatch}>
+			<CartStateContext.Provider value={state}>
+				{children}
+			</CartStateContext.Provider>
+		</CartDispatchContext.Provider>
+	);
+}
+```
+
+```mermaid
+sequenceDiagram
+	participant C as Cart control
+	participant D as Dispatch context
+	participant R as Reducer owner
+	participant S as State context
+	participant V as Cart views
+	C->>D: dispatch itemAdded
+	D->>R: Queue action
+	R->>R: Calculate immutable next state
+	R->>S: Provider publishes next state
+	S->>V: Consumers render next snapshot
+```
+
+Keep reducers pure. Run API calls in event handlers, dedicated services, data libraries, or effect/listener architecture rather than inside the reducer.
+
+## Splitting State and Actions
+
+Reducer `dispatch` and state setters have stable identities. Separating state from actions means components that only issue commands do not subscribe to every state change.
+
+```jsx
+export function useCartState() {
+	const state = useContext(CartStateContext);
+	if (state === null) throw new Error("useCartState requires CartProvider");
+	return state;
+}
+
+export function useCartActions() {
+	const dispatch = useContext(CartDispatchContext);
+	if (dispatch === null) throw new Error("useCartActions requires CartProvider");
+
+	return useMemo(() => ({
+		addItem: (product) => dispatch({ type: "itemAdded", product }),
+		removeItem: (productId) => dispatch({ type: "itemRemoved", productId }),
+		clearCart: () => dispatch({ type: "cartCleared" }),
+	}), [dispatch]);
+}
+```
+
+```mermaid
+flowchart TB
+	P[CartProvider] --> SC[Cart state context]
+	P --> AC[Cart actions context]
+	SC --> B[CartBadge subscribes to state]
+	SC --> L[CartList subscribes to state]
+	AC --> BTN[AddButton subscribes only to stable actions]
+	SC -->|state changes| B
+	SC -->|state changes| L
+	AC -. unchanged .-> BTN
+```
+
+If action wrappers are recreated, their context value changes. Stabilize them only when this separation has a measurable benefit or exposes a cleaner domain API.
+
+## Provider Update Semantics
+
+React compares the previous and next provider values with `Object.is`. A different object, array, or function identity is a changed context value even when its contents appear equivalent.
+
+```jsx
+// Creates a new object every provider render.
+<PreferencesContext.Provider value={{ locale, timeZone }}>
+	{children}
+</PreferencesContext.Provider>
+
+// Stable while dependencies are unchanged.
+const preferences = useMemo(
+	() => ({ locale, timeZone }),
+	[locale, timeZone],
+);
+
+return (
+	<PreferencesContext.Provider value={preferences}>
+		{children}
+	</PreferencesContext.Provider>
+);
+```
+
+Memoization prevents context updates caused only by wrapper allocation. It cannot prevent an update when `locale` or `timeZone` genuinely changes, and it should not be added without understanding the render path.
+
+### Consumer Propagation
+
+```mermaid
+flowchart TD
+	PR[Provider renders] --> EQ{Object.is previous and next value?}
+	EQ -->|true| SAME[No context publication]
+	EQ -->|false| SUB[Notify matching consumers]
+	SUB --> C1[Consumer inside memoized parent]
+	SUB --> C2[Deep consumer]
+	SUB --> C3[Consumer with no changed props]
+	M[React.memo ancestor] -. does not block consumed context .-> C1
+```
+
+`React.memo` compares props, not context consumed inside the component. A consumer renders when its selected context object changes, even if its props are equal.
+
+## Render Reach and Performance
+
+Context has all-or-nothing subscription semantics for a given context value: `useContext` does not select one field for update purposes.
+
+```jsx
+const appValue = {
+	user,
+	theme,
+	locale,
+	notifications,
+	liveCursor,
+};
+```
+
+If this object is one context, a change to `liveCursor` can notify consumers that only read `theme`. This is why one application-wide context often performs and scales poorly.
+
+### Split by Concern and Update Frequency
+
+```mermaid
+flowchart LR
+	BAD[One AppContext] --> U[User consumers]
+	BAD --> T[Theme consumers]
+	BAD --> L[Locale consumers]
+	BAD --> C[High-frequency cursor consumers]
+	GOOD[Separated providers] --> AU[Auth context]
+	GOOD --> TH[Theme context]
+	GOOD --> LO[Locale context]
+	GOOD --> ES[External selector store for cursor]
+```
+
+Use separate contexts when values have distinct ownership, consumers, or update rates. Do not split mechanically into dozens of contexts without coherent contracts; each provider is an API and maintenance boundary.
+
+### Colocate Providers
+
+Place a provider at the narrowest stable subtree that needs it. A checkout provider belongs around checkout routes, not necessarily around the entire application. Narrow placement limits coupling, resets state naturally when leaving the feature, and reduces update reach.
+
+```mermaid
+flowchart TB
+	APP[Application providers: locale, session] --> ROUTER[Router]
+	ROUTER --> SHOP[Shop routes]
+	ROUTER --> CHECK[Checkout routes]
+	CHECK --> CP[CheckoutProvider]
+	CP --> ADDR[Address step]
+	CP --> PAY[Payment step]
+	SHOP -. does not subscribe to checkout .-> CP
+```
+
+### Separate the Updating Owner from Stable Children
+
+Provider children created outside an updating provider component may retain their element identity, but context consumers still update when the value changes. Composition can reduce unrelated parent-driven renders; it does not bypass context publication.
+
+## Context Versus Props
+
+Props remain the most explicit local communication mechanism.
+
+| Use props when | Use context when |
 |---|---|
-| Dependency distribution, simple low-frequency shared state | Complex transitions, middleware, DevTools, selectors, entity normalization |
-| No built-in async/cache model | Thunks, listeners, RTK Query cache |
-| Provider value update reaches consumers | Subscription selectors limit updates |
+| One or a few levels need the value | Many distant descendants share one dependency |
+| The dependency is part of component reuse | Intermediaries should not conceptually know it |
+| Call sites should configure behavior explicitly | A subtree establishes an ambient contract |
+| Different instances receive different inputs | One provider defines scope for descendants |
 
-**Assignment:** theme/auth contexts with invariant hooks and render-count tests. **Interview:** Context does not eliminate state ownership; it changes delivery. It can be combined with a reducer but does not gain Redux middleware, DevTools, or server caching.
+```mermaid
+flowchart TD
+	V[Value needed by descendant] --> D{How distant and widespread?}
+	D -->|local or few consumers| P[Pass explicit props]
+	D -->|many descendants in coherent subtree| C[Consider context]
+	C --> F{High-frequency or selector needs?}
+	F -->|no| CTX[Scoped context]
+	F -->|yes| STORE[External selector store]
+```
+
+Prop drilling is not inherently harmful. Passing a value through two meaningful layers can be clearer than introducing an ambient dependency.
+
+## Context Versus Composition
+
+Composition can eliminate forwarding when intermediate components only need to place content.
+
+```jsx
+function Page({ user }) {
+	return (
+		<Layout
+			header={<UserMenu user={user} />}
+			content={<Dashboard userId={user.id} />}
+		/>
+	);
+}
+```
+
+Use composition when the parent can supply the final element or slot. Use context when descendants independently need to read the same scoped dependency.
+
+## Context Versus External Stores and Redux
+
+Context publication and selector-based store subscriptions have different update models.
+
+| Capability | Context | Redux Toolkit/external store |
+|---|---|---|
+| Subtree dependency delivery | Native and direct | Provider plus store subscription |
+| State ownership | Must be supplied separately | Store owns state |
+| Fine-grained selectors | Not built into `useContext` | Standard capability |
+| Middleware/listeners | None | Available depending on store |
+| DevTools/action history | None | Strong Redux support |
+| Entity normalization | Manual | Entity adapters/selectors |
+| High-frequency updates | Often broad | Selector subscriptions can narrow |
+| Multiple isolated instances | Natural with providers | Possible with separate stores |
+
+```mermaid
+flowchart LR
+	CTX[Context provider value changes] --> ALL[All consumers of that context are notified]
+	ST[External store state changes] --> SEL[Each subscriber reruns selector]
+	SEL --> EQ{Selected result equal?}
+	EQ -->|yes| SKIP[Skip subscriber render]
+	EQ -->|no| RENDER[Render subscriber]
+```
+
+Use Context for stable or moderately changing subtree dependencies. Use Redux Toolkit or another established store when cross-feature event workflows, middleware, DevTools, entity selectors, or fine-grained subscriptions justify it.
+
+## Context Versus Server-State Caches
+
+Remote data has lifecycle requirements Context does not provide:
+
+- Cache keys and deduplication.
+- Freshness and stale-time policy.
+- Cancellation and race handling.
+- Retry and backoff.
+- Pagination and partial data.
+- Mutation invalidation.
+- Background refresh.
+- Optimistic updates and rollback.
+
+Use RTK Query, TanStack Query, React Router data APIs, or another appropriate data layer. A library may use Context internally to deliver a cache client, but the cache owns remote data behavior.
+
+```mermaid
+flowchart TD
+	REQ[Shared remote resource] --> CACHE[Server-state cache owns lifecycle]
+	CACHE --> C1[Consumer query A]
+	CACHE --> C2[Consumer query B]
+	CFG[Cache client/config] --> CTX[Context may deliver client]
+	CTX --> C1
+	CTX --> C2
+	BAD[Raw fetched data in broad Context] -. lacks cache policy .-> REQ
+```
+
+## Context as Dependency Injection
+
+Context can deliver a service interface while production, test, and story environments provide different implementations.
+
+```jsx
+const AnalyticsContext = createContext(null);
+
+export function AnalyticsProvider({ client, children }) {
+	if (!client) throw new Error("AnalyticsProvider requires a client");
+
+	return (
+		<AnalyticsContext.Provider value={client}>
+			{children}
+		</AnalyticsContext.Provider>
+	);
+}
+
+export function useAnalytics() {
+	const client = useContext(AnalyticsContext);
+	if (!client) throw new Error("useAnalytics requires AnalyticsProvider");
+	return client;
+}
+```
+
+```jsx
+const productionAnalytics = {
+	track(eventName, properties) {
+		telemetry.send({ eventName, properties });
+	},
+};
+
+root.render(
+	<AnalyticsProvider client={productionAnalytics}>
+		<App />
+	</AnalyticsProvider>,
+);
+```
+
+Define a narrow interface and avoid a service-locator context containing every application dependency. Hidden ambient dependencies make components harder to understand and reuse.
+
+## Authentication Context
+
+Authentication context should expose a normalized session state, not treat a token's presence as proof of authorization.
+
+```jsx
+const SessionContext = createContext(null);
+
+export function SessionProvider({ sessionStore, children }) {
+	const session = useSyncExternalStore(
+		sessionStore.subscribe,
+		sessionStore.getSnapshot,
+		sessionStore.getServerSnapshot,
+	);
+
+	const value = useMemo(() => ({
+		status: session.status,
+		user: session.user,
+		signIn: sessionStore.signIn,
+		signOut: sessionStore.signOut,
+	}), [session, sessionStore]);
+
+	return (
+		<SessionContext.Provider value={value}>
+			{children}
+		</SessionContext.Provider>
+	);
+}
+```
+
+```mermaid
+stateDiagram-v2
+	[*] --> Loading
+	Loading --> Anonymous: no valid session
+	Loading --> Authenticated: session restored
+	Anonymous --> Authenticating: sign in
+	Authenticating --> Authenticated: accepted
+	Authenticating --> Anonymous: rejected
+	Authenticated --> Refreshing: expiry approaches
+	Refreshing --> Authenticated: refreshed
+	Refreshing --> Anonymous: refresh rejected
+	Authenticated --> Anonymous: sign out
+```
+
+The API must authorize every protected operation. Context controls client experience and delivers session information; it is not a security boundary. Avoid exposing raw tokens unless required, and never place secrets in rendered markup, URLs, logs, or analytics.
+
+## Theme and Locale Contexts
+
+Theme and locale are classic Context use cases because many descendants need coherent, relatively low-frequency configuration.
+
+Separate concerns that may change independently:
+
+```jsx
+function ApplicationProviders({ children }) {
+	return (
+		<LocaleProvider>
+			<ThemeProvider>
+				<FeatureFlagsProvider>
+					{children}
+				</FeatureFlagsProvider>
+			</ThemeProvider>
+		</LocaleProvider>
+	);
+}
+```
+
+Provider composition is acceptable when each provider has a focused contract. If bootstrap becomes difficult to read, extract a named application provider component rather than inventing a generic provider registry.
+
+For locale, distribute stable formatter services or locale/time-zone configuration. Do not recreate expensive formatters in every cell of a large table.
+
+## Compound Components
+
+Private Context helps related component parts coordinate without exposing internal wiring.
+
+```jsx
+const AccordionContext = createContext(null);
+
+function Accordion({ value, onValueChange, children }) {
+	const context = useMemo(
+		() => ({ value, onValueChange }),
+		[value, onValueChange],
+	);
+
+	return (
+		<AccordionContext.Provider value={context}>
+			{children}
+		</AccordionContext.Provider>
+	);
+}
+
+function AccordionItem({ id, title, children }) {
+	const accordion = useContext(AccordionContext);
+	if (!accordion) throw new Error("AccordionItem requires Accordion");
+
+	const open = accordion.value === id;
+	const panelId = `${id}-panel`;
+
+	return (
+		<section>
+			<h3>
+				<button
+					aria-expanded={open}
+					aria-controls={panelId}
+					onClick={() => accordion.onValueChange(open ? null : id)}
+				>
+					{title}
+				</button>
+			</h3>
+			<div id={panelId} hidden={!open}>{children}</div>
+		</section>
+	);
+}
+```
+
+```mermaid
+flowchart TB
+	ROOT[Accordion root owns open ID] --> PC[Private context]
+	PC --> I1[Item A reads open ID]
+	PC --> I2[Item B reads open ID]
+	I1 -->|onValueChange| ROOT
+	I2 -->|onValueChange| ROOT
+```
+
+Context coordinates state; semantic HTML, focus behavior, keyboard interaction, and ARIA requirements still need deliberate implementation.
+
+## Portals and Context
+
+A portal changes DOM placement but keeps React-tree ownership. Context reaches portal content through the React tree.
+
+```jsx
+function Modal({ children }) {
+	const theme = useTheme();
+
+	return createPortal(
+		<div role="dialog" data-theme={theme.resolvedMode}>
+			{children}
+		</div>,
+		document.getElementById("modal-root"),
+	);
+}
+```
+
+```mermaid
+flowchart LR
+	subgraph ReactTree[React tree]
+		TP[ThemeProvider] --> APP[Application]
+		APP --> MOD[Modal portal component]
+		MOD --> CON[Portal consumer reads theme]
+	end
+	subgraph DOMTree[DOM tree]
+		AR[app-root]
+		MR[modal-root] --> MD[Modal DOM]
+	end
+	CON -. rendered into .-> MD
+```
+
+DOM-based systems outside React, including separately mounted roots, do not automatically inherit Context. Wrap each independent root with required providers or share state through an external store/service.
+
+## Provider Placement and State Lifetime
+
+Provider identity and tree position determine the lifetime of state owned inside the provider.
+
+```jsx
+function CheckoutRoute() {
+	return (
+		<CheckoutProvider>
+			<Outlet />
+		</CheckoutProvider>
+	);
+}
+```
+
+Entering checkout mounts the provider; leaving checkout unmounts it and releases its local state and subscriptions. Moving a stateful provider or changing its key can reset the workflow.
+
+Choose placement based on required lifetime:
+
+| Lifetime | Provider placement |
+|---|---|
+| Entire application session | Application composition root |
+| Authenticated area | Authenticated route layout |
+| One workspace/project | Workspace route boundary keyed by identity |
+| One checkout flow | Checkout route layout |
+| One component family | Compound component root |
+| Across tabs/devices | Context is insufficient; use server/persistent owner |
+
+## Server Rendering and Hydration
+
+For server-rendered applications, the server and first client render must receive compatible provider values. Differences in theme, locale, time zone, session, or feature configuration can cause hydration mismatches or visible flashes.
+
+```mermaid
+sequenceDiagram
+	participant S as Server render
+	participant H as HTML/bootstrap data
+	participant C as Client hydrate
+	participant P as Providers
+	S->>P: Supply request-scoped values
+	P->>H: Render HTML plus safe serialized bootstrap
+	H->>C: Deliver document
+	C->>P: Recreate matching initial values
+	P-->>C: Hydrate existing markup
+	C->>P: Continue client updates
+```
+
+Never store request-specific server context in a process-wide mutable singleton; one user's data could leak into another request. Create request-scoped owners and serialize only data safe for the browser. Escape serialized content correctly and apply content security policy.
+
+## Async Work and Effects
+
+Providers may coordinate subscriptions or async session bootstrapping, but Context itself provides no race, cache, cancellation, retry, or persistence model.
+
+```jsx
+function FeatureFlagsProvider({ client, children }) {
+	const flags = useSyncExternalStore(
+		client.subscribe,
+		client.getSnapshot,
+		client.getServerSnapshot,
+	);
+
+	return (
+		<FeatureFlagsContext.Provider value={flags}>
+			{children}
+		</FeatureFlagsContext.Provider>
+	);
+}
+```
+
+Use `useSyncExternalStore` for mutable external sources rather than copying a subscription into Context with an ad hoc effect. Use a server-state library for remote resources. Keep provider loading and failure states explicit so consumers do not interpret `null` ambiguously.
+
+## Testing Context
+
+Test provider contracts through representative consumers. Verify defaults/invariants, updates, nested overrides, cleanup, and render reach where performance is part of the requirement.
+
+```jsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+function ThemeProbe() {
+	const { mode, setMode } = useTheme();
+	return (
+		<>
+			<output>Mode: {mode}</output>
+			<button onClick={() => setMode("dark")}>Use dark mode</button>
+		</>
+	);
+}
+
+test("publishes theme updates to consumers", async () => {
+	const user = userEvent.setup();
+
+	render(
+		<ThemeProvider initialMode="light">
+			<ThemeProbe />
+		</ThemeProvider>,
+	);
+
+	expect(screen.getByText("Mode: light")).toBeVisible();
+	await user.click(screen.getByRole("button", { name: /use dark mode/i }));
+	expect(screen.getByText("Mode: dark")).toBeVisible();
+});
+```
+
+### Test Wrapper
+
+```jsx
+function renderWithProviders(ui, {
+	theme = "light",
+	locale = "en-IN",
+} = {}) {
+	return render(
+		<LocaleProvider initialLocale={locale}>
+			<ThemeProvider initialMode={theme}>
+				{ui}
+			</ThemeProvider>
+		</LocaleProvider>,
+	);
+}
+```
+
+Avoid one oversized test wrapper that silently supplies every application provider to every test. Focused wrappers make dependencies visible and missing-provider tests meaningful.
+
+```mermaid
+flowchart TD
+	T[Test scenario] --> P[Render focused provider]
+	P --> C[Representative consumer]
+	C --> A[Assert initial contract]
+	A --> E[Trigger user/domain event]
+	E --> U[Assert consumer update]
+	U --> N[Test nested override or cleanup when relevant]
+```
+
+## Debugging Context Updates
+
+When consumers render unexpectedly:
+
+1. Use React DevTools Profiler to identify the update source and cost.
+2. Inspect whether the provider creates a new object/function every render.
+3. Check whether unrelated fields share one broad context.
+4. Verify provider placement and parent render frequency.
+5. Confirm the consumer imports the intended context identity.
+6. Measure before adding memoization or restructuring.
+
+When a consumer sees the default unexpectedly, check that the provider is above it in the same React tree, that imports resolve to the same module instance, and that tests/stories include the provider.
+
+## Security and Privacy
+
+Context values are client-side memory and are inspectable by users with control of the browser. Context does not protect secrets.
+
+| Risk | Correction |
+|---|---|
+| Raw access token distributed broadly | Prefer secure credential architecture and narrow session API |
+| Authorization inferred from hidden UI | Enforce permissions on every API operation |
+| Personal data placed in generic app context | Minimize scope and retained data |
+| Sensitive context logged by debug tooling | Redact logs and production diagnostics |
+| Feature flag treated as permission | Keep server authorization independent |
+| Request data stored in server singleton | Create request-scoped provider ownership |
+| Untrusted rich content supplied through context | Sanitize at rendering boundary |
+
+Theme, feature flags, and permissions delivered through Context may influence UI, but server policy remains authoritative.
+
+## Common Mistakes
+
+| Mistake | Consequence | Production correction |
+|---|---|---|
+| Context used for every shared value | Hidden dependencies and broad updates | Start with props; scope context intentionally |
+| One giant `AppContext` | Unrelated consumers update together | Split by concern and frequency |
+| New provider object each render | Avoidable consumer notifications | Stabilize value when dependencies are unchanged |
+| `React.memo` expected to block context | Consumer still renders | Split context or move to selector store |
+| Remote data fetched into Context | Missing cache and race policies | Use a server-state library |
+| Reducer performs API calls | Impure transitions | Keep reducer pure; coordinate async externally |
+| Missing provider silently uses fake default | Production misconfiguration is hidden | Use strict custom hook/sentinel |
+| Provider mounted too high | Excessive lifetime and update reach | Colocate at narrow stable boundary |
+| Provider mounted conditionally around same UI | State resets or dependency disappears | Keep provider topology predictable |
+| `null` means loading, anonymous, and missing provider | Ambiguous UI and bugs | Use explicit status and strict contract |
+| High-frequency cursor/animation in Context | Large render fan-out | Use external store or local state |
+| Duplicate context module identity | Provider appears invisible | Deduplicate packages and imports |
+| Sensitive values placed in Context | Client exposure | Minimize and use secure server architecture |
+| Test wrapper supplies everything | Dependencies become invisible | Use focused provider wrappers |
+
+## Production Checklist
+
+1. Identify the real owner before creating a context.
+2. Confirm many descendants need the same coherent dependency.
+3. Define a narrow domain-specific context contract.
+4. Use a strict custom hook when a provider is mandatory.
+5. Place the provider at the narrowest stable lifetime boundary.
+6. Split contexts by ownership and update frequency, not arbitrarily.
+7. Stabilize object/function values when it prevents measured updates.
+8. Keep reducers pure and async/cache behavior in appropriate systems.
+9. Use a selector-based store for high-frequency or fine-grained state.
+10. Use a server-state cache for remote resource lifecycles.
+11. Model loading, anonymous, ready, and failure states explicitly.
+12. Keep credentials and sensitive data out of broad context contracts.
+13. Match initial provider values during server rendering and hydration.
+14. Test missing providers, nested overrides, updates, and cleanup.
+15. Profile render propagation before optimizing.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Use Context for currency/locale, checkout workflow scope, and stable service dependencies. Use a server-state cache for catalog/inventory and a reducer/store for cart transitions according to required persistence and cross-route scope.
+
+### Banking
+
+Use a narrowly scoped session context with explicit status, route-scoped transfer workflow ownership, strict redaction, and server-authoritative permissions. Never treat a role or feature flag in Context as authorization.
+
+### CRM
+
+Use workspace context for tenant identity, display configuration, and stable commands. Keep customer records in a query cache, edit drafts local to forms, and high-frequency notifications in a selector-based store.
+
+### Design System
+
+Use Context privately for compound controls, theme tokens, direction, form-field coordination, and portal-aware overlays. Preserve native semantics and ensure nested provider overrides are intentional and testable.
+
+### Analytics Dashboard
+
+Use Context for stable dashboard configuration and date-range scope when update frequency is moderate. Keep streaming metrics and cursor movement outside broad Context so widgets subscribe to focused external-store selectors.
+
+A professional Context architecture makes dependency scope explicit, keeps ownership in the correct system, and controls update reach through focused contracts rather than treating one provider as a universal store.
 
 ---
 
