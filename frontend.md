@@ -12946,29 +12946,967 @@ A professional Vite pipeline keeps development feedback fast without confusing i
 
 [Previous: Vite](#module-14-vite) | [Next: Authentication](#module-16-authentication)
 
-Tree shaking removes statically provable unused exports, primarily from ESM's static import/export graph. Minifiers perform dead-code elimination after bundler analysis. CommonJS and dynamic access are harder to analyze. Package `sideEffects` metadata tells bundlers which files may be safely omitted; incorrect `false` can remove CSS or initialization.
+## Introduction
+
+Tree shaking is the build-time elimination of code that a bundler can prove is unnecessary for the selected entry points. It relies primarily on the static structure of ECMAScript modules, package side-effect metadata, whole-graph analysis, and final dead-code elimination.
+
+The phrase comes from imagining the module graph as a tree: the build keeps reachable branches that contribute observable behavior and shakes away branches that do not. Real dependency graphs contain cycles, shared modules, dynamic imports, conditional exports, and side effects, so production behavior is more precise than the metaphor suggests.
 
 ```mermaid
 flowchart LR
- M[ES module graph] --> U[Mark used exports]
- U --> S[Respect side effects]
- S --> D[Drop unreachable code]
- D --> N[Minify]
- N --> A[Analyze bundle]
+	ENTRY[Selected entry points] --> GRAPH[Construct module graph]
+	GRAPH --> REACH[Mark reachable modules]
+	REACH --> EXPORTS[Analyze used exports]
+	EXPORTS --> EFFECTS[Preserve required side effects]
+	EFFECTS --> DCE[Dead-code elimination and minification]
+	DCE --> OUTPUT[Optimized chunks]
+```
+
+Tree shaking is not a runtime garbage collector, not compression, and not code splitting. It changes what code is emitted; code splitting changes when emitted code is loaded.
+
+## The Optimization Pipeline
+
+A professional mental model separates several related optimizations:
+
+| Stage | Question |
+|---|---|
+| Module resolution | Which file or package export does an import identify? |
+| Reachability | Which modules can be reached from an entry or dynamic boundary? |
+| Used-export analysis | Which exports of each reachable module are consumed? |
+| Side-effect analysis | Can an unused module or statement be removed safely? |
+| Scope hoisting | Can compatible modules be combined into fewer scopes? |
+| Dead-code elimination | Which unreachable statements and expressions can be removed? |
+| Minification | How can retained code be represented more compactly? |
+| Compression | How efficiently can emitted bytes be transferred? |
+
+```mermaid
+flowchart TD
+	SOURCE[Source modules] --> RESOLVE[Resolve imports and package exports]
+	RESOLVE --> LINK[Link static module graph]
+	LINK --> USED[Propagate used exports]
+	USED --> SIDE{Side effect required?}
+	SIDE -->|yes| KEEP[Retain effectful code]
+	SIDE -->|no| DROP[Remove unused module/statements]
+	KEEP --> MINIFY[Minify retained code]
+	DROP --> MINIFY
+	MINIFY --> COMPRESS[Host applies Brotli or gzip]
+```
+
+Bundlers and minifiers may divide these responsibilities differently. Evaluate the final production artifact rather than assuming one configuration flag guarantees every stage.
+
+## Why ES Modules Enable Analysis
+
+ECMAScript module imports and exports are syntactically static. A tool can identify dependencies without executing application code.
+
+```js
+import { formatCurrency } from "./money.js";
+export { calculateTax } from "./tax.js";
+```
+
+Static properties include:
+
+- Import and export declarations appear at module top level.
+- Imported bindings are live and read-only from the importing module.
+- Export names can be discovered during parsing.
+- Module loading follows standardized semantics.
+- Static imports cannot be placed behind arbitrary runtime conditions.
+
+```mermaid
+flowchart LR
+	PARSE[Parse ESM syntax] --> IMPORTS[Known import requests]
+	PARSE --> EXPORTS[Known export names]
+	IMPORTS --> GRAPH[Link module graph without executing it]
+	EXPORTS --> USE[Propagate usage from consumers]
+	USE --> PRUNE[Prune provably unused declarations]
+```
+
+Dynamic `import()` is also syntactically recognizable, but it creates an asynchronous graph boundary whose module is loaded only when the expression executes.
+
+## ESM and CommonJS
+
+CommonJS permits runtime mutation and dynamic property access:
+
+```js
+const utilities = require(condition ? "./modern.js" : "./legacy.js");
+module.exports[requestedName] = createUtility(requestedName);
+```
+
+These patterns make complete static reasoning difficult. Tools can optimize some CommonJS through heuristics or conversion, but the guarantees are weaker than well-formed ESM.
+
+| Capability | ESM | CommonJS |
+|---|---:|---:|
+| Statically discoverable imports | Strong | Often limited |
+| Statically discoverable named exports | Strong | Pattern-dependent |
+| Conditional module loading | Dynamic `import()` boundary | Arbitrary `require()` expressions |
+| Live bindings | Standard behavior | Object/property conventions |
+| Tree-shaking suitability | High when side effects are controlled | Variable and tool-dependent |
+
+```mermaid
+flowchart TD
+	PKG[Dependency package] --> FORMAT{Published format}
+	FORMAT -->|Static ESM| ANALYZE[Precise import/export analysis]
+	FORMAT -->|CommonJS| INTEROP[Interop wrapper or conversion]
+	ANALYZE --> SMALL[Fine-grained pruning possible]
+	INTEROP --> CONSERVATIVE[Conservative retention may be required]
+```
+
+Do not rewrite a stable dependency merely because it contains CommonJS. Measure its actual bundle cost, check whether a modern ESM entry exists, and evaluate compatible alternatives.
+
+## Reachability Versus Export Usage
+
+A module can be reachable while only some exports are used.
+
+```js
+// math.js
+export function add(left, right) {
+	return left + right;
+}
+
+export function expensiveStatistics(values) {
+	return calculateStatistics(values);
+}
 ```
 
 ```js
-// Better analyzability
-import { formatCurrency } from "./money.js";
-
-// Dynamic import is code splitting, not by itself tree shaking.
-const module = await import("./heavy-report.js");
-module.openReport();
+// main.js
+import { add } from "./math.js";
+console.log(add(2, 3));
 ```
 
-Named imports do not guarantee a small bundle if the package is CommonJS or has broad side effects. Barrel files can accidentally pull initialization or create cycles; measure rather than banning them categorically. Configure `sideEffects: ["**/*.css", "./src/polyfills.js"]`, publish ESM correctly, avoid top-level effects, and inspect source-map-explorer/rollup visualizer/webpack analyzer output.
+`math.js` is reachable because `add` is imported. `expensiveStatistics` can be removed only when its declaration and dependencies have no required side effects.
 
-**Interview:** code splitting changes when code loads; tree shaking changes whether unused code is emitted. **Assignment:** create an intentionally bloated bundle, identify retained modules, correct imports/metadata, and record before/after parsed and compressed sizes.
+```mermaid
+flowchart LR
+	MAIN[main.js] -->|uses add| MATH[math.js]
+	MATH --> ADD[add export: used]
+	MATH --> STATS[expensiveStatistics export: unused]
+	ADD --> KEEP[Retain]
+	STATS --> CHECK{Effect-free and unreferenced?}
+	CHECK -->|yes| REMOVE[Remove]
+	CHECK -->|no| RETAIN[Retain required behavior]
+```
+
+An unused export name does not imply that every statement involved in defining it is removable.
+
+## Side Effects
+
+A side effect is observable behavior beyond producing a value. Examples include:
+
+- Mutating globals.
+- Registering custom elements or plugins.
+- Installing polyfills.
+- Starting timers, workers, sockets, or subscriptions.
+- Writing to storage.
+- Logging or telemetry initialization.
+- Modifying exported mutable state.
+- Importing CSS for application-wide styling.
+- Throwing during module evaluation.
+
+```js
+// Effectful module evaluation
+registerLocale("fr", frenchMessages);
+window.addEventListener("online", synchronizeQueue);
+```
+
+```js
+// Effect-free declaration until called
+export function registerFrenchLocale() {
+	registerLocale("fr", frenchMessages);
+}
+```
+
+Moving behavior behind an explicit function improves analyzability, testing, lifecycle control, and application startup. Do not remove required initialization merely to reduce output.
+
+```mermaid
+flowchart TD
+	UNUSED[Module/export appears unused] --> EVAL{Does evaluation have observable behavior?}
+	EVAL -->|yes or unknown| PRESERVE[Preserve module or statement]
+	EVAL -->|no| META{Package metadata permits pruning?}
+	META -->|yes| DROP[Drop from relevant chunk]
+	META -->|no or uncertain| PRESERVE
+```
+
+## `sideEffects` Package Metadata
+
+Webpack and compatible tooling use the `package.json` `sideEffects` field to identify files that can be skipped when none of their exports are used.
+
+```json
+{
+  "name": "@brainworks/ui",
+  "sideEffects": false
+}
+```
+
+This declaration means every file in the package is safe to omit when its exports are unused. It is a strong behavioral promise, not a request to optimize aggressively.
+
+Packages with effectful files should use patterns:
+
+```json
+{
+  "name": "@brainworks/ui",
+  "sideEffects": [
+    "**/*.css",
+    "./src/polyfills.js",
+    "./src/register-elements.js"
+  ]
+}
+```
+
+```mermaid
+flowchart TD
+	FILE[Unused package file] --> FIELD{sideEffects metadata}
+	FIELD -->|false and no used exports| OMIT[Omit file]
+	FIELD -->|matches effectful pattern| KEEP[Retain module evaluation]
+	FIELD -->|metadata absent| CONS[Use conservative tool analysis]
+	CONS --> KEEP
+```
+
+Incorrect `sideEffects: false` can silently remove CSS, polyfills, registrations, or initialization only in optimized builds. Test package consumers under production conditions.
+
+## Statement-Level Dead-Code Elimination
+
+Minifiers remove unreachable statements after bundler-level graph analysis.
+
+```js
+if (import.meta.env.DEV) {
+	installDevelopmentTools();
+}
+```
+
+When a production build replaces `import.meta.env.DEV` with `false`, a minifier can remove the branch and potentially the imported development implementation.
+
+```mermaid
+flowchart LR
+	SOURCE[if DEV then install diagnostics] --> DEFINE[Replace DEV with false]
+	DEFINE --> FOLD[Constant folding]
+	FOLD --> DEAD[Mark branch unreachable]
+	DEAD --> REMOVE[Remove branch and newly unused dependencies]
+```
+
+Keep compile-time conditions statically visible:
+
+```js
+// Analyzable
+if (__ENABLE_DEBUG_PANEL__) {
+	openDebugPanel();
+}
+
+// Harder to reason about when configuration is dynamic
+if (runtimeConfiguration.features[requestedFeature]) {
+	openDebugPanel();
+}
+```
+
+Runtime feature flags cannot remove code from a prebuilt bundle unless the implementation is isolated behind a dynamic import and never requested for that user/session.
+
+## Pure Annotations
+
+Minifiers can use `/* @__PURE__ */` annotations to indicate that a call or constructor can be removed when its result is unused.
+
+```js
+const formatter = /* @__PURE__ */ createFormatter({ locale: "en" });
+```
+
+This annotation asserts that calling `createFormatter` has no observable side effects. If that assertion is false, optimization can break behavior.
+
+```mermaid
+flowchart TD
+	CALL[Unused call result] --> PROOF{Can tool prove call is pure?}
+	PROOF -->|yes| DROP[Remove call]
+	PROOF -->|no| ANN{Trusted pure annotation?}
+	ANN -->|yes| DROP
+	ANN -->|no| KEEP[Retain possible side effect]
+```
+
+Prefer naturally pure APIs and compiler-generated annotations. Add manual annotations only after verifying semantics and output. Comments can be stripped by an earlier transform, so toolchain order matters.
+
+## Named Imports Are Not a Guarantee
+
+This import syntax is precise:
+
+```js
+import { debounce } from "utility-library";
+```
+
+But final size still depends on:
+
+- Whether the resolved package entry is ESM.
+- Whether the package marks side effects accurately.
+- Whether the named export file imports a broad registry.
+- Whether transpilation preserves ESM.
+- Whether the bundler understands package export conditions.
+- Whether other code uses the remaining package.
+
+Deep imports can reduce cost in some packages:
+
+```js
+import debounce from "utility-library/debounce.js";
+```
+
+Use only documented package exports. Internal file paths may be unsupported and can break on upgrades.
+
+## Barrel Files
+
+Barrel files re-export APIs from one entry:
+
+```js
+// index.js
+export { Button } from "./Button.jsx";
+export { DataGrid } from "./DataGrid.jsx";
+export { initializeTelemetry } from "./telemetry.js";
+```
+
+Barrels can provide a stable public API, but risks include:
+
+- Pulling effectful modules into the graph.
+- Creating cycles between features.
+- Slowing development transforms in very large repositories.
+- Hiding ownership boundaries.
+- Causing test tools with weaker optimization to load more code.
+
+```mermaid
+flowchart TD
+	APP[Consumer imports Button from barrel] --> BARREL[index.js]
+	BARREL --> BUTTON[Button module]
+	BARREL --> GRID[DataGrid re-export]
+	BARREL --> TELEMETRY[Effectful telemetry re-export]
+	BUTTON --> USED[Used]
+	GRID --> PRUNE[Potentially pruned]
+	TELEMETRY --> KEEP[Evaluation may force retention]
+```
+
+Do not ban barrels categorically. Keep public barrels effect-free, prevent circular imports, and verify output. Internal modules can use direct imports when that makes boundaries and performance clearer.
+
+## Namespace Imports and Dynamic Property Access
+
+Namespace imports can limit fine-grained analysis when properties are selected dynamically.
+
+```js
+import * as icons from "./icons/index.js";
+
+export function Icon({ name }) {
+	const Component = icons[name];
+	return Component ? <Component /> : null;
+}
+```
+
+The build may need every exported icon because `name` is unknown at build time.
+
+Prefer an explicit registry when the supported set is finite:
+
+```js
+import { SearchIcon } from "./icons/SearchIcon.jsx";
+import { CloseIcon } from "./icons/CloseIcon.jsx";
+
+const icons = {
+	search: SearchIcon,
+	close: CloseIcon,
+};
+```
+
+For hundreds of optional assets, use controlled dynamic imports or build-time glob discovery and accept the corresponding chunks.
+
+```mermaid
+flowchart LR
+	DYNAMIC[Namespace with runtime property] --> ALL[Many exports considered reachable]
+	EXPLICIT[Explicit finite registry] --> SELECTED[Only listed imports reachable]
+	GLOB[Controlled lazy glob/import map] --> ASYNC[Separate discoverable chunks]
+```
+
+## Dynamic Imports and Code Splitting
+
+Dynamic imports create loading boundaries; they do not inherently eliminate the imported code.
+
+```js
+export async function openReport() {
+	const { renderReport } = await import("./heavy-report.js");
+	return renderReport();
+}
+```
+
+If the call is reachable, the report module is emitted into an asynchronous chunk. If the entire function and dynamic import are proven unused, that chunk may disappear.
+
+```mermaid
+flowchart TD
+	IMPORT[Dynamic import expression] --> REACH{Expression reachable?}
+	REACH -->|no| OMIT[No async chunk required]
+	REACH -->|yes| CHUNK[Emit asynchronous chunk]
+	CHUNK --> RUNTIME{User executes path?}
+	RUNTIME -->|yes| FETCH[Fetch and execute]
+	RUNTIME -->|no| NOTLOAD[Chunk remains unrequested]
+```
+
+Tree shaking answers **whether code is emitted**. Code splitting answers **which chunk contains emitted code and when it loads**.
+
+## React Patterns
+
+React components are ordinary module exports and can be tree-shaken when package and transform semantics allow.
+
+```jsx
+// Prefer explicit imports for a known screen
+import { Button } from "@brainworks/ui/button";
+```
+
+Common React retention causes include:
+
+- Component index files that import global CSS or register behavior.
+- Icon packages accessed through runtime names.
+- Route registries eagerly importing every page.
+- UI libraries publishing only CommonJS.
+- Higher-order component factories with unrecognized call effects.
+- Development-only tools selected by runtime rather than compile-time flags.
+
+Lazy routes improve initial loading but should be grouped by user navigation, not every small component.
+
+## CSS and Non-JavaScript Side Effects
+
+CSS imports are effectful because their purpose is to alter rendering:
+
+```js
+import "./theme.css";
+```
+
+If a package declares every file side-effect-free, this import can disappear when no JavaScript export is consumed. Preserve CSS in metadata:
+
+```json
+{
+  "sideEffects": ["**/*.css", "**/*.scss"]
+}
+```
+
+```mermaid
+flowchart LR
+	COMP[Component module] --> CSS[CSS import]
+	CSS --> META{CSS marked side effect?}
+	META -->|yes| STYLE[Retain emitted style behavior]
+	META -->|no and component unused| REMOVE[Style may be removed]
+```
+
+Library authors should document whether consumers import CSS explicitly or component entry points import it. Test both direct and barrel imports.
+
+## Transpilation Hazards
+
+Tree shaking can degrade when an earlier compiler converts ESM to CommonJS before the bundler analyzes it.
+
+```js
+// Babel configuration for an application bundled afterward
+module.exports = {
+	presets: [
+		["@babel/preset-env", { modules: false }],
+	],
+};
+```
+
+`modules: false` preserves ESM for the bundler. Exact settings depend on the build tool; modern Vite and framework plugins already manage common transforms.
+
+```mermaid
+flowchart TD
+	ESM[Authored ESM] --> TRANSFORM{Earlier transform preserves modules?}
+	TRANSFORM -->|yes| BUNDLER[Bundler sees static ESM graph]
+	TRANSFORM -->|no, converts to CJS| WRAPPED[Bundler sees runtime wrappers]
+	BUNDLER --> PRECISE[Fine-grained pruning]
+	WRAPPED --> LIMITED[Optimization may be limited]
+```
+
+Inspect the effective toolchain before adding Babel, TypeScript, or compatibility transforms. Duplicate transformations can increase build time and damage source maps or optimization.
+
+## TypeScript Considerations
+
+Use type-only imports for clarity and correct emit behavior:
+
+```ts
+import type { Customer } from "./customer-types.js";
+import { formatCustomer } from "./format-customer.js";
+```
+
+TypeScript erases type-only constructs. Compiler options such as `importsNotUsedAsValues`, `preserveValueImports`, and `verbatimModuleSyntax` vary by TypeScript generation; use the options supported by the installed version and align them with bundler expectations.
+
+Enums, decorators, namespaces, and emitted metadata can create runtime code. Confirm output rather than assuming all TypeScript declarations disappear.
+
+## Package Entry Points
+
+Library tree shaking depends on publishing metadata that resolves consumers to analyzable code.
+
+```json
+{
+  "name": "@brainworks/formatters",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./currency": {
+      "types": "./dist/currency.d.ts",
+      "import": "./dist/currency.js",
+      "require": "./dist/currency.cjs"
+    }
+  },
+  "sideEffects": false
+}
+```
+
+```mermaid
+flowchart TD
+	CONSUMER[Consumer import] --> EXPORTS[package exports map]
+	EXPORTS --> CONDITION{Resolver condition}
+	CONDITION -->|import| ESM[ESM entry]
+	CONDITION -->|require| CJS[CommonJS entry]
+	ESM --> SHAKE[Static analysis path]
+	CJS --> INTEROP[Compatibility path]
+```
+
+Avoid ambiguous or contradictory `main`, `module`, and `exports` fields. The `exports` map should define supported public subpaths. Test package tarballs in representative Webpack, Vite, Node, and test-runner consumers.
+
+## Dual-Package Hazards
+
+Publishing ESM and CommonJS variants can create separate module instances when an application loads both forms. This can duplicate singleton state or framework runtimes.
+
+Risks include:
+
+- Separate caches and registries.
+- Duplicate React or styling engines.
+- Different default/named export interop.
+- Divergent code between builds.
+- Consumer-specific tree-shaking results.
+
+Keep source behavior equivalent, externalize peer dependencies, define clear conditional exports, and test mixed dependency graphs.
+
+## Scope Hoisting
+
+Scope hoisting, also called module concatenation in some tooling, combines compatible modules into fewer function wrappers. It can improve minifier visibility and reduce runtime overhead.
+
+```mermaid
+flowchart LR
+	A[Module A scope] --> LINK[Static ESM relationship]
+	B[Module B scope] --> LINK
+	LINK --> SAFE{Compatible for concatenation?}
+	SAFE -->|yes| SCOPE[Combined scope]
+	SAFE -->|no| WRAP[Separate module wrappers]
+	SCOPE --> MIN[Cross-module name and dead-code optimization]
+```
+
+Concatenation can be blocked by module formats, runtime boundaries, externalization, evaluation order, or tool constraints. It is an implementation optimization, not a reason to merge unrelated source files manually.
+
+## Re-Exports and Cycles
+
+ESM cycles are legal but can complicate evaluation order and optimization.
+
+```mermaid
+flowchart LR
+	A[feature-a/index.js] --> B[shared/index.js]
+	B --> C[feature-b/index.js]
+	C --> A
+```
+
+Symptoms include initialization errors, unexpectedly retained modules, and order-sensitive values. Break cycles by moving stable contracts downward, importing direct implementation dependencies, or separating registration from definitions.
+
+Use dependency graph tooling in CI for architectural cycles where the repository is large enough to justify it.
+
+## Bundler Behavior
+
+### Webpack
+
+Webpack combines used-export analysis, `sideEffects` metadata, module concatenation, and a minimizer in production mode.
+
+```js
+module.exports = {
+	mode: "production",
+	optimization: {
+		usedExports: true,
+		concatenateModules: true,
+		minimize: true,
+	},
+};
+```
+
+Production mode already enables appropriate defaults. Explicit flags are useful for explanation or diagnostics, not mandatory boilerplate. Webpack stats can show provided/used exports and optimization bailouts.
+
+### Vite and Rollup-Oriented Builds
+
+Vite's production pipeline performs Rollup-oriented tree shaking. Rollup is particularly strong at static ESM analysis and offers controls such as module-side-effect handling through lower-level options.
+
+```js
+export default defineConfig({
+	build: {
+		rollupOptions: {
+			treeshake: {
+				moduleSideEffects: "no-external",
+			},
+		},
+	},
+});
+```
+
+This setting is not a universal recommendation. Incorrect assumptions about external package effects can break behavior. Prefer accurate package metadata and defaults before global overrides.
+
+### esbuild and Other Tools
+
+esbuild, SWC-based systems, and framework compilers also perform dead-code and graph optimizations with different heuristics and configuration. Cross-tool package quality comes from standards-compliant ESM, accurate exports, and accurate side-effect declarations rather than bundler-specific tricks.
+
+## External Dependencies
+
+Externalized modules are not included in the current bundle, so their internal unused code cannot be removed by that bundle's optimizer.
+
+```mermaid
+flowchart TD
+	IMPORT[Import dependency] --> EXTERNAL{Marked external?}
+	EXTERNAL -->|no| GRAPH[Include in bundle graph]
+	GRAPH --> SHAKE[Analyze and prune internals]
+	EXTERNAL -->|yes| REF[Emit runtime import/reference]
+	REF --> OTHER[Dependency optimized by its own delivery/build process]
+```
+
+Externalization is common for libraries and SSR server builds. It shifts responsibility to the consuming application or runtime rather than making code disappear globally.
+
+## Feature Flags and Compile-Time Constants
+
+Build-time flags can remove branches:
+
+```js
+if (__ENTERPRISE_REPORTS__) {
+	registerEnterpriseReports();
+}
+```
+
+Runtime flags keep both branches available:
+
+```js
+if (config.features.enterpriseReports) {
+	registerEnterpriseReports();
+}
+```
+
+```mermaid
+flowchart TD
+	FLAG[Feature decision] --> TIME{Known at build time?}
+	TIME -->|yes| CONST[Replace with constant]
+	CONST --> DCE[Remove unreachable branch]
+	TIME -->|no| RUNTIME[Retain decision logic]
+	RUNTIME --> BOTH[Both synchronous branches may remain]
+	RUNTIME --> LAZY[Dynamic import can defer optional implementation]
+```
+
+Build-time variants create different artifacts. Runtime flags support dynamic rollout but are visible and bypassable in clients; they must not enforce authorization.
+
+## Internationalization and Locale Data
+
+Internationalization packages often contain large locale catalogs. A dynamic namespace lookup can retain every locale.
+
+```js
+// Explicit supported locale map
+const localeLoaders = {
+	en: () => import("./locales/en.js"),
+	fr: () => import("./locales/fr.js"),
+	de: () => import("./locales/de.js"),
+};
+```
+
+This emits supported locales as discoverable asynchronous boundaries. Validate locale input before indexing the map and provide a fallback. Tree shaking removes unsupported imports only when they never enter the graph.
+
+## Icon Libraries
+
+Icon packages are a frequent bundle-size issue.
+
+Prefer documented per-icon or statically named imports:
+
+```jsx
+import { Search, X } from "lucide-react";
+```
+
+Confirm the package publishes effective ESM and that output contains only required icons. A runtime icon-by-string API can require an explicit registry or lazy map and may retain a large catalog.
+
+Do not infer optimization from source syntax alone; inspect the generated chunk.
+
+## Utility Libraries
+
+Before replacing a utility dependency:
+
+1. Identify the resolved package entry and format.
+2. Measure retained modules and compressed output.
+3. Check duplicate versions.
+4. Verify whether direct documented exports exist.
+5. Compare native APIs or smaller alternatives for compatibility and maintenance.
+6. Measure browser execution, not only package install size.
+
+Package size displayed on a registry is not equal to bundle cost. It can include tests, docs, multiple formats, and files never imported.
+
+## Measuring Tree Shaking
+
+Use a controlled production build and compare artifacts.
+
+```mermaid
+flowchart LR
+	BASE[Record baseline commit and build inputs] --> BUILD1[Production build]
+	BUILD1 --> STATS1[Capture chunks, modules, raw/compressed sizes]
+	STATS1 --> CHANGE[Make one optimization change]
+	CHANGE --> BUILD2[Repeat production build]
+	BUILD2 --> DIFF[Compare graph and runtime behavior]
+	DIFF --> DECIDE[Keep, revise, or revert]
+```
+
+Record:
+
+- Entry and route chunk sizes.
+- Raw, gzip, and Brotli sizes.
+- Modules included and reasons for retention.
+- Duplicate dependency versions.
+- Parse/evaluation cost on representative devices.
+- Requests and caching behavior.
+- Functional test results.
+
+Do not compare development output with production output or builds made with different lockfiles, modes, source maps, targets, or environment flags.
+
+## Bundle Analysis Tools
+
+Common choices include:
+
+- Webpack stats and `webpack-bundle-analyzer`.
+- Rollup visualizer plugins for Vite/Rollup builds.
+- `source-map-explorer` for compatible maps.
+- Bundler-specific metafiles or analysis reports.
+- Browser coverage as supporting runtime evidence.
+
+Treemaps show what is present, not always why it is present. Use importer/reason data to trace retention back to entries, side effects, dynamic access, or shared chunks.
+
+## Diagnosing an Unexpected Module
+
+```mermaid
+flowchart TD
+	FOUND[Unexpected module in production chunk] --> IMPORTER[Find importer/reason chain]
+	IMPORTER --> FORMAT{Resolved ESM or CommonJS?}
+	FORMAT --> META[Inspect exports and sideEffects metadata]
+	META --> ACCESS{Static import or dynamic namespace access?}
+	ACCESS --> TRANSFORM[Check whether transforms preserve ESM]
+	TRANSFORM --> USED[Check another feature/chunk uses it]
+	USED --> FIX[Apply smallest accurate correction]
+	FIX --> VERIFY[Rebuild, test, and compare]
+```
+
+Possible corrections include:
+
+- Importing a documented subpath.
+- Replacing dynamic namespace access with an explicit map.
+- Moving required side effects to a dedicated entry.
+- Correcting package `sideEffects` metadata.
+- Preserving ESM through transpilation.
+- Deduplicating package versions.
+- Lazy-loading an optional feature.
+- Updating a dependency with a proper ESM build.
+
+Never set global side-effect assumptions merely to make a chart smaller.
+
+## Optimization Bailouts
+
+Tools may retain code because they cannot prove removal is safe. Common bailouts include:
+
+- CommonJS wrappers.
+- Dynamic `require()`.
+- Namespace objects used dynamically.
+- Top-level side effects.
+- Re-export cycles.
+- Unknown function-call effects.
+- `eval` or code generation.
+- Module identity crossing special runtime boundaries.
+- Package metadata missing or contradictory.
+
+A bailout is not necessarily a bug. It is a conservative correctness decision. Change code only when the size/runtime benefit justifies the maintenance cost.
+
+## Testing Optimization Correctness
+
+Production optimization can reveal failures absent in development.
+
+Test cases should cover:
+
+- Global CSS remains present.
+- Polyfills execute before dependent code.
+- Custom elements and plugin registries are initialized.
+- Lazy routes and locale chunks load.
+- Feature variants match build flags.
+- Package consumers can import root and subpath exports.
+- ESM and CommonJS consumers behave consistently when both are supported.
+- No duplicate singleton/framework instances exist.
+- Source maps correspond to optimized assets.
+
+```mermaid
+flowchart TB
+	SOURCE[Library/application source] --> DEV[Development tests]
+	SOURCE --> PROD[Optimized production build]
+	PROD --> STATIC[Serve real artifact]
+	STATIC --> SMOKE[Browser smoke tests]
+	STATIC --> SIZE[Bundle budget assertions]
+	STATIC --> EFFECTS[Initialization and CSS assertions]
+```
+
+Snapshotting exact hashed filenames is brittle. Assert behavior, manifest relationships, module presence where meaningful, and bounded sizes.
+
+## CI Performance Budgets
+
+Tree-shaking regressions should be visible before release.
+
+```mermaid
+flowchart LR
+	CI[CI production build] --> REPORT[Generate machine-readable bundle report]
+	REPORT --> BUDGET{Within entry and route budgets?}
+	BUDGET -->|yes| TEST[Run artifact tests]
+	BUDGET -->|no| DELTA[Report largest module/chunk deltas]
+	DELTA --> REVIEW[Owner reviews intentional or accidental growth]
+```
+
+Use budgets for compressed initial JavaScript, route chunks, and exceptional heavyweight features. Allow explicit reviewed updates when product capability genuinely requires more code.
+
+## Library Authoring Guidelines
+
+1. Author modules in ESM.
+2. Keep public entry modules free of implicit initialization.
+3. Define explicit package export subpaths.
+4. Externalize peer dependencies such as React.
+5. Mark `sideEffects` accurately and preserve CSS/polyfill entries.
+6. Avoid runtime-generated export tables.
+7. Keep declarations and runtime exports aligned.
+8. Preserve pure annotations through compilation where needed.
+9. Test the packed artifact, not only workspace source.
+10. Test representative Webpack and Vite consumers in production mode.
+11. Document required setup imports separately from ordinary APIs.
+12. Compare root import and subpath import output.
+
+### Explicit Initialization Pattern
+
+```js
+// Better library boundary
+export function installPlugin(application) {
+	application.register(createPlugin());
+}
+```
+
+```js
+// Consumer controls the effect
+import { installPlugin } from "@brainworks/plugin";
+installPlugin(application);
+```
+
+Explicit initialization improves tree shaking and makes lifecycle ownership visible.
+
+## Application Authoring Guidelines
+
+- Import only supported public APIs.
+- Prefer explicit finite registries over arbitrary namespace lookup.
+- Keep development-only code behind compile-time constants.
+- Lazy-load genuinely optional heavy features.
+- Separate definitions from application initialization.
+- Avoid feature barrels that cross architectural boundaries.
+- Deduplicate dependency versions.
+- Preserve ESM through custom transpilation.
+- Measure before replacing dependencies.
+- Verify production behavior after metadata changes.
+
+## Security Considerations
+
+Tree shaking is not a security control. Removed client code is unavailable in that artifact, but retained browser code and configuration remain public.
+
+```mermaid
+flowchart TD
+	SECRET[Secret or privileged logic] --> DECISION{Ship to browser?}
+	DECISION -->|no| SERVER[Keep on trusted server]
+	DECISION -->|yes| PUBLIC[Assume user can inspect and modify]
+	PUBLIC --> SHAKE[Tree shaking may remove unused branches]
+	SHAKE --> STILL[Retained output remains public]
+```
+
+Never depend on tree shaking to remove credentials, private keys, administrative endpoints, or authorization logic. Build misconfiguration can retain a branch, and source maps or alternate artifacts can expose source. Keep privileged capability out of the client build inputs entirely.
+
+## Common Mistakes
+
+| Mistake | Consequence | Professional correction |
+|---|---|---|
+| Assuming named import guarantees small output | Package may resolve to broad CommonJS/effectful entry | Inspect resolved format and production chunk |
+| Confusing tree shaking with code splitting | Optional code still emitted, only deferred | Distinguish emission from loading time |
+| Setting `sideEffects: false` blindly | CSS/polyfills/registration disappear | Declare exact effectful patterns and test consumers |
+| Converting ESM to CommonJS before bundling | Static analysis degrades | Preserve ESM through the bundler stage |
+| Runtime property lookup over namespace | Many/all exports retained | Use explicit registry or controlled lazy imports |
+| Deep-importing private package files | Upgrades break | Use documented export subpaths |
+| One broad barrel across features | Cycles/effects expand graph | Keep public barrels effect-free and bounded |
+| Treating package install size as bundle size | Wrong optimization priority | Measure emitted and compressed output |
+| Adding pure annotation to effectful call | Required behavior removed | Prove purity and test optimized output |
+| Removing all top-level behavior mechanically | Initialization becomes inconsistent | Design explicit owned initialization |
+| Externalizing dependency to claim savings | Cost moves to runtime/consumer | Evaluate complete delivery architecture |
+| Manual chunking called tree shaking | Loading groups change, unused code may remain | Analyze used exports and side effects separately |
+| Development build used for comparison | Optimizations are absent/different | Compare controlled production builds |
+| Ignoring duplicate versions | Same library emitted multiple times | Align ranges and deduplicate lockfile |
+| Dynamic flag expected to erase code | Both runtime branches remain | Use build-time constants or lazy boundaries |
+| Tree shaking used to hide secrets | Secrets can remain in source/artifacts | Exclude secrets from client inputs |
+| Optimizing without functional tests | Production-only behavior breaks | Smoke-test optimized artifacts |
+
+## Professional Investigation Workflow
+
+1. Define the user-facing performance problem and affected entry/route.
+2. Reproduce with a clean production build.
+3. Capture bundle stats and compressed sizes.
+4. Find the importer chain for unexpected code.
+5. Confirm the resolved package entry and module format.
+6. Inspect `exports`, `type`, and `sideEffects` metadata.
+7. Check namespace access, barrels, cycles, and top-level effects.
+8. Confirm TypeScript/Babel transforms preserve ESM.
+9. Make one semantically accurate change.
+10. Rebuild under identical inputs.
+11. Run functional and browser smoke tests.
+12. Compare transfer, parse, execution, and cache behavior.
+13. Document package metadata or architecture decisions.
+
+## Production Checklist
+
+1. Use static ESM imports and exports for application and library code.
+2. Preserve ESM until the bundler performs graph analysis.
+3. Keep module evaluation free of unnecessary side effects.
+4. Isolate required initialization in clearly documented modules/functions.
+5. Declare package `sideEffects` metadata accurately.
+6. Preserve CSS, polyfills, and registration files as effectful.
+7. Publish explicit ESM package export paths.
+8. Externalize peer dependencies in libraries.
+9. Avoid unsupported internal deep imports.
+10. Keep barrel files bounded, effect-free, and cycle-free.
+11. Replace dynamic namespace selection with explicit registries when practical.
+12. Use dynamic imports for genuinely optional heavy behavior.
+13. Treat runtime flags and build-time constants differently.
+14. Use pure annotations only for proven effect-free calls.
+15. Inspect TypeScript and Babel output for module preservation.
+16. Analyze actual production chunks, not source syntax or package size.
+17. Record raw and compressed entry/route budgets.
+18. Track duplicate dependencies and optimization bailouts.
+19. Test CSS, polyfills, registrations, and lazy chunks in production.
+20. Test library tarballs through representative consumers.
+21. Keep client secrets out of build inputs regardless of optimization.
+22. Re-measure after dependency and build-tool upgrades.
+23. Prefer correctness and explicit lifecycle behavior over marginal byte savings.
+
+## Real-World Architectures
+
+### E-Commerce
+
+Keep catalog and cart essentials in the initial graph, lazy-load reviews and rich recommendations, import only supported payment-provider browser APIs, and verify that locale, currency, and checkout initialization survive production optimization.
+
+### Banking
+
+Use conservative explicit imports, no client secrets, tightly controlled polyfills, production artifact tests, and reviewed dependency upgrades. Tree shaking may reduce diagnostics and unused widgets, but server authorization remains mandatory.
+
+### Enterprise CRM
+
+Separate charting, export, and document editors behind route or interaction boundaries. Replace runtime component catalogs with explicit registries, analyze duplicate design-system versions, and enforce route-level budgets.
+
+### Design System
+
+Publish effect-free ESM component subpaths, externalize React, preserve CSS side effects, expose declarations through package exports, and test root and per-component imports in Webpack and Vite consumers.
+
+### Internationalized Application
+
+Define the supported locale set explicitly, lazy-load catalogs, keep fallback messages available, and avoid broad dynamic paths that force every translation into the graph.
+
+### Plugin Platform
+
+Separate plugin definitions from registration, expose an explicit installation API, lazy-load optional plugins from an allowlisted manifest, and retain mandatory bootstrap effects through accurate metadata.
+
+A professional tree-shaking strategy begins with analyzable modules and truthful side-effect contracts, then proves improvement through controlled production builds. The objective is not the smallest theoretical bundle; it is the smallest correct, maintainable, and observable delivery for each user journey.
 
 ---
 
