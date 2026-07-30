@@ -33,6 +33,8 @@
 
 ---
 
+[Top](#top) | [Next: Section 2](#section-2)
+
 ### What is it?
 
 JavaScript is a programming language that tells your app what to do at runtime.
@@ -195,13 +197,13 @@ Cart total: 597
 
 JavaScript is the behavior engine of modern applications. It takes inputs, applies logic, and creates outputs users can see and trust.
 
-[Top](#top) | [Next: Section 2](#section-2)
-
 <a id="section-2"></a>
 
 ## 2. Runtime Model: Execution Context and Call Stack
 
 ---
+
+[Previous: Section 1](#section-1) | [Top](#top) | [Next: Section 3](#section-3)
 
 ![JavaScript Execution Context](assets/screenshots/javascript-execution.png)
 
@@ -388,13 +390,13 @@ If loopForever is called, it will eventually throw stack overflow
 
 Execution context and call stack explain the exact order in which JavaScript prepares memory, runs statements, enters functions, and returns control.
 
-[Previous: Section 1](#section-1) | [Top](#top) | [Next: Section 3](#section-3)
-
 <a id="section-3"></a>
 
 ## 3. Variables, Scope, and Data Types
 
 ---
+
+[Previous: Section 2](#section-2) | [Top](#top) | [Next: Section 4](#section-4)
 
 ### What is it?
 
@@ -813,13 +815,13 @@ In this function example:
 
 Correct variable, scope, and data type handling prevents silent bugs, improves readability, and makes debugging much faster.
 
-[Previous: Section 2](#section-2) | [Top](#top) | [Next: Section 4](#section-4)
-
 <a id="section-4"></a>
 
 ## 4. Type Coercion and Equality
 
 ---
+
+[Previous: Section 3](#section-3) | [Top](#top) | [Next: Section 5](#section-5)
 
 ### What is it?
 
@@ -1153,13 +1155,13 @@ Why this happens:
 
 Type coercion is powerful but risky when ignored. Use strict equality and explicit conversions to keep logic predictable and production-safe.
 
-[Previous: Section 3](#section-3) | [Top](#top) | [Next: Section 5](#section-5)
-
 <a id="section-5"></a>
 
 ## 5. Operators, Statements, and Loops
 
 ---
+
+[Previous: Section 4](#section-4) | [Top](#top) | [Next: Section 6](#section-6)
 
 ### What is it?
 
@@ -1540,13 +1542,13 @@ Executed once with count=5
 
 Operators, statements, and loops are the foundation of application logic. Clear conditions and safe loops directly improve correctness and maintainability.
 
-[Previous: Section 4](#section-4) | [Top](#top) | [Next: Section 6](#section-6)
-
 <a id="section-6"></a>
 
 ## 6. Functions Deep Dive
 
 ---
+
+[Previous: Section 5](#section-5) | [Top](#top) | [Next: Section 7](#section-7)
 
 ### What is it?
 
@@ -2044,13 +2046,13 @@ first end
 
 Functions are the building blocks of JavaScript architecture. Understanding function types, hoisting behavior, and call stack order helps you write correct, reusable, and debuggable code.
 
-[Previous: Section 5](#section-5) | [Top](#top) | [Next: Section 7](#section-7)
-
 <a id="section-7"></a>
 
 ## 7. String Methods Deep Dive
 
 ---
+
+[Previous: Section 6](#section-6) | [Top](#top) | [Next: Section 8](#section-8)
 
 ### What is it?
 
@@ -2273,13 +2275,13 @@ hahaha
 
 String methods are essential for input cleaning, validation, search, and output formatting in real applications.
 
-[Previous: Section 6](#section-6) | [Top](#top) | [Next: Section 8](#section-8)
-
 <a id="section-8"></a>
 
 ## 8. Number Methods Deep Dive
 
 ---
+
+[Previous: Section 7](#section-7) | [Top](#top) | [Next: Section 9](#section-9)
 
 ### What is it?
 
@@ -2460,13 +2462,13 @@ console.log(Math.min(10, 20, 5));
 
 Number methods and helpers are critical for safe calculations, reliable validation, and clean financial/data output.
 
-[Previous: Section 7](#section-7) | [Top](#top) | [Next: Section 9](#section-9)
-
 <a id="section-9"></a>
 
 ## 9. Arrays and Array Methods
 
 ---
+
+[Previous: Section 8](#section-8) | [Top](#top) | [Next: Section 10](#section-10)
 
 ### What is it?
 
@@ -3003,13 +3005,13 @@ console.log(totalInStock);
 
 Array methods are the backbone of JavaScript data processing. Choosing the right method improves readability, correctness, and real-world maintainability.
 
-[Previous: Section 8](#section-8) | [Top](#top) | [Next: Section 10](#section-10)
-
 <a id="section-10"></a>
 
 ## 10. Objects and Object Patterns
 
 ---
+
+[Previous: Section 9](#section-9) | [Top](#top) | [Next: Section 11](#section-11)
 
 ### What is it?
 
@@ -3272,13 +3274,13 @@ console.log(config.version);
 
 Objects represent real-world entities and structured application data. Mastering access, update, and safe-read patterns is essential for production JavaScript.
 
-[Previous: Section 9](#section-9) | [Top](#top) | [Next: Section 11](#section-11)
-
 <a id="section-11"></a>
 
 ## 11. this, call, apply, bind
 
 ---
+
+[Previous: Section 10](#section-10) | [Top](#top) | [Next: Section 12](#section-12)
 
 ### What is it?
 
@@ -3828,13 +3830,13 @@ Nisha from Pune
 
 Understanding `this` and binding methods prevents many advanced bugs.
 
-[Previous: Section 10](#section-10) | [Top](#top) | [Next: Section 12](#section-12)
-
 <a id="section-12"></a>
 
 ## 12. Prototype and Classes
 
 ---
+
+[Previous: Section 11](#section-11) | [Top](#top) | [Next: Section 13](#section-13)
 
 ### What is it?
 
@@ -4300,13 +4302,13 @@ This shows class syntax is a nicer layer over prototype mechanics.
 
 Prototype and class understanding gives you production-level OOP design in JavaScript. With encapsulation, abstraction, inheritance, polymorphism, and composition, you can build scalable and maintainable real-world systems.
 
-[Previous: Section 11](#section-11) | [Top](#top) | [Next: Section 13](#section-13)
-
 <a id="section-13"></a>
 
 ## 13. DOM and Events
 
 ---
+
+[Previous: Section 12](#section-12) | [Top](#top) | [Next: Section 14](#section-14)
 
 ### What is it?
 
@@ -4566,13 +4568,13 @@ E --> F[Persist if needed localStorage/API]
 
 DOM and events are the bridge between UI and JavaScript logic. Mastering selection, event propagation, delegation, and safe updates is essential for real-world frontend development.
 
-[Previous: Section 12](#section-12) | [Top](#top) | [Next: Section 14](#section-14)
-
 <a id="section-14"></a>
 
 ## 14. Async JavaScript
 
 ---
+
+[Previous: Section 13](#section-13) | [Top](#top) | [Next: Section 15](#section-15)
 
 ### What is it?
 
@@ -5069,13 +5071,13 @@ Reason:
 
 Async JavaScript and the event loop are the backbone of modern frontend behavior. If you understand stack, queues, and microtask priority, you can predict execution order, write responsive apps, and debug async issues confidently.
 
-[Previous: Section 13](#section-13) | [Top](#top) | [Next: Section 15](#section-15)
-
 <a id="section-15"></a>
 
 ## 15. APIs, Fetch, Axios, and REST Basics
 
 ---
+
+[Previous: Section 14](#section-14) | [Top](#top) | [Next: Section 16](#section-16)
 
 ### What is it?
 
@@ -5372,13 +5374,13 @@ E --> F
 
 API handling is a core real-world JavaScript skill. When you understand HTTP methods, status codes, request lifecycle, and fetch/axios patterns, you can build reliable, secure, and user-friendly data-driven applications.
 
-[Previous: Section 14](#section-14) | [Top](#top) | [Next: Section 16](#section-16)
-
 <a id="section-16"></a>
 
 ## 16. Error Handling and Debugging
 
 ---
+
+[Previous: Section 15](#section-15) | [Top](#top) | [Next: Section 17](#section-17)
 
 ### What is it?
 
@@ -5657,13 +5659,13 @@ Developer log should include:
 
 Strong error handling and debugging turn fragile apps into reliable systems. If you can classify, capture, recover, and trace errors systematically, you can solve production issues faster and build user trust.
 
-[Previous: Section 15](#section-15) | [Top](#top) | [Next: Section 17](#section-17)
-
 <a id="section-17"></a>
 
 ## 17. Useful Built-ins: Date, Math, Map, Set
 
 ---
+
+[Previous: Section 16](#section-16) | [Top](#top) | [Next: Section 18](#section-18)
 
 ### What is it?
 
@@ -5928,13 +5930,13 @@ Date, Math, Map, and Set are high-impact built-ins for production JavaScript. Ch
 
 Date, Math, Map, and Set are high-impact built-ins for production JavaScript. Choosing the right one improves correctness, performance, and readability across real applications.
 
-[Previous: Section 16](#section-16) | [Top](#top) | [Next: Section 18](#section-18)
-
 <a id="section-18"></a>
 
 ## 18. Modern JS Features (ES6+)
 
 ---
+
+[Previous: Section 17](#section-17) | [Top](#top) | [Next: Section 19](#section-19)
 
 ### What is it?
 
@@ -6229,13 +6231,13 @@ H -- No --> J[Use simplest readable syntax]
 
 ES6+ is not just shorter syntax; it is a set of patterns for safer, clearer, and scalable JavaScript. Mastering these concepts improves interview performance and real-world code quality.
 
-[Previous: Section 17](#section-17) | [Top](#top) | [Next: Section 19](#section-19)
-
 <a id="section-19"></a>
 
 ## 19. Interview Question Bank
 
 ---
+
+[Previous: Section 18](#section-18) | [Top](#top) | [Next: Section 20](#section-20)
 
 ### How to use this bank
 
@@ -6458,13 +6460,13 @@ ES6+ is not just shorter syntax; it is a set of patterns for safer, clearer, and
 5. Explain Map vs Object in 30 seconds.
 6. Explain optional chaining + nullish coalescing in 30 seconds.
 
-[Previous: Section 18](#section-18) | [Top](#top) | [Next: Section 20](#section-20)
-
 <a id="section-20"></a>
 
 ## 20. Final Learning Roadmap
 
 ---
+
+[Previous: Section 19](#section-19) | [Top](#top)
 
 ### What this roadmap gives you
 
@@ -6608,6 +6610,4 @@ These are high-frequency failure areas in interviews and projects:
 ### Closing note
 
 If you complete this roadmap with consistent snippet practice, you will be strong in JavaScript fundamentals, practical implementation, debugging confidence, and interview performance.
-
-[Previous: Section 19](#section-19) | [Top](#top)
 
