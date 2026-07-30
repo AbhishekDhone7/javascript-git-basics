@@ -27,11 +27,11 @@
 - [19. Interview Question Bank](#19-interview-question-bank)
 - [20. Final Learning Roadmap](#20-final-learning-roadmap)
 
----
-
 <a id="section-1"></a>
 
 ## 1. JavaScript at a Glance
+
+---
 
 ### What is it?
 
@@ -197,11 +197,11 @@ JavaScript is the behavior engine of modern applications. It takes inputs, appli
 
 [Top](#top) | [Next: Section 2](#section-2)
 
----
-
 <a id="section-2"></a>
 
 ## 2. Runtime Model: Execution Context and Call Stack
+
+---
 
 ![JavaScript Execution Context](assets/screenshots/javascript-execution.png)
 
@@ -390,11 +390,11 @@ Execution context and call stack explain the exact order in which JavaScript pre
 
 [Previous: Section 1](#section-1) | [Top](#top) | [Next: Section 3](#section-3)
 
----
-
 <a id="section-3"></a>
 
 ## 3. Variables, Scope, and Data Types
+
+---
 
 ### What is it?
 
@@ -815,11 +815,11 @@ Correct variable, scope, and data type handling prevents silent bugs, improves r
 
 [Previous: Section 2](#section-2) | [Top](#top) | [Next: Section 4](#section-4)
 
----
-
 <a id="section-4"></a>
 
 ## 4. Type Coercion and Equality
+
+---
 
 ### What is it?
 
@@ -1155,11 +1155,11 @@ Type coercion is powerful but risky when ignored. Use strict equality and explic
 
 [Previous: Section 3](#section-3) | [Top](#top) | [Next: Section 5](#section-5)
 
----
-
 <a id="section-5"></a>
 
 ## 5. Operators, Statements, and Loops
+
+---
 
 ### What is it?
 
@@ -1542,11 +1542,11 @@ Operators, statements, and loops are the foundation of application logic. Clear 
 
 [Previous: Section 4](#section-4) | [Top](#top) | [Next: Section 6](#section-6)
 
----
-
 <a id="section-6"></a>
 
 ## 6. Functions Deep Dive
+
+---
 
 ### What is it?
 
@@ -2046,11 +2046,11 @@ Functions are the building blocks of JavaScript architecture. Understanding func
 
 [Previous: Section 5](#section-5) | [Top](#top) | [Next: Section 7](#section-7)
 
----
-
 <a id="section-7"></a>
 
 ## 7. String Methods Deep Dive
+
+---
 
 ### What is it?
 
@@ -2275,11 +2275,11 @@ String methods are essential for input cleaning, validation, search, and output 
 
 [Previous: Section 6](#section-6) | [Top](#top) | [Next: Section 8](#section-8)
 
----
-
 <a id="section-8"></a>
 
 ## 8. Number Methods Deep Dive
+
+---
 
 ### What is it?
 
@@ -2462,11 +2462,11 @@ Number methods and helpers are critical for safe calculations, reliable validati
 
 [Previous: Section 7](#section-7) | [Top](#top) | [Next: Section 9](#section-9)
 
----
-
 <a id="section-9"></a>
 
 ## 9. Arrays and Array Methods
+
+---
 
 ### What is it?
 
@@ -3005,11 +3005,11 @@ Array methods are the backbone of JavaScript data processing. Choosing the right
 
 [Previous: Section 8](#section-8) | [Top](#top) | [Next: Section 10](#section-10)
 
----
-
 <a id="section-10"></a>
 
 ## 10. Objects and Object Patterns
+
+---
 
 ### What is it?
 
@@ -3274,11 +3274,11 @@ Objects represent real-world entities and structured application data. Mastering
 
 [Previous: Section 9](#section-9) | [Top](#top) | [Next: Section 11](#section-11)
 
----
-
 <a id="section-11"></a>
 
 ## 11. this, call, apply, bind
+
+---
 
 ### What is it?
 
@@ -3830,11 +3830,11 @@ Understanding `this` and binding methods prevents many advanced bugs.
 
 [Previous: Section 10](#section-10) | [Top](#top) | [Next: Section 12](#section-12)
 
----
-
 <a id="section-12"></a>
 
 ## 12. Prototype and Classes
+
+---
 
 ### What is it?
 
@@ -4302,11 +4302,11 @@ Prototype and class understanding gives you production-level OOP design in JavaS
 
 [Previous: Section 11](#section-11) | [Top](#top) | [Next: Section 13](#section-13)
 
----
-
 <a id="section-13"></a>
 
 ## 13. DOM and Events
+
+---
 
 ### What is it?
 
@@ -4568,11 +4568,11 @@ DOM and events are the bridge between UI and JavaScript logic. Mastering selecti
 
 [Previous: Section 12](#section-12) | [Top](#top) | [Next: Section 14](#section-14)
 
----
-
 <a id="section-14"></a>
 
 ## 14. Async JavaScript
+
+---
 
 ### What is it?
 
@@ -5071,11 +5071,11 @@ Async JavaScript and the event loop are the backbone of modern frontend behavior
 
 [Previous: Section 13](#section-13) | [Top](#top) | [Next: Section 15](#section-15)
 
----
-
 <a id="section-15"></a>
 
 ## 15. APIs, Fetch, Axios, and REST Basics
+
+---
 
 ### What is it?
 
@@ -5374,11 +5374,11 @@ API handling is a core real-world JavaScript skill. When you understand HTTP met
 
 [Previous: Section 14](#section-14) | [Top](#top) | [Next: Section 16](#section-16)
 
----
-
 <a id="section-16"></a>
 
 ## 16. Error Handling and Debugging
+
+---
 
 ### What is it?
 
@@ -5659,11 +5659,11 @@ Strong error handling and debugging turn fragile apps into reliable systems. If 
 
 [Previous: Section 15](#section-15) | [Top](#top) | [Next: Section 17](#section-17)
 
----
-
 <a id="section-17"></a>
 
 ## 17. Useful Built-ins: Date, Math, Map, Set
+
+---
 
 ### What is it?
 
@@ -5930,11 +5930,11 @@ Date, Math, Map, and Set are high-impact built-ins for production JavaScript. Ch
 
 [Previous: Section 16](#section-16) | [Top](#top) | [Next: Section 18](#section-18)
 
----
-
 <a id="section-18"></a>
 
 ## 18. Modern JS Features (ES6+)
+
+---
 
 ### What is it?
 
@@ -6231,11 +6231,11 @@ ES6+ is not just shorter syntax; it is a set of patterns for safer, clearer, and
 
 [Previous: Section 17](#section-17) | [Top](#top) | [Next: Section 19](#section-19)
 
----
-
 <a id="section-19"></a>
 
 ## 19. Interview Question Bank
+
+---
 
 ### How to use this bank
 
@@ -6460,11 +6460,11 @@ ES6+ is not just shorter syntax; it is a set of patterns for safer, clearer, and
 
 [Previous: Section 18](#section-18) | [Top](#top) | [Next: Section 20](#section-20)
 
----
-
 <a id="section-20"></a>
 
 ## 20. Final Learning Roadmap
+
+---
 
 ### What this roadmap gives you
 
