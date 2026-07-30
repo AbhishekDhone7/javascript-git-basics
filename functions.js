@@ -40,3 +40,86 @@ function createAdder(baseValue) {
 }
 
 console.log(createAdder(5)(10));
+
+
+
+let a = "string 1";
+
+function abc(x) {
+x = "new value" 
+console.log("inside function ", x)
+}
+abc(a)
+console.log(a)
+
+
+
+
+
+
+
+
+
+let b = [1,2,3,4];
+
+function abc(a) {
+  a[1] = "new value" 
+}
+abc(b)
+console.log(b);
+
+
+
+
+let obj = {
+ name : "abhishek",
+}
+
+function callName(city, country) {
+  console.log(this.name, city, country);
+}
+
+callName.call(obj, "Pune", "India")
+callName.apply(obj, ["Pune", "India"])
+
+
+const newFunction = callName.bind(obj)
+newFunction("Pune", "India");
+
+
+
+let obj = {
+ name : "abhishek",
+ a : function () {
+  console.log(this.name); // abhishek
+ },
+ b : () => {
+  console.log(this.name); // undefined
+ },
+ c : function () {
+  function abc () {
+    console.log(this.name); // undefined
+  }
+  abc()
+ },
+ d : () => {
+  function abc () {
+    console.log(this.name); // undefined
+  }
+  abc()
+ },
+ e : function () {
+  const abc = () => {
+    console.log(this.name); // abhishek
+  }
+  abc()
+ }
+}
+
+obj.a()
+obj.b()
+obj.c()
+obj.d()
+obj.e()
+
+
