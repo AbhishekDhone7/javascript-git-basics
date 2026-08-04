@@ -205,7 +205,7 @@ JavaScript is the behavior engine of modern applications. It takes inputs, appli
 
 [Previous: JavaScript at a Glance](#section-1) | [Top](#top) | [Next: Variables, Scope, and Data Types](#section-3)
 
-![JavaScript Execution Context](assets/screenshots/javascript-execution.png)
+![JavaScript Execution Context](../assets/screenshots/javascript-execution.png)
 
 ### What is it?
 

@@ -57,9 +57,9 @@ flowchart TD
 
 ### Screenshots (Introduction)
 
-![Git Workflow in VS Code](./assets/screenshots/real-01-git-workflow-vscode.png)
-![GitHub Repository Home](./assets/screenshots/real-02-github-repo-home.png)
-![Terminal Git Status](./assets/screenshots/real-03-terminal-git-status.png)
+![Git Workflow in VS Code](../assets/screenshots/real-01-git-workflow-vscode.png)
+![GitHub Repository Home](../assets/screenshots/real-02-github-repo-home.png)
+![Terminal Git Status](../assets/screenshots/real-03-terminal-git-status.png)
 
 ---
 
@@ -218,9 +218,9 @@ stateDiagram-v2
 
 ### Screenshots (Initialize Repository)
 
-![Terminal git init output](./assets/screenshots/real-04-git-init-output.png)
-![VS Code Source Control staged files](./assets/screenshots/real-05-vscode-staging.png)
-![GitHub first push result](./assets/screenshots/real-06-github-first-push.png)
+![Terminal git init output](../assets/screenshots/real-04-git-init-output.png)
+![VS Code Source Control staged files](../assets/screenshots/real-05-vscode-staging.png)
+![GitHub first push result](../assets/screenshots/real-06-github-first-push.png)
 
 ---
 
@@ -287,9 +287,9 @@ flowchart TD
 
 ### Screenshots (Daily Workflow)
 
-![Terminal daily workflow](./assets/screenshots/real-07-daily-workflow-terminal.png)
-![VS Code commit message and commit button](./assets/screenshots/real-08-vscode-commit.png)
-![GitHub commit history](./assets/screenshots/real-09-github-commit-history.png)
+![Terminal daily workflow](../assets/screenshots/real-07-daily-workflow-terminal.png)
+![VS Code commit message and commit button](../assets/screenshots/real-08-vscode-commit.png)
+![GitHub commit history](../assets/screenshots/real-09-github-commit-history.png)
 
 ---
 
@@ -374,9 +374,9 @@ flowchart TD
 
 ### Screenshots (Clone)
 
-![Terminal git clone output](./assets/screenshots/real-10-git-clone-output.png)
-![VS Code branch switch](./assets/screenshots/real-11-vscode-branch-switch.png)
-![Git graph after fetch](./assets/screenshots/real-12-git-graph-fetch.png)
+![Terminal git clone output](../assets/screenshots/real-10-git-clone-output.png)
+![VS Code branch switch](../assets/screenshots/real-11-vscode-branch-switch.png)
+![Git graph after fetch](../assets/screenshots/real-12-git-graph-fetch.png)
 
 ---
 
@@ -508,10 +508,10 @@ flowchart LR
 
 ### Screenshots (Merge Conflicts)
 
-![Terminal push rejected non-fast-forward](./assets/screenshots/real-13-push-rejected.png)
-![VS Code merge conflict markers](./assets/screenshots/real-14-vscode-conflict-markers.png)
-![VS Code conflict resolution actions](./assets/screenshots/real-15-vscode-conflict-actions.png)
-![GitHub pull request conflict warning](./assets/screenshots/real-16-github-pr-conflict.png)
+![Terminal push rejected non-fast-forward](../assets/screenshots/real-13-push-rejected.png)
+![VS Code merge conflict markers](../assets/screenshots/real-14-vscode-conflict-markers.png)
+![VS Code conflict resolution actions](../assets/screenshots/real-15-vscode-conflict-actions.png)
+![GitHub pull request conflict warning](../assets/screenshots/real-16-github-pr-conflict.png)
 
 ---
 
@@ -615,7 +615,7 @@ flowchart TD
     H --> I[Continue feature work]
 ```
 
-![Git stash workflow in terminal](./assets/screenshots/real-21-git-stash-workflow.png)
+![Git stash workflow in terminal](../assets/screenshots/real-21-git-stash-workflow.png)
 
 ---
 
@@ -695,7 +695,7 @@ flowchart TD
     K --> L
 ```
 
-![Multiple stash list in terminal](./assets/screenshots/real-22-git-stash-list.png)
+![Multiple stash list in terminal](../assets/screenshots/real-22-git-stash-list.png)
 
 ---
 
@@ -790,7 +790,7 @@ flowchart TD
     H --> I["git push --force-with-lease\nPush rewritten history safely"]
 ```
 
-![Git rebase terminal output](./assets/screenshots/real-23-git-rebase-workflow.png)
+![Git rebase terminal output](../assets/screenshots/real-23-git-rebase-workflow.png)
 
 ---
 
@@ -869,7 +869,7 @@ flowchart LR
     Before --> After
 ```
 
-![Merge vs Rebase visual diagram](./assets/screenshots/real-24-merge-vs-rebase.png)
+![Merge vs Rebase visual diagram](../assets/screenshots/real-24-merge-vs-rebase.png)
 
 ---
 
@@ -1005,7 +1005,7 @@ flowchart LR
     R3 -->|"git cherry-pick a7f3e91"| M3
 ```
 
-![Cherry-pick terminal and git log output](./assets/screenshots/real-25-git-cherry-pick.png)
+![Cherry-pick terminal and git log output](../assets/screenshots/real-25-git-cherry-pick.png)
 
 ---
 
@@ -1052,10 +1052,10 @@ flowchart TD
 
 ### Screenshots (Visual Pack)
 
-![VS Code Source Control panel](./assets/screenshots/real-17-vscode-source-control.png)
-![GitHub branches page](./assets/screenshots/real-18-github-branches.png)
-![GitHub pull request page](./assets/screenshots/real-19-github-pull-request.png)
-![Git graph in terminal or extension](./assets/screenshots/real-20-git-graph.png)
+![VS Code Source Control panel](../assets/screenshots/real-17-vscode-source-control.png)
+![GitHub branches page](../assets/screenshots/real-18-github-branches.png)
+![GitHub pull request page](../assets/screenshots/real-19-github-pull-request.png)
+![Git graph in terminal or extension](../assets/screenshots/real-20-git-graph.png)
 
 ---
 
