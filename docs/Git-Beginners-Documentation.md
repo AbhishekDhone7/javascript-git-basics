@@ -115,7 +115,7 @@ What it does:
 
 Example:
 ```bash
-git add Array.js
+git add array-methods.js
 ```
 
 Expected output:
@@ -132,9 +132,9 @@ Expected output (example):
 ```text
 [main (root-commit) a1b2c3d] Initial commit
  3 files changed, 120 insertions(+)
- create mode 100644 Array.js
- create mode 100644 dummy2.js
- create mode 100644 Hoisting-TDZ.js
+ create mode 100644 array-methods.js
+ create mode 100644 reverse-sentence.js
+ create mode 100644 hoisting-and-tdz.js
 ```
 
 #### 2.5 Rename Current Branch to main
@@ -260,11 +260,11 @@ git push
 ### Real-World Example
 
 Scenario:
-- You fixed a bug in `Array.js` where empty arrays caused errors.
+- You fixed a bug in `array-methods.js` where empty arrays caused errors.
 
 Commands:
 ```bash
-git add Array.js
+git add array-methods.js
 git commit -m "Fix crash when array is empty"
 git push
 ```

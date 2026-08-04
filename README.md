@@ -324,12 +324,13 @@ javascript-git-basics/
 |-- JavaScript/                    # Numbered JavaScript curriculum
 |-- scholer-desk/                  # React practice application
 |-- assets/screenshots/            # Documentation and project images
-|-- Array.js                       # Focused JavaScript practice
-|-- String.js
-|-- functions.js
-|-- Hoisting-TDZ.js
-|-- coding-exercises.js
-|-- dummy2.js                     # Additional scratch/practice file
+|-- array-methods.js               # Array method examples
+|-- asynchronous-javascript.js     # Event loop and Fetch API examples
+|-- coding-exercises.js            # Coding questions with multiple solutions
+|-- function-concepts.js           # Functions, closures, and this binding
+|-- hoisting-and-tdz.js            # Hoisting and temporal dead zone examples
+|-- reverse-sentence.js            # Sentence reversal example
+|-- string-methods.js              # String method examples
 `-- README.md
 ```
 

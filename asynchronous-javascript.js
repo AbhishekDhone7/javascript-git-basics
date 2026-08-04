@@ -1,15 +1,15 @@
-// java ->  multy thred
-// 10000 -> 10000 threds -> server slow (16 gb)
-// vedio proccesing
-// image proccesing
+// Java -> multithreaded
+// 10000 -> 10000 threads -> server slow (16 GB)
+// video processing
+// image processing
 // pdf generation
 
 
-// Node -> single thred (background treads 10 we can use)
+// Node -> single thread (background threads can be used)
 // 10000 -> async -> 1 -> callback -> 2 -> callback -> 3 (10 mb) 
 // chat applications (websockets)
-// foot delivery, game, booking
-// streming 
+// food delivery, games, booking
+// streaming
 
 // Results -> 1 <- 3 ,- 2
 
@@ -38,31 +38,31 @@
 
 
 
-async function logA() { 
+async function logAwaitedA() { 
     await console.log('A') 
 }
-function logB() { console.log('B') }
-function logC() { console.log('C') }
-function logD() { console.log('D') }
+function logTimerB() { console.log('B') }
+function logPromiseC() { console.log('C') }
+function logSynchronousD() { console.log('D') }
 
 // Click the "RUN" button to learn how this works!
-logA();
-setTimeout(logB, 0);
-Promise.resolve().then(logC);
-logD();
+logAwaitedA();
+setTimeout(logTimerB, 0);
+Promise.resolve().then(logPromiseC);
+logSynchronousD();
 
 
 
 async function getProducts() {
   try {
-    const res = await fetch("https://jsonplaceholder.typicode.com/users");
+    const response = await fetch("https://jsonplaceholder.typicode.com/users");
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
     }
 
-    const data = await res.json();
-    console.log("Count:", data);
+    const products = await response.json();
+    console.log("Products:", products);
   } catch (error) {
     console.log("Request failed:", error.message);
   }
@@ -80,17 +80,17 @@ async function createPost() {
     userId: 1
   };
 
-  const res = await fetch("https://jsonplaceholder.typicode.com/posts/id", {
+  const response = await fetch("https://jsonplaceholder.typicode.com/posts", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authe" : "Bearer JWT"
+      "Authorization": "Bearer JWT"
     },
     body: JSON.stringify(payload)
   });
 
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-  const created = await res.json();
-  console.log(created.id);
+  const createdPost = await response.json();
+  console.log(createdPost.id);
 }

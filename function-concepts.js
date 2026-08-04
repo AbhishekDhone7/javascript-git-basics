@@ -43,14 +43,14 @@ console.log(createAdder(5)(10));
 
 
 
-let a = "string 1";
+let primitiveText = "string 1";
 
-function abc(x) {
-x = "new value" 
-console.log("inside function ", x)
+function reassignPrimitiveParameter(text) {
+  text = "new value";
+  console.log("inside function ", text);
 }
-abc(a)
-console.log(a)
+reassignPrimitiveParameter(primitiveText);
+console.log(primitiveText);
 
 
 
@@ -60,18 +60,18 @@ console.log(a)
 
 
 
-let b = [1,2,3,4];
+let numberList = [1, 2, 3, 4];
 
-function abc(a) {
-  a[1] = "new value" 
+function mutateArrayParameter(numbers) {
+  numbers[1] = "new value";
 }
-abc(b)
-console.log(b);
+mutateArrayParameter(numberList);
+console.log(numberList);
 
 
 
 
-let obj = {
+let personForBinding = {
  name : "abhishek",
 }
 
@@ -79,47 +79,47 @@ function callName(city, country) {
   console.log(this.name, city, country);
 }
 
-callName.call(obj, "Pune", "India")
-callName.apply(obj, ["Pune", "India"])
+callName.call(personForBinding, "Pune", "India")
+callName.apply(personForBinding, ["Pune", "India"])
 
 
-const newFunction = callName.bind(obj)
-newFunction("Pune", "India");
+const boundCallName = callName.bind(personForBinding);
+boundCallName("Pune", "India");
 
 
 
-let obj = {
+let personWithMethods = {
  name : "abhishek",
- a : function () {
+ regularMethod : function () {
   console.log(this.name); // abhishek
  },
- b : () => {
+ arrowMethod : () => {
   console.log(this.name); // undefined
  },
- c : function () {
-  function abc () {
+ regularMethodWithNestedFunction : function () {
+  function printName () {
     console.log(this.name); // undefined
   }
-  abc()
+  printName()
  },
- d : () => {
-  function abc () {
+ arrowMethodWithNestedFunction : () => {
+  function printName () {
     console.log(this.name); // undefined
   }
-  abc()
+  printName()
  },
- e : function () {
-  const abc = () => {
+ regularMethodWithNestedArrow : function () {
+  const printName = () => {
     console.log(this.name); // abhishek
   }
-  abc()
+  printName()
  }
 }
 
-obj.a()
-obj.b()
-obj.c()
-obj.d()
-obj.e()
+personWithMethods.regularMethod()
+personWithMethods.arrowMethod()
+personWithMethods.regularMethodWithNestedFunction()
+personWithMethods.arrowMethodWithNestedFunction()
+personWithMethods.regularMethodWithNestedArrow()
 
 
